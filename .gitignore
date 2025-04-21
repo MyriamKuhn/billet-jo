@@ -5,6 +5,7 @@
 # Laravel environment
 .env
 .env.*
+/.env.env.example
 /.php_cs.cache
 .phpactor.json
 .phpunit.result.cache
@@ -27,7 +28,7 @@
 /tests
 /phpunit.xml
 /README.md
-/.editorconfig
+.editorconfig
 
 # IDEs & tools
 /.fleet
