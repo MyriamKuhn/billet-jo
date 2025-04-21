@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bienvenue sur l'API JO 2024</title>
+    <title>Welcome to the 2024 Olympics API</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
