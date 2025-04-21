@@ -1,0 +1,121 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Paris 2024 Olympic Games Ticketing API",
+        "description": "This API manages the entire ticket lifecycle for the Paris 2024 Olympic Games: user registration, shopping cart management, payment processing, ticket generation, and entry validation.\n\nThis project was developed as part of the **Bachelor's degree in Digital Solutions Development**. The architecture is based on a **modular Laravel monolith**, structured into internal services (users, tickets, cart, payment, etc.) organized as internal packages to ensure better organization, maintainability, and scalability.\n\nThe notification system, including emails and system messages, is managed internally through a dedicated Laravel service and is not exposed as a public API.",
+        "contact": {
+            "name": "Myriam Kühn",
+            "url": "https://myriamkuhn.com/",
+            "email": "myriam.kuehn@free.fr"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000",
+            "description": "Local development environment"
+        },
+        {
+            "url": "https://api-jo2024.mkcodecreations.dev",
+            "description": "Production server (planned)"
+        }
+    ],
+    "paths": {
+        "/api/cart/ping": {
+            "get": {
+                "tags": [
+                    "Cart"
+                ],
+                "summary": "Test route",
+                "operationId": "e7cfa648d85fd26bbc030629bb30bcf1",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/payment/ping": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Test route",
+                "operationId": "c3ae22d08215bab0c4d22e2edc5b121c",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/product/ping": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Test route",
+                "operationId": "603751feb31b986383e6d4af7b7a7b44",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/ticket/ping": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Test route",
+                "operationId": "d558dab4d2de358752c3798cf771c6c7",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/api/user/ping": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Test route",
+                "operationId": "d5f53313d34a9b07506e3533fb3d1dae",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Users",
+            "description": "Account management, authentication, roles, and profiles"
+        },
+        {
+            "name": "Tickets",
+            "description": "Ticket creation, generation, validation, and tracking"
+        },
+        {
+            "name": "Payments",
+            "description": "Payment processing and secure transactions"
+        },
+        {
+            "name": "Cart",
+            "description": "Management of items added to the shopping cart"
+        },
+        {
+            "name": "Products",
+            "description": "Management of products available for purchase"
+        }
+    ]
+}
