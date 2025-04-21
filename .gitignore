@@ -21,3 +21,12 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/tests
+phpunit.xml
+README.md
+.github/
+/bootstrap/cache/
+/storage/framework/*
+/storage/logs/*
+.editorconfig
+.php_cs.cache
