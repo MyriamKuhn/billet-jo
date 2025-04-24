@@ -6,10 +6,12 @@ use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Payment extends Model
 {
-    use HasUuid;
+    /** @use HasFactory<\Database\Factories\PaymentFactory> */
+    use HasUuid, HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -55,5 +57,15 @@ class Payment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Associate the payment with a ticket.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, Payment>
+     */
+    public function ticket()
+    {
+        return $this->hasMany(Ticket::class);
     }
 }

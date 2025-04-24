@@ -56,4 +56,34 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
         ];
     }
+
+    /**
+     * Associate the user with a ticket.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, User>
+     */
+    public function ticket()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    /**
+     * Associate the user with a payment.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Payment, User>
+     */
+    public function payment()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Associate the user with a cart.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Cart, User>
+     */
+    public function cart()
+    {
+        return $this->hasOne(Cart::class);
+    }
 }

@@ -34,4 +34,24 @@ class Product extends Model
         'sale' => 'decimal:2',
         'stock_quantity' => 'integer',
     ];
+
+    /**
+     * Associate the product with a ticket.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, Product>
+     */
+    public function ticket()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    /**
+     * Associate the product with a cart item.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CartItem, Product>
+     */
+    public function cartItem()
+    {
+        return $this->hasMany(CartItem::class);
+    }
 }

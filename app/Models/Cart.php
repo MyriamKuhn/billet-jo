@@ -29,4 +29,14 @@ class Cart extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Associate the cart with cart items.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<CartItem, Cart>
+     */
+    public function cartItem()
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
 }
