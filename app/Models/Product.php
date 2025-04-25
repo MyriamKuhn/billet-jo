@@ -40,7 +40,7 @@ class Product extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, Product>
      */
-    public function ticket()
+    public function tickets()
     {
         return $this->hasMany(Ticket::class);
     }
@@ -50,7 +50,7 @@ class Product extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<CartItem, Product>
      */
-    public function cartItem()
+    public function cartItems()
     {
         return $this->hasMany(CartItem::class);
     }

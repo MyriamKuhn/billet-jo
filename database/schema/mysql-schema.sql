@@ -37,8 +37,8 @@ CREATE TABLE `cart_items` (
   PRIMARY KEY (`id`),
   KEY `cart_items_cart_id_foreign` (`cart_id`),
   KEY `cart_items_product_id_foreign` (`product_id`),
-  CONSTRAINT `cart_items_cart_id_foreign` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `cart_items_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
+  CONSTRAINT `cart_items_cart_id_foreign` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`id`),
+  CONSTRAINT `cart_items_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `carts`;
@@ -51,7 +51,7 @@ CREATE TABLE `carts` (
   `user_id` bigint(20) unsigned NOT NULL,
   PRIMARY KEY (`id`),
   KEY `carts_user_id_foreign` (`user_id`),
-  CONSTRAINT `carts_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `carts_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `failed_jobs`;
@@ -141,7 +141,7 @@ CREATE TABLE `payments` (
   UNIQUE KEY `payments_invoice_link_unique` (`invoice_link`),
   KEY `payments_user_id_foreign` (`user_id`),
   KEY `payments_transaction_id_index` (`transaction_id`),
-  CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `personal_access_tokens`;
@@ -203,6 +203,7 @@ CREATE TABLE `tickets` (
   `qr_code_link` varchar(255) NOT NULL,
   `pdf_link` varchar(255) NOT NULL,
   `is_used` tinyint(1) NOT NULL DEFAULT 0,
+  `is_refunded` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `user_id` bigint(20) unsigned NOT NULL,
@@ -212,9 +213,9 @@ CREATE TABLE `tickets` (
   KEY `tickets_user_id_foreign` (`user_id`),
   KEY `tickets_payment_id_foreign` (`payment_id`),
   KEY `tickets_product_id_foreign` (`product_id`),
-  CONSTRAINT `tickets_payment_id_foreign` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `tickets_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `tickets_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `tickets_payment_id_foreign` FOREIGN KEY (`payment_id`) REFERENCES `payments` (`id`),
+  CONSTRAINT `tickets_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),
+  CONSTRAINT `tickets_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `users`;
@@ -253,4 +254,4 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (5,'2025_04_22_1942
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (6,'2025_04_22_195417_create_payments_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (7,'2025_04_22_200446_create_tickets_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (8,'2025_04_22_203104_create_cart_items_table',1);
-INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (9,'2025_04_23_200508_create_personal_access_tokens_table',2);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (9,'2025_04_23_200508_create_personal_access_tokens_table',1);

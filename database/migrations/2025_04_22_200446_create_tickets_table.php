@@ -16,13 +16,14 @@ return new class extends Migration
             $table->string('qr_code_link');
             $table->string('pdf_link');
             $table->boolean('is_used')->default(false);
+            $table->boolean('is_refunded')->default(false);
             $table->timestamps();
 
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users');
 
-            $table->foreignId('payment_id')->constrained('payments')->onDelete('cascade');
+            $table->foreignId('payment_id')->constrained('payments');
 
-            $table->foreignId('product_id')->constrained('products')->onDelete('cascade');
+            $table->foreignId('product_id')->constrained('products');
         });
     }
 

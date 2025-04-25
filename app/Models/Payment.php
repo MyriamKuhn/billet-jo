@@ -64,7 +64,7 @@ class Payment extends Model
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, Payment>
      */
-    public function ticket()
+    public function tickets()
     {
         return $this->hasMany(Ticket::class);
     }

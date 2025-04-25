@@ -62,7 +62,7 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, User>
      */
-    public function ticket()
+    public function tickets()
     {
         return $this->hasMany(Ticket::class);
     }
@@ -72,7 +72,7 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<Payment, User>
      */
-    public function payment()
+    public function payments()
     {
         return $this->hasMany(Payment::class);
     }
