@@ -26,7 +26,7 @@
 
 # Tests & docs
 /tests/*
-/phpunit.xml
+phpunit.xml
 /README.md
 .editorconfig
 
