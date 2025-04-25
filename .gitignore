@@ -30,6 +30,9 @@
 /README.md
 .editorconfig
 
+# Databases
+/database
+
 # IDEs & tools
 /.fleet
 /.idea
