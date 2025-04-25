@@ -32,6 +32,7 @@ phpunit.xml
 
 #Database
 /database/*
+database
 
 # IDEs & tools
 /.fleet
@@ -53,4 +54,3 @@ yarn-error.log
 
 # Auth tokens
 /auth.json
-
