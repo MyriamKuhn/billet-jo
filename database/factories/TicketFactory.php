@@ -23,6 +23,7 @@ class TicketFactory extends Factory
             'qr_code_link' => $this->faker->url,
             'pdf_link' => $this->faker->url,
             'is_used' => false,
+            'is_refunded' => false,
             'user_id' => User::factory(),
             'payment_id' => Payment::factory(),
             'product_id' => Product::factory(),
