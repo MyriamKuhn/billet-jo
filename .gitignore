@@ -25,10 +25,13 @@
 /bootstrap/cache/*.php
 
 # Tests & docs
-/tests
+/tests/*
 /phpunit.xml
 /README.md
 .editorconfig
+
+#Database
+/database/*
 
 # IDEs & tools
 /.fleet
