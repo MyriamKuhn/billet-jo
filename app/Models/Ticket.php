@@ -19,6 +19,7 @@ class Ticket extends Model
         'qr_code_link',
         'pdf_link',
         'is_used',
+        'is_refunded',
         'user_id',
         'payment_id',
         'product_id',
@@ -31,6 +32,7 @@ class Ticket extends Model
      */
     protected $casts = [
         'is_used' => 'boolean',
+        'is_refunded' => 'boolean',
     ];
 
     /**
