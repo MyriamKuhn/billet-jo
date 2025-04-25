@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens,HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -18,9 +20,15 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
         'email',
-        'password',
+        'password_hash',
+        'firstname',
+        'lastname',
+        'role',
+        'twofa_secret',
+        'twofa_enabled',
+        'is_active',
+        'email_verified_at',
     ];
 
     /**
@@ -29,8 +37,9 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'password',
+        'password_hash',
         'remember_token',
+        'twofa_secret',
     ];
 
     /**
@@ -41,8 +50,40 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'role'=> UserRole::class,
+            'twofa_enabled' => 'boolean',
+            'is_active' => 'boolean',
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Associate the user with a ticket.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, User>
+     */
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    /**
+     * Associate the user with a payment.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Payment, User>
+     */
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Associate the user with a cart.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Cart, User>
+     */
+    public function cart()
+    {
+        return $this->hasOne(Cart::class);
     }
 }
