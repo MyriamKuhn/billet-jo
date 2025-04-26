@@ -28,11 +28,15 @@ The notification system, including emails and system messages, is managed intern
  *     ),
  *     @OA\Server(
  *         url="https://api-jo2024.mkcodecreations.dev",
- *         description="Production server (planned)"
+ *         description="Production server"
  *     ),
  *     @OA\Tag(
  *         name="Users",
  *         description="Account management, authentication, roles, and profiles"
+ *     ),
+ *     @OA\Tag(
+ *         name="Email Verification",
+ *         description="Email verification and confirmation process"
  *     ),
  *     @OA\Tag(
  *         name="Tickets",
@@ -49,7 +53,7 @@ The notification system, including emails and system messages, is managed intern
  *     @OA\Tag(
  *         name="Products",
  *         description="Management of products available for purchase"
- *     ),
+ *     )
  * )
  */
 class Info {}
