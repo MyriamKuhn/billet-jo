@@ -21,4 +21,6 @@ return [
     'twofa_invalid' => 'The two-factor authentication code is invalid.',
     'login_success' => 'Login successful.',
     'account_disabled' => 'Your account has been disabled. Please contact support.',
+    'logout_success' => 'Successfully logged out.',
+    'no_active_token' => 'You are not authenticated.',
 ];

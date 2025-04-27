@@ -21,4 +21,6 @@ return [
     'twofa_invalid' => 'Le code de vérification en deux étapes est invalide.',
     'login_success' => 'Connexion réussie.',
     'account_disabled' => 'Votre compte a été désactivé. Veuillez contacter le support.',
+    'logout_success' => 'Déconnexion réussie.',
+    'no_active_token' => 'Vous n\'êtes pas authentifiés.',
 ];

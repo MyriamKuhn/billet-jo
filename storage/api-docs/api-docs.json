@@ -261,7 +261,7 @@
                 }
             }
         },
-        "api/auth/login": {
+        "/api/auth/login": {
             "post": {
                 "tags": [
                     "Authentication"
@@ -581,6 +581,83 @@
                                         "message": {
                                             "type": "string",
                                             "example": "An unknown error occurred. Please try again."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout a user and invalidate their current access token",
+                "description": "Logs out the user by deleting their current active token.",
+                "operationId": "logoutUser",
+                "responses": {
+                    "200": {
+                        "description": "Successfully logged out.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Successfully logged out."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "No active token found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "You are not authenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unknown error or Database error occurred while logging out.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unknown error occurred."
                                         }
                                     },
                                     "type": "object"

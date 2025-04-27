@@ -6,7 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class SetLocale
+class SetLocalLanguages
 {
     /**
      * Handle an incoming request.
@@ -19,7 +19,7 @@ class SetLocale
         $locale = explode(',', $request->header('Accept-Language', 'en'))[0];
 
         // Ensure the locale is valid
-        if (!in_array($locale, ['en', 'fr', 'de', 'es'])) {
+        if (!in_array($locale, ['en', 'fr', 'de'])) {
             $locale = 'en'; // Default to 'en' if the locale is invalid
         }
 

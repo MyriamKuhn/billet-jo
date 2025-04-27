@@ -21,4 +21,6 @@ return [
     'twofa_invalid' => 'Der Zwei-Faktor-Authentifizierungscode ist ungültig.',
     'login_success' => 'Erfolgreich eingeloggt.',
     'account_disabled' => 'Ihr Konto wurde deaktiviert. Bitte wenden Sie sich an den Support.',
+    'logout_success' => 'Erfolgreich abgemeldet.',
+    'no_active_token' => 'Ihr seid nicht authentifiziert.',
 ];

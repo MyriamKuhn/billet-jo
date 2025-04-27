@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use PragmaRX\Google2FA\Google2FA;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class AuthController extends Controller
 {
@@ -137,10 +141,10 @@ class AuthController extends Controller
 
             return response()->json([
                 'status'=> 'success',
-                'message' => __('account_created')
+                'message' => __('validation.account_created')
             ], 201);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             Log::error('Validation error', [
                 'errors' => $e->validator->errors(),
                 'input' => $request->all(),
@@ -152,7 +156,7 @@ class AuthController extends Controller
                 'errors' => $e->validator->errors(),
             ], 422);
 
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             Log::error('Database error', [
                 'error' => $e->getMessage(),
                 'input' => $request->all(),
@@ -163,7 +167,7 @@ class AuthController extends Controller
                 'message' => __('validation.unknown_error'),
             ], 500);
 
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             Log::error('Access denied', [
                 'error' => $e->getMessage(),
             ]);
@@ -174,7 +178,7 @@ class AuthController extends Controller
                 'errors' => $e->getMessage(),
             ], 403);
 
-        } catch (\Illuminate\Http\Exceptions\ThrottleRequestsException $e) {
+        } catch (ThrottleRequestsException $e) {
             Log::warning('Too many attempts', [
                 'retry_after' => $e->getHeaders()['Retry-After'],
             ]);
@@ -235,7 +239,7 @@ class AuthController extends Controller
      * Login a user.
      *
      * @OA\Post(
-     *     path="api/auth/login",
+     *     path="/api/auth/login",
      *     summary="Login user",
      *     description="Allows a user to log in with their email and password, and receive an authentication token. Admins can disable accounts, and users can choose to remember their login or activate two-factor authentication (2FA).",
      *     operationId="login",
@@ -389,7 +393,7 @@ class AuthController extends Controller
                 ],
             ], 200);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             Log::error('Validation error', [
                 'errors' => $e->validator->errors(),
                 'input' => $request->all(),
@@ -401,7 +405,7 @@ class AuthController extends Controller
                 'errors' => $e->validator->errors(),
             ], 422);
 
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             Log::error('Database error', [
                 'error' => $e->getMessage(),
                 'input' => $request->all(),
@@ -412,7 +416,7 @@ class AuthController extends Controller
                 'message' => __('validation.unknown_error'),
             ], 500);
 
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             Log::error('Access denied', [
                 'error' => $e->getMessage(),
             ]);
@@ -423,7 +427,7 @@ class AuthController extends Controller
                 'errors' => $e->getMessage(),
             ], 403);
 
-        } catch (\Illuminate\Http\Exceptions\ThrottleRequestsException $e) {
+        } catch (ThrottleRequestsException $e) {
             Log::warning('Too many attempts', [
                 'retry_after' => $e->getHeaders()['Retry-After'],
             ]);
@@ -533,7 +537,7 @@ class AuthController extends Controller
                 'message' => __('validation.must_be_connected'),
             ], 401);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             Log::error('Validation error', [
                 'errors' => $e->validator->errors(),
                 'input' => $request->all(),
@@ -545,7 +549,7 @@ class AuthController extends Controller
                 'errors' => $e->validator->errors(),
             ], 422);
 
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             Log::error('Database error', [
                 'error' => $e->getMessage(),
                 'input' => $request->all(),
@@ -556,7 +560,7 @@ class AuthController extends Controller
                 'message' => __('validation.unknown_error'),
             ], 500);
 
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             Log::error('Access denied', [
                 'error' => $e->getMessage(),
             ]);
@@ -569,6 +573,88 @@ class AuthController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error enabling 2FA', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => __('validation.unknown_error'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Logout a user.
+     *
+     * @OA\Post(
+     *     path="/api/auth/logout",
+     *     summary="Logout a user and invalidate their current access token",
+     *     description="Logs out the user by deleting their current active token.",
+     *     operationId="logoutUser",
+     *     tags={"Authentication"},
+     *     security={{
+     *         "bearerAuth": {}
+     *     }},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successfully logged out.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="Successfully logged out.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="No active token found.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="You are not authenticated.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Unknown error or Database error occurred while logging out.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="Unknown error occurred.")
+     *         )
+     *     ),
+     * )
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+
+            // Check if the user is authenticated
+            if (!$user->currentAccessToken()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => __('validation.no_active_token'),
+            ], 400);
+            }
+
+            // Delete the current access token
+            $user->currentAccessToken()->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => __('validation.logout_success'),
+            ], 200);
+
+        } catch (QueryException $e) {
+            Log::error('Database error', [
+                'error' => $e->getMessage(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.unknown_error'),
+            ], 500);
+
+        } catch (\Exception $e) {
+            Log::error('Logout error', [
                 'error' => $e->getMessage(),
             ]);
 

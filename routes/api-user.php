@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\VerificationController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\CheckOriginMiddleware;
 
 Route::prefix('auth')->group(function () {
     // This route is used to register a new user
@@ -14,6 +15,11 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])
         ->name('login')
         ->middleware(['throttle:5,1']);
+
+    // This route is used to logout a user
+    Route::post('/logout', [AuthController::class,'logout'])
+        ->middleware('auth:sanctum')
+        ->name('logout');
 
     // This route is used to enable the two-factor authentication for the user
     Route::post('/enable2FA', [AuthController::class, 'enableTwoFactor'])
@@ -29,5 +35,5 @@ Route::prefix('auth')->group(function () {
     Route::post('/email/resend-verification', [VerificationController::class, 'resendVerificationEmail'])
         ->middleware(['auth:sanctum'])
         ->name('verification.resend');
-});
+})->middleware([CheckOriginMiddleware::class]);
 
