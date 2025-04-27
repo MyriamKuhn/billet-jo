@@ -50,7 +50,7 @@ class CorsMiddleware
     {
         $allowedOrigins = [
             'https://jo2024.mkcodecreations.dev',
-            'http://localhost:5173',
+            'http://localhost:3000',
         ];
 
         $origin = $request->headers->get('Origin');

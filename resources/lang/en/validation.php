@@ -7,7 +7,6 @@ return [
     'email_verification_resend' => 'A new verification email has been sent.',
     'validation_failed' => 'Validation error. Please check your data.',
     'user_not_found' => 'User not found.',
-    'database_error' => 'Database error. Please try again.',
     'access_denied' => 'Access denied. You do not have the necessary permissions.',
     'throttling_error' => 'Too many attempts. Please try again later.',
     'unknown_error' => 'An unknown error occurred. Please try again.',
@@ -16,4 +15,10 @@ return [
     'email_verification_invalid' => 'The verification link is invalid.',
     'email_verification_expired' => 'The verification link has expired.',
     'must_be_connected' => 'You must be logged in to perform this action.',
+    'invalid_credentials' => 'Invalid credentials. Please check your email address and password.',
+    'email_not_verified' => 'Your email address has not been verified. A new verification email has been sent.',
+    'twofa_required' => 'Two-factor authentication is required. Please enter the verification code.',
+    'twofa_invalid' => 'The two-factor authentication code is invalid.',
+    'login_success' => 'Login successful.',
+    'account_disabled' => 'Your account has been disabled. Please contact support.',
 ];

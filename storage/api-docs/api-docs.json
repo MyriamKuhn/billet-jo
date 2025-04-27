@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Paris 2024 Olympic Games Ticketing API",
-        "description": "This API manages the entire ticket lifecycle for the Paris 2024 Olympic Games: user registration, shopping cart management, payment processing, ticket generation, and entry validation.\n\nThis project was developed as part of the **Bachelor's degree in Digital Solutions Development**. The architecture is based on a **modular Laravel monolith**, structured into internal services (users, tickets, cart, payment, etc.) organized as internal packages to ensure better organization, maintainability, and scalability.\n\nThe notification system, including emails and system messages, is managed internally through a dedicated Laravel service and is not exposed as a public API.",
+        "description": "This API manages the entire ticket lifecycle for the Paris 2024 Olympic Games: user registration, shopping cart management, payment processing, ticket generation, and entry validation.\n\nThis project was developed as part of the **Bachelor's degree in Digital Solutions Development**. The architecture is based on a **modular Laravel monolith**, structured into internal services (users, tickets, cart, payment, etc.) organized as internal packages to ensure better organization, maintainability, and scalability.\n\nThe notification system, including emails and system messages, is managed internally through a dedicated Laravel service and is not exposed as a public API.\n\n**Note:** All API endpoints are protected by CORS (Cross-Origin Resource Sharing) to restrict access to authorized domains only, ensuring secure communication between the client and the server.",
         "contact": {
             "name": "Myriam Kühn",
             "url": "https://myriamkuhn.com/",
@@ -81,10 +81,10 @@
                 }
             }
         },
-        "/api/user/register": {
+        "/api/auth/register": {
             "post": {
                 "tags": [
-                    "Users"
+                    "Authentication"
                 ],
                 "summary": "Register a new user",
                 "description": "Allows a user to create an account. Requires a secure password (at least 15 characters, with uppercase letters, lowercase letters, numbers, and symbols), validation via Google reCAPTCHA to prevent abuse, and email confirmation after registration. Account creation attempts are protected by throttling to prevent spam. A verification email is sent to validate the user's email address. The API also protects against unauthorized access with a restrictive CORS configuration.",
@@ -163,7 +163,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Captcha verification failed."
+                                            "example": "Validation error. Please check your data."
                                         },
                                         "errors": {
                                             "type": "object",
@@ -198,7 +198,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Too many attempts. Please try again in 60 seconds."
+                                            "example": "Too many attempts. Please try again later."
                                         }
                                     },
                                     "type": "object"
@@ -214,11 +214,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "An internal error occurred. Please try again later."
-                                        },
-                                        "errors": {
-                                            "type": "string",
-                                            "example": "Database error. Please try again."
+                                            "example": "An unknown error occurred. Please try again."
                                         }
                                     },
                                     "type": "object"
@@ -234,7 +230,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Access denied."
+                                            "example": "Access denied. You do not have the necessary permissions."
                                         },
                                         "errors": {
                                             "type": "string",
@@ -261,16 +257,203 @@
                                 }
                             }
                         }
-                    },
-                    "405": {
-                        "description": "Not allowed",
+                    }
+                }
+            }
+        },
+        "api/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login user",
+                "description": "Allows a user to log in with their email and password, and receive an authentication token. Admins can disable accounts, and users can choose to remember their login or activate two-factor authentication (2FA).",
+                "operationId": "login",
+                "requestBody": {
+                    "description": "Login credentials (email and password are mandatory)",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password",
+                                    "remember"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "user@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "MyGreatPassword@123"
+                                    },
+                                    "remember": {
+                                        "description": "Optional: Whether the user wants to stay logged in",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "twofa_code": {
+                                        "description": "Optional: Two-factor authentication code",
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connection successful. Returns the authentication token and user information.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Method not allowed."
+                                            "example": "Login successful."
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "token_example"
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "firstname": {
+                                                    "type": "string",
+                                                    "example": "John"
+                                                },
+                                                "lastname": {
+                                                    "type": "string",
+                                                    "example": "Doe"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "user@example.com"
+                                                },
+                                                "role": {
+                                                    "type": "string",
+                                                    "example": "user"
+                                                },
+                                                "twofa_enabled": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error (email not verified or 2FA code not valid)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation error. Please check your data."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid credentials. Please check your email address and password."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Account disabled or access denied.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Your account has been disabled. Please contact support."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many attempts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Too many attempts. Please try again later."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error or database error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "An unknown error occurred. Please try again."
                                         }
                                     },
                                     "type": "object"
@@ -281,10 +464,142 @@
                 }
             }
         },
-        "/email/verify/{id}/{hash}": {
+        "/api/auth/enable2FA": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Enable two-factor authentication for the user",
+                "description": "Generates a new secret key for two-factor authentication and returns the QR code URL.",
+                "operationId": "enableTwoFactor",
+                "responses": {
+                    "200": {
+                        "description": "Two-factor authentication enabled successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "secret": {
+                                            "description": "Generated secret key for 2FA",
+                                            "type": "string",
+                                            "example": "JBSWY3DPEHPK3PXP"
+                                        },
+                                        "qrCodeUrl": {
+                                            "description": "URL to generate QR code for 2FA",
+                                            "type": "string",
+                                            "example": "otpauth://totp/Example%3Auser%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication error: User must be logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "You must be logged in to perform this action."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error: Input validation failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation error. Please check your data."
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "additionalProperties": [
+                                                {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "property": null
+                                                    },
+                                                    "property": null
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied: User does not have the necessary permissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Access denied. You do not have the necessary permissions."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "An unknown error occurred. Please try again."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/email/verify/{id}/{hash}": {
             "get": {
                 "tags": [
-                    "Email Verification"
+                    "Authentication"
                 ],
                 "summary": "Verify the user's email address",
                 "description": "This route verifies a user's email address via a link sent to them. Based on the result, it returns a redirection URL. This operation is intended to be used exclusively through links sent by email.",
@@ -327,6 +642,7 @@
                                             "example": "Your email address has been successfully verified."
                                         },
                                         "redirect_url": {
+                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
                                             "example": "https://jo2024.mkcodecreation.dev/verification-result/success"
                                         }
@@ -351,6 +667,7 @@
                                             "example": "The verification link is invalid."
                                         },
                                         "redirect_url": {
+                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
                                             "example": "https://jo2024.mkcodecreation.dev/verification-result/invalid"
                                         }
@@ -375,6 +692,7 @@
                                             "example": "User not found."
                                         },
                                         "redirect_url": {
+                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
                                             "example": "https://jo2024.mkcodecreation.dev/verification-result/invalid"
                                         }
@@ -399,8 +717,34 @@
                                             "example": "Your email address has already been verified."
                                         },
                                         "redirect_url": {
+                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
                                             "example": "https://jo2024.mkcodecreation.dev/verification-result/already-verified"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "An unknown error occurred. Please try again later"
+                                        },
+                                        "redirect_url": {
+                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
+                                            "type": "string",
+                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/error"
                                         }
                                     },
                                     "type": "object"
@@ -411,10 +755,10 @@
                 }
             }
         },
-        "/email/verification-notification": {
+        "/api/auth/email/verification-notification": {
             "post": {
                 "tags": [
-                    "Email Verification"
+                    "Authentication"
                 ],
                 "summary": "Resend email verification link",
                 "description": "This endpoint allows a logged-in user to request a resend of the email verification link if their email address has not been verified yet.",
@@ -467,6 +811,26 @@
                                 }
                             }
                         }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "An unknown error occurred. Please try again later"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -477,14 +841,20 @@
             }
         }
     },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Enter your Bearer token in the Authorization header, starting with 'Bearer 'followed by a space and your token. For example: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
     "tags": [
         {
-            "name": "Users",
-            "description": "Account management, authentication, roles, and profiles"
-        },
-        {
-            "name": "Email Verification",
-            "description": "Email verification and confirmation process"
+            "name": "Authentication",
+            "description": "User authentication and registration"
         },
         {
             "name": "Tickets",

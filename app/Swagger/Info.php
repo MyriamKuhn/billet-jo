@@ -11,7 +11,9 @@ namespace App\Swagger;
 
 This project was developed as part of the **Bachelor's degree in Digital Solutions Development**. The architecture is based on a **modular Laravel monolith**, structured into internal services (users, tickets, cart, payment, etc.) organized as internal packages to ensure better organization, maintainability, and scalability.
 
-The notification system, including emails and system messages, is managed internally through a dedicated Laravel service and is not exposed as a public API.",
+The notification system, including emails and system messages, is managed internally through a dedicated Laravel service and is not exposed as a public API.
+
+**Note:** All API endpoints are protected by CORS (Cross-Origin Resource Sharing) to restrict access to authorized domains only, ensuring secure communication between the client and the server.",
  *         @OA\Contact(
  *             name="Myriam Kühn",
  *             email="myriam.kuehn@free.fr",
@@ -30,13 +32,22 @@ The notification system, including emails and system messages, is managed intern
  *         url="https://api-jo2024.mkcodecreations.dev",
  *         description="Production server"
  *     ),
- *     @OA\Tag(
- *         name="Users",
- *         description="Account management, authentication, roles, and profiles"
+ *    @OA\Components(
+ *      @OA\SecurityScheme(
+ *          securityScheme="bearerAuth",
+ *          type="http",
+ *          scheme="bearer",
+ *          bearerFormat="JWT",
+ *          description="Enter your Bearer token in the Authorization header, starting with 'Bearer 'followed by a space and your token. For example: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`"
+ *      )
  *     ),
  *     @OA\Tag(
- *         name="Email Verification",
- *         description="Email verification and confirmation process"
+ *         name="Authentication",
+ *         description="User authentication and registration"
+ *     ),
+ *     @OA\Tag(
+ *         name="Users",
+ *         description="Account management"
  *     ),
  *     @OA\Tag(
  *         name="Tickets",
@@ -53,7 +64,7 @@ The notification system, including emails and system messages, is managed intern
  *     @OA\Tag(
  *         name="Products",
  *         description="Management of products available for purchase"
- *     )
+ *     ),
  * )
  */
 class Info {}

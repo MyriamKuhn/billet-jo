@@ -1,0 +1,181 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use Tests\TestCase;
+use PragmaRX\Google2FA\Google2FA;
+
+class UserLoginTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function testAllowsUserToLoginWithValidCredentialsWithoutRemember(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'test@example.com',
+            'password_hash' => Hash::make('MyGreatPassword@123'),
+        ]);
+
+        $response = $this->postJson(route('login'), [
+            'email' => 'test@example.com',
+            'password' => 'MyGreatPassword@123',
+            'remember' => false,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['token']);
+
+        $token = $response->json('token');
+        $this->assertNotNull($token); // Vérifie que le token existe
+        $this->assertIsString($token); // Vérifie que le token est bien une chaîne de caractères
+    }
+
+    public function testAllowsUserToLoginWithInvalidCredentials(): void
+    {
+        $response = $this->postJson(route('login'), [
+            'email' => 'test@example.com',
+            'password' => 'wrongpassword',
+            'remember' => false,
+        ]);
+
+        $response->assertStatus(401);
+        $response->assertJson([
+            'status' => 'error',
+            'message' => 'Invalid credentials. Please check your email address and password.',
+        ]);
+    }
+
+    public function testNotAllowsLoginForUnverifiedUser(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'unverified@example.com',
+            'password_hash' => Hash::make('MyGreatPassword@123'),
+            'email_verified_at' => null, // User is not verified
+        ]);
+
+        $response = $this->postJson(route('login'), [
+            'email' => 'unverified@example.com',
+            'password' => 'MyGreatPassword@123',
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJson([
+            'status'=> 'error',
+            'message' => 'Your email address has not been verified. A new verification email has been sent.',
+        ]);
+    }
+
+    public function testAllowsAuthenticatedUserToAccessProtectedRoute(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'auth@example.com',
+            'password_hash' => Hash::make('MyGreatPassword@123'),
+        ]);
+
+        Auth::attempt(['email' => $user->email, 'password' => 'MyGreatPassword@123']);
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'Authorization' => "Bearer $token"
+        ])->postJson(route('enable2FA'));
+
+        $response->assertStatus(200);
+    }
+
+    public function testRejectsUserWithInvalidToken(): void
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer invalid_token',
+        ])->postJson(route('enable2FA'));
+
+        $response->assertStatus(401);
+        $response->assertJson(['message' => 'Unauthenticated.']);
+    }
+
+    public function testAllowsUserToEnableTwoFactorAuthentication(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'test@example.com',
+            'password_hash' => Hash::make('MyGreatPassword@123'),
+        ]);
+
+        // Activer 2FA pour cet utilisateur
+        $google2fa = new Google2FA();
+        $secret = $google2fa->generateSecretKey();
+        $user->twofa_secret = $secret;
+        $user->twofa_enabled = true;
+        $user->save();
+
+        // Vérification que le secret a bien été sauvegardé
+        $this->assertNotNull($user->twofa_secret);
+        $this->assertTrue($user->twofa_enabled);
+
+        // Simuler la génération du code 2FA
+        $code = $google2fa->getCurrentOtp($secret);  // Code généré par l'application d'authentification
+
+        // Tester la soumission du code pour valider l'authentification
+        $response = $this->postJson(route('login'), [
+            'email' => 'test@example.com',
+            'password' => 'MyGreatPassword@123',
+            'remember' => false,
+            'twofa_code' => $code,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Login successful.']);
+    }
+
+    public function testNotAllowsInvalidTwoFactorCode(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'test@example.com',
+            'password_hash' => Hash::make('MyGreatPassword@123'),
+        ]);
+
+        $google2fa = new Google2FA();
+        $secret = $google2fa->generateSecretKey();
+        $user->twofa_secret = $secret;
+        $user->twofa_enabled = true;
+        $user->save();
+
+        // Générer un code 2FA mais en utilisant un code invalide pour l'utilisateur
+        $invalidCode = '123456';
+
+        $response = $this->postJson(route('login'), [
+            'email' => 'test@example.com',
+            'password' => 'MyGreatPassword@123',
+            'remember' => false,
+            'twofa_code' => $invalidCode,
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJson(['message' => 'The two-factor authentication code is invalid.']);
+    }
+
+    public function testNotAllowsDisabledUserToLogin(): void
+    {
+        // Créer un utilisateur désactivé
+        $user = User::factory()->create([
+            'email' => 'test@example.com',
+            'password_hash' => Hash::make('MyGreatPassword@123'),
+            'is_active' => false,  // Utilisateur désactivé
+        ]);
+
+        // Essayer de se connecter avec les informations de l'utilisateur désactivé
+        $response = $this->postJson(route('login'), [
+            'email' => $user->email,
+            'password' => 'MyGreatPassword@123',
+        ]);
+
+        // Vérifier que l'utilisateur désactivé ne peut pas se connecter
+        $response->assertStatus(403);  // Forbidden - compte désactivé
+        $response->assertJson([
+            'status' => 'error',
+            'message' => 'Your account has been disabled. Please contact support.',
+        ]);
+    }
+}

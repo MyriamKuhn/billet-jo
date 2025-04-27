@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use App\Services\CartService;
 
-class RegisterTest extends TestCase
+class UserRegisterTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -25,7 +25,7 @@ class RegisterTest extends TestCase
         ]);
 
         // Essaie de créer un autre utilisateur avec le même email
-        $response = $this->post('/api/user/register', [
+        $response = $this->post('/api/auth/register', [
             'firstname' => 'Jane',
             'lastname' => 'Doe',
             'email' => 'user@example.com',
@@ -40,7 +40,7 @@ class RegisterTest extends TestCase
 
     public function testValidationFails()
     {
-        $response = $this->post('/api/user/register', [
+        $response = $this->post('/api/auth/register', [
             'firstname' => '',
             'lastname' => '',
             'email' => 'invalid-email',
@@ -55,7 +55,7 @@ class RegisterTest extends TestCase
 
     public function testUserCreation()
     {
-        $response = $this->post('/api/user/register', [
+        $response = $this->post('/api/auth/register', [
             'firstname' => 'John',
             'lastname' => 'Doe',
             'email' => 'user@example.com',
@@ -74,7 +74,7 @@ class RegisterTest extends TestCase
     {
         Notification::fake();
 
-        $response = $this->post('/api/user/register', [
+        $response = $this->post('/api/auth/register', [
             'firstname' => 'John',
             'lastname' => 'Doe',
             'email' => 'user@example.com',
@@ -97,7 +97,7 @@ class RegisterTest extends TestCase
         Notification::fake();
 
         // Enregistrer un utilisateur
-        $response = $this->post('/api/user/register', [
+        $response = $this->post('/api/auth/register', [
             'firstname' => 'John',
             'lastname' => 'Doe',
             'email' => 'user@example.com',
