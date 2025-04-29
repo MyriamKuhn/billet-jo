@@ -34,4 +34,22 @@ class UserLogoutTest extends TestCase
             'tokenable_id' => $user->id,
         ]);
     }
+
+    public function testLogoutFailsWithoutActiveToken(): void
+    {
+        // Crée un utilisateur sans token actif
+        $user = User::factory()->create();
+
+        // Simule une requête sans authentification de token
+        $response = $this->actingAs($user)->postJson('/api/auth/logout');
+
+        // On fait croire que l'utilisateur n'a pas de token actif
+        $user->setRelation('currentAccessToken', null);
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'status' => 'error',
+                'message' => __('validation.no_active_token'),
+            ]);
+    }
 }

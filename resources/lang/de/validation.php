@@ -23,4 +23,9 @@ return [
     'account_disabled' => 'Ihr Konto wurde deaktiviert. Bitte wenden Sie sich an den Support.',
     'logout_success' => 'Erfolgreich abgemeldet.',
     'no_active_token' => 'Ihr seid nicht authentifiziert.',
+    'reset_link_sent' => 'Ein Link zum Zurücksetzen des Passworts wurde an Ihre E-Mail-Adresse gesendet.',
+    'reset_link_failed' => 'Fehler beim Senden des Links zum Zurücksetzen des Passworts. Bitte versuchen Sie es erneut.',
+    'password_reset_success' => 'Ihr Passwort wurde erfolgreich zurückgesetzt.',
+    'password_invalid_token' => 'Das Passwort-Zurücksetz-Token ist ungültig oder abgelaufen.',
+    'password_no_user' => 'Es konnte kein Benutzer mit dieser E-Mail-Adresse gefunden werden.',
 ];

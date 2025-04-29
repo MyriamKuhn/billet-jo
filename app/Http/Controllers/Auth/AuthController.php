@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Log;
+use Laravel\Sanctum\TransientToken;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use PragmaRX\Google2FA\Google2FA;
 use Illuminate\Auth\AuthenticationException;
@@ -17,9 +18,15 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Auth\Access\AuthorizationException;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Support\Facades\Password as PasswordFacade;
+use Throwable;
+use App\Services\CaptchaService;
 
 class AuthController extends Controller
 {
+    public function __construct(private CaptchaService $captchaService) {}
+
         /**
      * Register a new user.
      *
@@ -107,7 +114,7 @@ class AuthController extends Controller
                 'password' => [
                     'required',
                     'confirmed', // Doit correspondre à password_confirmation
-                    Password::min(15)
+                    PasswordRule::min(15)
                         ->mixedCase()
                         ->letters()
                         ->numbers()
@@ -119,7 +126,11 @@ class AuthController extends Controller
             // Verification of the captcha only on the production environment
             // In local, we don't need to verify the captcha
             if (app()->environment('production')) {
-                if (!$this->verifyCaptcha($validated['captcha_token'])) {
+
+                $captchaResult = $this->captchaService->verify($validated['captcha_token']);
+
+                if (!$captchaResult) {
+                    Log::warning('Échec de la vérification du captcha');
                     return response()->json([
                         'status' => 'error',
                         'message' => __('validation.captcha_failed')
@@ -198,40 +209,6 @@ class AuthController extends Controller
                 'status'=> 'error',
                 'message' => __('validation.unknown_error'),
             ], 500);
-        }
-    }
-
-    /**
-     * Verify the captcha token with Google reCAPTCHA.
-     *
-     * @param string $token
-     * @return bool
-     */
-    private function verifyCaptcha(string $token): bool
-    {
-        try {
-            $response = Http::withOptions([
-                'verify' => app()->environment('production'),  // Deactivate SSL verification in local environment
-            ])->asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-                'secret' => env('RECAPTCHA_SECRET_KEY'),
-                'response' => $token,
-            ]);
-
-            $data = $response->json();
-
-            // Check if the response is valid and contains success
-            if ($data['success'] ?? false) {
-                return true;
-            } else {
-                Log::warning('Captcha failed', ['data' => $data]);
-                return false;
-            }
-        } catch (\Exception $e) {
-            Log::error('Error during captcha verification', [
-                'error' => $e->getMessage(),
-                'token' => $token
-            ]);
-            return false; // In case of an error, we assume the captcha is invalid
         }
     }
 
@@ -626,16 +603,21 @@ class AuthController extends Controller
         try {
             $user = $request->user();
 
+            $token = $user->currentAccessToken();
+
             // Check if the user is authenticated
-            if (!$user->currentAccessToken()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => __('validation.no_active_token'),
-            ], 400);
+            if (!$token || get_class($token) === TransientToken::class) {
+                Log::warning('Logout attempt without active token', [
+                    'user_id' => $user->id,
+                ]);
+                return response()->json([
+                    'status' => 'error',
+                    'message' => __('validation.no_active_token'),
+                ], 400);
             }
 
             // Delete the current access token
-            $user->currentAccessToken()->delete();
+            $token->delete();
 
             return response()->json([
                 'status' => 'success',
@@ -656,6 +638,285 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             Log::error('Logout error', [
                 'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => __('validation.unknown_error'),
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/forgot-password",
+     *     summary="Send password reset link",
+     *     description="This endpoint sends a password reset link to the user's email address.",
+     *     operationId="forgotPassword",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Password reset link sent successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="A password reset link has been sent to your email address.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="User not found."),
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data."),
+     *             @OA\Property(property="errors", type="object", additionalProperties={"type":"string"})
+     *         )
+     *     ),
+     *      @OA\Response(
+     *         response=429,
+     *         description="Too many attempts. Please try again later.",
+     *         @OA\Header(
+     *             header="Retry-After",
+     *             description="Time to wait before retrying (in seconds)",
+     *             @OA\Schema(type="integer", example=60)
+     *         ),
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Too many attempts. Please try again later.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal Server Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *         )
+     *     )
+     * )
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        // Validate the request data
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        try {
+            $user = User::where('email', $request->email)->first();
+
+            // Generate a password reset token
+            $token = PasswordFacade::createToken($user);
+
+            // Send the password reset link
+            $user->notify(new ResetPasswordNotification($token));
+
+            return response()->json([
+                'status' => 'success',
+                'message' => __('validation.reset_link_sent'),
+            ], 200);
+
+        } catch (QueryException $e) {
+            Log::error('Database error', [
+                'error' => $e->getMessage(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.unknown_error'),
+            ], 500);
+
+        } catch (ThrottleRequestsException $e) {
+            Log::warning('Too many attempts', [
+                'retry_after' => $e->getHeaders()['Retry-After'],
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.throttling_error'),
+            ], 429, ['Retry-After' => $e->getHeaders()['Retry-After']]);
+
+        } catch (ValidationException $e) {
+            Log::error('Validation error', [
+                'errors' => $e->validator->errors(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.validation_failed'),
+                'errors' => $e->validator->errors(),
+            ], 422);
+
+        } catch (\Exception $e) {
+            Log::error('Unknown error', [
+                'error' => $e->getMessage(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.unknown_error'),
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/reset-password",
+     *     summary="Reset user password",
+     *     description="Allows a user to reset their password using a valid token sent by email.",
+     *     operationId="resetPassword",
+     *     tags={"Authentication"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"token", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="token", type="string", example="abcdef123456"),
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="StrongP@ssword2025!"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="StrongP@ssword2025!")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Password successfully reset",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="Your password has been reset successfully.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid token",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="The password reset token is invalid or has expired.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="User not found",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="No user could be found with this email address.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data."),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="email",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The email field is required.")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="password",
+     *                     type="array",
+     *                     @OA\Items(type="string", example="The password must be at least 15 characters.")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Server error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *         )
+     *     )
+     * )
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => [
+                    'required',
+                    'confirmed',
+                    PasswordRule::min(15)
+                        ->mixedCase()
+                        ->letters()
+                        ->numbers()
+                        ->symbols(),
+                ],
+        ]);
+
+        try {
+            $response = PasswordFacade::reset(
+                $request->only('email', 'password', 'password_confirmation', 'token'),
+                function ($user, $password) {
+                    $user->password_hash = Hash::make($password);
+                    $user->save();
+                }
+            );
+
+            switch ($response) {
+                case PasswordFacade::PASSWORD_RESET:
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => __('validation.password_reset_success'),
+                    ], 200);
+
+                case PasswordFacade::INVALID_TOKEN:
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => __('validation.password_invalid_token'),
+                    ], 400);
+
+                case PasswordFacade::INVALID_USER:
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => __('validation.password_no_user'),
+                    ], 404);
+
+                default:
+                    logger()->error('Unexpected password reset response.', [
+                        'response' => $response,
+                    ]);
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => __('validation.unknown_error'), // Ex: "An unexpected error occurred."
+                    ], 500);
+            }
+
+        } catch (ValidationException $e) {
+            Log::error('Validation error', [
+                'errors' => $e->validator->errors(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.validation_failed'),
+                'errors' => $e->validator->errors(),
+            ], 422);
+
+        } catch (Throwable $e) {
+            logger()->error('Exception during password reset.', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([

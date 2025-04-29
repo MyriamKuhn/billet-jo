@@ -35,5 +35,15 @@ Route::prefix('auth')->group(function () {
     Route::post('/email/resend-verification', [VerificationController::class, 'resendVerificationEmail'])
         ->middleware(['auth:sanctum'])
         ->name('verification.resend');
+
+    // This route is used to reset the password of the user
+    Route::post('/forgot-password', [AuthController::class,'forgotPassword'])
+        ->middleware(['throttle:5,1'])
+        ->name('forgot.password');
+
+    // This route is used to reset the password of the user
+    Route::post('/reset-password', [AuthController::class,'resetPassword'])
+        ->middleware(['throttle:5,1'])
+        ->name('reset.password');
 })->middleware([CheckOriginMiddleware::class]);
 

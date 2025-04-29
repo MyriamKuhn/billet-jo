@@ -23,4 +23,9 @@ return [
     'account_disabled' => 'Your account has been disabled. Please contact support.',
     'logout_success' => 'Successfully logged out.',
     'no_active_token' => 'You are not authenticated.',
+    'reset_link_sent' => 'A password reset link has been sent to your email address.',
+    'reset_link_failed' => 'Failed to send password reset link. Please try again.',
+    'password_reset_success' => 'Your password has been successfully reset.',
+    'password_invalid_token' => 'The password reset token is invalid or has expired.',
+    'password_no_user' => 'No user could be found with this email address.',
 ];

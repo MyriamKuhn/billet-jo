@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 use PragmaRX\Google2FA\Google2FA;
+use Mockery;
 
 class UserLoginTest extends TestCase
 {
@@ -178,4 +179,80 @@ class UserLoginTest extends TestCase
             'message' => 'Your account has been disabled. Please contact support.',
         ]);
     }
+
+    public function testLoginFailsWithInvalidTwofaCode(): void
+    {
+        // Création d'un utilisateur avec 2FA activé
+        $user = User::factory()->create([
+            'email' => 'john@example.com',
+            'password_hash' => bcrypt('StrongPassword123!'),
+            'email_verified_at' => now(),
+            'is_active' => true,
+            'twofa_enabled' => true,
+            'twofa_secret' => 'BASE32SECRET1234',
+        ]);
+
+        // Mock propre de Google2FA
+        /** @var \Mockery\MockInterface|\PragmaRX\Google2FA\Google2FA $mock */
+        $mock = Mockery::mock(Google2FA::class);
+        $mock->shouldReceive('verifyKey')
+            ->once()
+            ->with($user->twofa_secret, 'wrong-code')
+            ->andReturn(false);
+
+        // Remplacer l'instance dans le container Laravel
+        $this->app->instance('pragmarx.google2fa', $mock);
+
+        // Requête de login avec mauvais code 2FA
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'StrongPassword123!',
+            'twofa_code' => 'wrong-code',
+        ]);
+
+        // Vérifie que la réponse est bien une erreur 2FA
+        $response->assertStatus(400)
+                ->assertJson([
+                    'status' => 'error',
+                    'message' => __('validation.twofa_invalid'),
+                ]);
+    }
+
+    public function testLoginFailsWithNoTwofaCode(): void
+    {
+        // Création d'un utilisateur avec 2FA activé
+        $user = User::factory()->create([
+            'email' => 'john@example.com',
+            'password_hash' => bcrypt('StrongPassword123!'),
+            'email_verified_at' => now(),
+            'is_active' => true,
+            'twofa_enabled' => true,
+        ]);
+
+        // Mock propre de Google2FA
+        /** @var \Mockery\MockInterface|\PragmaRX\Google2FA\Google2FA $mock */
+        $mock = Mockery::mock(Google2FA::class);
+        $mock->shouldReceive('verifyKey')
+            ->once()
+            ->with($user->twofa_secret, 'wrong-code')
+            ->andReturn(false);
+
+        // Remplacer l'instance dans le container Laravel
+        $this->app->instance('pragmarx.google2fa', $mock);
+
+        // Requête de login avec mauvais code 2FA
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'StrongPassword123!',
+            'twofa_code' => 'wrong-code',
+        ]);
+
+        // Vérifie que la réponse est bien une erreur 2FA
+        $response->assertStatus(400)
+                ->assertJson([
+                    'status' => 'error',
+                ]);
+    }
+
+
 }

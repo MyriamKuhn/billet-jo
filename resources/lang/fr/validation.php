@@ -23,4 +23,9 @@ return [
     'account_disabled' => 'Votre compte a été désactivé. Veuillez contacter le support.',
     'logout_success' => 'Déconnexion réussie.',
     'no_active_token' => 'Vous n\'êtes pas authentifiés.',
+    'reset_link_sent'=> 'Un lien de réinitialisation de mot de passe a été envoyé à votre adresse e-mail.',
+    'reset_link_failed' => 'Échec de l\'envoi du lien de réinitialisation de mot de passe. Veuillez réessayer.',
+    'password_reset_success'=> 'Votre mot de passe a été réinitialisé avec succès.',
+    'password_invalid_token' => 'Le jeton de réinitialisation de mot de passe est invalide ou a expiré.',
+    'password_no_user' => 'Aucun utilisateur n\'a pu être trouvé avec cette adresse e-mail.',
 ];

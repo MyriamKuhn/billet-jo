@@ -2,13 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Auth\AuthController;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Event;
 use App\Services\CartService;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
+use Mockery;
+use App\Services\CaptchaService;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class UserRegisterTest extends TestCase
 {
@@ -130,5 +139,73 @@ class UserRegisterTest extends TestCase
         $this->assertDatabaseHas('carts', [
             'user_id' => $user->id,
         ]);
+    }
+
+    public function testRegisterFailsWhenFirstnameIsMissing(): void
+    {
+        $payload = [
+            'lastname' => 'Doe',
+            'email' => 'john.doe@example.com',
+            'password' => 'ValidPassword123!',
+            'password_confirmation' => 'ValidPassword123!',
+            'captcha_token' => 'valid-captcha-token',
+        ];
+
+        $response = $this->postJson('/api/auth/register', $payload);
+
+        $response->assertStatus(422)
+                ->assertJson([
+                    'status' => 'error',
+                    'message' => __('validation.validation_failed'),
+                    'errors' => [
+                        'firstname' => ['The firstname field is required.'],
+                    ]
+                ]);
+    }
+
+    public function testRegisterFailsWhenPasswordIsTooShort(): void
+    {
+        $payload = [
+            'firstname' => 'John',
+            'lastname' => 'Doe',
+            'email' => 'john.doe@example.com',
+            'password' => 'Short1!',
+            'password_confirmation' => 'Short1!',
+            'captcha_token' => 'valid-captcha-token',
+        ];
+
+        $response = $this->postJson('/api/auth/register', $payload);
+
+        $response->assertStatus(422)
+                ->assertJson([
+                    'status' => 'error',
+                    'message' => __('validation.validation_failed'),
+                    'errors' => [
+                        'password' => ['The password field must be at least 15 characters.'],
+                    ]
+                ]);
+    }
+
+    public function testRegisterFailsWhenPasswordConfirmationDoesNotMatch(): void
+    {
+        $payload = [
+            'firstname' => 'John',
+            'lastname' => 'Doe',
+            'email' => 'john.doe@example.com',
+            'password' => 'ValidPassword123!',
+            'password_confirmation' => 'InvalidPassword123!',
+            'captcha_token' => 'valid-captcha-token',
+        ];
+
+        $response = $this->postJson('/api/auth/register', $payload);
+
+        $response->assertStatus(422)
+                ->assertJson([
+                    'status' => 'error',
+                    'message' => __('validation.validation_failed'),
+                    'errors' => [
+                        'password' => ['The password field confirmation does not match.'],
+                    ]
+                ]);
     }
 }
