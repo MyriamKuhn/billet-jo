@@ -28,4 +28,6 @@ return [
     'password_reset_success' => 'Ihr Passwort wurde erfolgreich zurückgesetzt.',
     'password_invalid_token' => 'Das Passwort-Zurücksetz-Token ist ungültig oder abgelaufen.',
     'password_no_user' => 'Es konnte kein Benutzer mit dieser E-Mail-Adresse gefunden werden.',
+    'password_changed_success' => 'Ihr Passwort wurde erfolgreich geändert.',
+    'current_password_invalid'=> 'Das aktuelle Passwort ist nicht korrekt.',
 ];

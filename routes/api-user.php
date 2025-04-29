@@ -45,5 +45,10 @@ Route::prefix('auth')->group(function () {
     Route::post('/reset-password', [AuthController::class,'resetPassword'])
         ->middleware(['throttle:5,1'])
         ->name('reset.password');
+
+    // This route is used to update the password of the user
+    Route::put('/update-password', [AuthController::class,'updatePassword'])
+        ->middleware(['auth:sanctum'])
+        ->name('update.password');
 })->middleware([CheckOriginMiddleware::class]);
 

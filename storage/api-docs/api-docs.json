@@ -25,62 +25,6 @@
         }
     ],
     "paths": {
-        "/api/cart/ping": {
-            "get": {
-                "tags": [
-                    "Cart"
-                ],
-                "summary": "Test route",
-                "operationId": "e7cfa648d85fd26bbc030629bb30bcf1",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/api/payment/ping": {
-            "get": {
-                "tags": [
-                    "Payments"
-                ],
-                "summary": "Test route",
-                "operationId": "c3ae22d08215bab0c4d22e2edc5b121c",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/api/product/ping": {
-            "get": {
-                "tags": [
-                    "Products"
-                ],
-                "summary": "Test route",
-                "operationId": "603751feb31b986383e6d4af7b7a7b44",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/api/ticket/ping": {
-            "get": {
-                "tags": [
-                    "Tickets"
-                ],
-                "summary": "Test route",
-                "operationId": "d558dab4d2de358752c3798cf771c6c7",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
         "/api/auth/register": {
             "post": {
                 "tags": [
@@ -980,6 +924,132 @@
                 }
             }
         },
+        "/api/auth/update-password": {
+            "put": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Change the user's password",
+                "description": "This endpoint allows the user to change their password. It requires the current password and the new one.",
+                "operationId": "14af1972865d0a18ecb8d9a43b11fe7b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "current_password",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "current_password": {
+                                        "description": "The current password of the user",
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "description": "The new password to be set for the user",
+                                        "type": "string"
+                                    },
+                                    "password_confirmation": {
+                                        "description": "Confirmation of the new password",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Your password has been successfully changed."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid current password",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The current password is incorrect."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error, invalid input data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Validation error. Please check your data."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "An unknown error occurred. Please try again."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/auth/email/verify/{id}/{hash}": {
             "get": {
                 "tags": [
@@ -1239,22 +1309,6 @@
         {
             "name": "Authentication",
             "description": "User authentication and registration"
-        },
-        {
-            "name": "Tickets",
-            "description": "Ticket creation, generation, validation, and tracking"
-        },
-        {
-            "name": "Payments",
-            "description": "Payment processing and secure transactions"
-        },
-        {
-            "name": "Cart",
-            "description": "Management of items added to the shopping cart"
-        },
-        {
-            "name": "Products",
-            "description": "Management of products available for purchase"
         }
     ]
 }

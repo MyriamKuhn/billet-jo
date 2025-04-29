@@ -28,4 +28,6 @@ return [
     'password_reset_success'=> 'Votre mot de passe a été réinitialisé avec succès.',
     'password_invalid_token' => 'Le jeton de réinitialisation de mot de passe est invalide ou a expiré.',
     'password_no_user' => 'Aucun utilisateur n\'a pu être trouvé avec cette adresse e-mail.',
+    'password_changed_success' => 'Votre mot de passe a été changé avec succès.',
+    'current_password_invalid' => 'Le mot de passe actuel est incorrect.',
 ];

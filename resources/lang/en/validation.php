@@ -28,4 +28,6 @@ return [
     'password_reset_success' => 'Your password has been successfully reset.',
     'password_invalid_token' => 'The password reset token is invalid or has expired.',
     'password_no_user' => 'No user could be found with this email address.',
+    'password_changed_success' => 'Your password has been successfully changed.',
+    'current_password_invalid' => 'The current password is incorrect.',
 ];

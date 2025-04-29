@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password as PasswordRule;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\TransientToken;
@@ -20,6 +19,7 @@ use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Auth\Access\AuthorizationException;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Password as PasswordFacade;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 use App\Services\CaptchaService;
 
@@ -113,7 +113,7 @@ class AuthController extends Controller
                 'email' => 'required|email|max:100|unique:users,email',
                 'password' => [
                     'required',
-                    'confirmed', // Doit correspondre à password_confirmation
+                    'confirmed', // Must match password_confirmation
                     PasswordRule::min(15)
                         ->mixedCase()
                         ->letters()
@@ -921,6 +921,144 @@ class AuthController extends Controller
 
             return response()->json([
                 'status' => 'error',
+                'message' => __('validation.unknown_error'),
+            ], 500);
+        }
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/auth/update-password",
+     *     summary="Change the user's password",
+     *     description="This endpoint allows the user to change their password. It requires the current password and the new one.",
+     *     tags={"Authentication"},
+     *     security={{
+     *         "bearerAuth": {}
+     *     }},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             required={"current_password", "password", "password_confirmation"},
+     *             @OA\Property(
+     *                 property="current_password",
+     *                 type="string",
+     *                 description="The current password of the user"
+     *             ),
+     *             @OA\Property(
+     *                 property="password",
+     *                 type="string",
+     *                 description="The new password to be set for the user"
+     *             ),
+     *             @OA\Property(
+     *                 property="password_confirmation",
+     *                 type="string",
+     *                 description="Confirmation of the new password"
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Password updated successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="Your password has been successfully changed.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid current password",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="The current password is incorrect.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error, invalid input data",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *         )
+     *     )
+     * )
+     */
+    public function updatePassword(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'current_password' => ['required', 'string'],
+                'password' => [
+                    'required',
+                    'confirmed',
+                    PasswordRule::min(15)
+                        ->mixedCase()
+                        ->letters()
+                        ->numbers()
+                        ->symbols(),
+                ],
+            ]);
+
+            $user = Auth::user();
+
+            if (!Hash::check($validated['current_password'], $user->password_hash)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => __('validation.current_password_invalid'),
+                ], 400);
+            }
+
+            $user->password_hash = Hash::make($validated['password']);
+            $user->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => __('validation.password_changed_success'),
+            ], 200);
+
+        } catch (ValidationException $e) {
+            Log::error('Validation error', [
+                'errors' => $e->validator->errors(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.validation_failed'),
+                'errors' => $e->validator->errors(),
+            ], 422);
+
+        } catch (QueryException $e) {
+            Log::error('Database error', [
+                'error' => $e->getMessage(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.unknown_error'),
+            ], 500);
+
+        } catch (\Exception $e) {
+            Log::error('Unknown error', [
+                'error' => $e->getMessage(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
                 'message' => __('validation.unknown_error'),
             ], 500);
         }
