@@ -768,7 +768,7 @@ class AuthController extends Controller
     /**
      * Update the user's password.
      *
-     * @OA\Put(
+     * @OA\Patch(
      *     path="/api/auth/update-password",
      *     summary="Change the user's password",
      *     description="This endpoint allows the user to change their password. It requires the current password and the new one.",
@@ -904,7 +904,7 @@ class AuthController extends Controller
     /**
      * Update the user's email address.
      *
-     * @OA\Put(
+     * @OA\Patch(
      *     path="/api/auth/update-email",
      *     summary="Change the user's email",
      *     description="This endpoint allows an authenticated user to update their email address.",

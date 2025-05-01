@@ -26,7 +26,7 @@ class UpdatePasswordTest extends TestCase
         $this->actingAs($user);
 
         // Envoie la requête pour changer le mot de passe
-        $response = $this->putJson('/api/auth/update-password', [
+        $response = $this->patchJson('/api/auth/update-password', [
             'current_password' => 'ancien_mdp_123',
             'password' => 'Nouveau_mdp_123!',
             'password_confirmation' => 'Nouveau_mdp_123!',
@@ -51,7 +51,7 @@ class UpdatePasswordTest extends TestCase
         $this->actingAs($user);
 
         // Envoie la requête pour changer le mot de passe
-        $response = $this->putJson('/api/auth/update-password', [
+        $response = $this->patchJson('/api/auth/update-password', [
             'current_password' => 'ancien_mdp_123',
             'password' => 'nouveau_mdp_123!',
             'password_confirmation' => 'nouveau_mdp_123!',
@@ -75,7 +75,7 @@ class UpdatePasswordTest extends TestCase
         $this->actingAs($user);
 
         // Envoie la requête pour changer le mot de passe
-        $response = $this->putJson('/api/auth/update-password', [
+        $response = $this->patchJson('/api/auth/update-password', [
             'current_password' => 'ancien_mdp_456',
             'password' => 'Nouveau_mdp_123!',
             'password_confirmation' => 'Nouveau_mdp_123!',
@@ -100,7 +100,7 @@ class UpdatePasswordTest extends TestCase
         $this->actingAs($user);
 
         // Envoie la requête pour changer le mot de passe
-        $response = $this->putJson('/api/auth/update-password', [
+        $response = $this->patchJson('/api/auth/update-password', [
             'current_password' => 'ancien_mdp_456',
             'password' => 'Nouveau_mdp_123!',
             'password_confirmation' => 'Modifie_mdp_123!',

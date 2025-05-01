@@ -260,7 +260,7 @@ class ResetPasswordTest extends TestCase
     {
         // Aucune authentification ici
 
-        $response = $this->putJson('/api/auth/update-password', [
+        $response = $this->patchJson('/api/auth/update-password', [
             'current_password' => 'OldPassword123!',
             'password' => 'NewPassword123!',
             'password_confirmation' => 'NewPassword123!',
@@ -276,7 +276,7 @@ class ResetPasswordTest extends TestCase
     {
         $this->withoutMiddleware();
 
-        $response = $this->putJson('/api/auth/update-password', [
+        $response = $this->patchJson('/api/auth/update-password', [
             'current_password' => 'OldPassword123!',
             'password' => 'NewPassword123!',
             'password_confirmation' => 'NewPassword123!',

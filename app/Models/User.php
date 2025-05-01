@@ -10,6 +10,30 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Notifications\VerifyEmailNotification;
 
+/**
+ * @OA\Schema(
+ *     schema="User",
+ *     type="object",
+ *     required={"id", "firstname", "lastname", "email", "role", "is_active"},
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="firstname", type="string", example="John"),
+ *     @OA\Property(property="lastname", type="string", example="Doe"),
+ *     @OA\Property(property="email", type="string", example="john.doe@example.com"),
+ *     @OA\Property(property="role", type="string", enum={"admin", "employee", "user"}, example="admin"),
+ *     @OA\Property(property="twofa_enabled", type="boolean", example=true),
+ *     @OA\Property(property="twofa_secret", type="string", example="abcd1234"),
+ *     @OA\Property(property="is_active", type="boolean", example=true),
+ *     @OA\Property(property="email_verified_at", type="string", format="date-time", example="2023-04-01T12:00:00Z"),
+ *     @OA\Property(property="created_at", type="string", format="date-time", example="2023-01-01T00:00:00Z"),
+ *     @OA\Property(property="updated_at", type="string", format="date-time", example="2023-04-01T12:00:00Z"),
+ *     @OA\Property(property="password_hash", type="string", example="$2y$10$Sfs4e51z4./7bdZI9shXv1m5gIaDU5hN2mJ4qhp9HXVFuDQZDzKCm"),
+ *     @OA\Property(property="remember_token", type="string", example="abcd1234xyz"),
+ *     @OA\Property(property="cart", type="object", ref="#/components/schemas/Cart"),
+ *     @OA\Property(property="tickets", type="array", @OA\Items(ref="#/components/schemas/Ticket")),
+ *     @OA\Property(property="payments", type="array", @OA\Items(ref="#/components/schemas/Payment")),
+ *     @OA\Property(property="emailUpdate", type="object", ref="#/components/schemas/EmailUpdate"),
+ * )
+ */
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */

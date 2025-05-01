@@ -48,12 +48,12 @@ Route::prefix('auth')->group(function () {
         ->name('reset.password');
 
     // This route is used to update the password of the user
-    Route::put('/update-password', [AuthController::class,'updatePassword'])
+    Route::patch('/update-password', [AuthController::class,'updatePassword'])
         ->middleware(['auth:sanctum'])
         ->name('update.password');
 
     // This route is used to update the email of the user
-    Route::put('/update-email', [AuthController::class,'updateEmail'])
+    Route::patch('/update-email', [AuthController::class,'updateEmail'])
         ->middleware(['auth:sanctum'])
         ->name('update.email');
 
@@ -71,7 +71,7 @@ Route::prefix('auth')->group(function () {
 
 Route::prefix('user')->group(function () {
     // This route is used to update the users information
-    Route::put('/update', [UserController::class, 'updateName'])
+    Route::patch('/update', [UserController::class, 'updateName'])
         ->middleware(['auth:sanctum'])
         ->name('user.update');
 
@@ -79,4 +79,19 @@ Route::prefix('user')->group(function () {
     Route::get('/all', [UserController::class, 'index'])
         ->middleware(['auth:sanctum'])
         ->name('user.all');
+
+    // This route is used to get the information of a user
+    Route::get('/{id}', [UserController::class, 'show'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.show');
+
+    // This route is used for an admin to change the information of a user
+    Route::patch('/{user}', [UserController::class, 'updateUserByAdmin'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.update.admin');
+
+    // This route is used to see if the user has changed his email
+    Route::get('/{user}/email-update', [UserController::class, 'checkEmailUpdate'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.email.update');
 })->middleware([CheckOriginMiddleware::class]);

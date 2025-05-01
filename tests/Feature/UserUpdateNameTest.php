@@ -26,7 +26,7 @@ class UserUpdateNameTest extends TestCase
         ];
 
         $response = $this->actingAs($user)
-                        ->putJson('/api/user/update', $payload);
+                        ->patchJson('/api/user/update', $payload);
 
         $response->assertStatus(200)
                 ->assertJson([
@@ -53,7 +53,7 @@ class UserUpdateNameTest extends TestCase
 
         // When
         $response = $this->actingAs($user)
-                        ->putJson('/api/user/update', []);
+                        ->patchJson('/api/user/update', []);
 
         // Then
         $response->assertStatus(422)
@@ -63,7 +63,7 @@ class UserUpdateNameTest extends TestCase
     public function testItReturnsUnauthorizedIfNotAuthenticated()
     {
         // When
-        $response = $this->putJson('/api/user/update', [
+        $response = $this->patchJson('/api/user/update', [
             'firstname' => 'Someone',
             'lastname' => 'Else',
         ]);
@@ -84,7 +84,7 @@ class UserUpdateNameTest extends TestCase
         Route::put('/api/user/update', [UserController::class, 'updateName']);
 
         // When: appel sans utilisateur authentifié
-        $response = $this->putJson('/api/user/update', [
+        $response = $this->patchJson('/api/user/update', [
             'firstname' => 'Ghost',
             'lastname' => 'User',
         ]);
@@ -107,7 +107,7 @@ class UserUpdateNameTest extends TestCase
         $this->actingAs($user);
 
         // When
-        $response = $this->putJson('/api/user/update', [
+        $response = $this->patchJson('/api/user/update', [
             'firstname' => 'Crash',
             'lastname' => 'Test',
         ]);

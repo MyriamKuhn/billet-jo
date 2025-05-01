@@ -28,7 +28,7 @@ class UpdateMailTest extends TestCase
 
     public function testItReturnsUnauthorizedIfUserIsNotAuthenticated()
     {
-        $response = $this->putJson('/api/auth/update-email', [
+        $response = $this->patchJson('/api/auth/update-email', [
             'email' => 'new@example.com',
         ]);
 
@@ -42,7 +42,7 @@ class UpdateMailTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->putJson('/api/auth/update-email', [
+        $response = $this->actingAs($user)->patchJson('/api/auth/update-email', [
             'email' => 'not-an-email',
         ]);
 
@@ -55,7 +55,7 @@ class UpdateMailTest extends TestCase
         $user = User::factory()->create();
         $otherUser = User::factory()->create(['email' => 'taken@example.com']);
 
-        $response = $this->actingAs($user)->putJson('/api/auth/update-email', [
+        $response = $this->actingAs($user)->patchJson('/api/auth/update-email', [
             'email' => 'taken@example.com',
         ]);
 
@@ -67,7 +67,7 @@ class UpdateMailTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'current@example.com']);
 
-        $response = $this->actingAs($user)->putJson('/api/auth/update-email', [
+        $response = $this->actingAs($user)->patchJson('/api/auth/update-email', [
             'email' => 'current@example.com',
         ]);
 
@@ -81,7 +81,7 @@ class UpdateMailTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'old@example.com']);
 
-        $response = $this->actingAs($user)->putJson('/api/auth/update-email', [
+        $response = $this->actingAs($user)->patchJson('/api/auth/update-email', [
             'email' => 'new@example.com',
         ]);
 
@@ -107,7 +107,7 @@ class UpdateMailTest extends TestCase
     {
         $this->withoutMiddleware(); // désactive Sanctum
 
-        $response = $this->putJson('/api/auth/update-email', [
+        $response = $this->patchJson('/api/auth/update-email', [
             'email' => 'newemail@example.com',
         ]);
 
