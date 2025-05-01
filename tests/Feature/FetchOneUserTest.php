@@ -69,9 +69,5 @@ class FetchOneUserTest extends TestCase
         $response = $this->getJson(route('user.show', 999));
 
         $response->assertStatus(404);
-        $response->assertJson([
-            'status' => 'error',
-            'error' => __('user.error_user_not_found'),
-        ]);
     }
 }

@@ -3,7 +3,8 @@
 Welcome to the backend of the Olympic Games Ticketing Platform.  
 This project provides a RESTful API to manage users, cart operations, ticket purchases, two-factor authentication (2FA), and more.
 
-![Tests](https://img.shields.io/badge/tests-37_passed-4caf50.svg) ![Assertions](https://img.shields.io/badge/assertions-119_success-2196f3.svg) ![PHP version](https://img.shields.io/badge/php-8.3-blue) ![Laravel](https://img.shields.io/badge/laravel-12-red)
+![Tests](https://img.shields.io/badge/tests-148_passed-4caf50.svg) ![Assertions](https://img.shields.io/badge/assertions-375_success-2196f3.svg) ![Test Coverage](https://img.shields.io/badge/coverage-79.3%25-brightgreen) ![Swagger Docs](https://img.shields.io/badge/Swagger%20Docs-Available-brightgreen)
+![PHP version](https://img.shields.io/badge/php-8.3-blue) ![Laravel](https://img.shields.io/badge/laravel-12-red)
 
 ---
 
@@ -117,7 +118,8 @@ The application has a **full feature test coverage**, including:
 - Cart and payment logic
 - Performance (N+1 queries detection)
 
-✅ **37 tests passed** with **119 assertions**.  
+✅ **148 tests passed** with **375 assertions**.  
+📊 **Coverage: 79.3%**
 (Last tested on: `php artisan test`)
 
 To run all automated tests:

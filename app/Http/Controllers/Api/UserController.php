@@ -9,6 +9,8 @@ use Validator;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use App\Models\EmailUpdate;
+use Illuminate\Validation\Rules\Password as PasswordRule;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
@@ -107,8 +109,10 @@ class UserController extends Controller
     }
 
     /**
+     * Retrieve a specific user by ID.
+     *
      * @OA\Get(
-     *     path="/api/user/{id}",
+     *     path="/api/user/{user}",
      *     summary="Retrieve a specific user by ID",
      *     description="Fetch details of a user by ID. Only admins and employees can access this.",
      *     operationId="getUserById",
@@ -156,11 +160,9 @@ class UserController extends Controller
      *     )
      * )
      */
-    public function show($id): JsonResponse
+    public function show(User $user): JsonResponse
     {
         try {
-            $user = User::findOrFail($id);
-
             $authUser = auth()->user();
 
             if (!($authUser->role->isAdmin() || $authUser->role->isEmployee())) {
@@ -183,13 +185,6 @@ class UserController extends Controller
             Log::error('Error fetching user details', [
                 'error' => $e->getMessage(),
             ]);
-
-            if ($e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('user.error_user_not_found'),
-                ], 404);
-            }
 
             return response()->json([
                 'status' => 'error',
@@ -494,6 +489,8 @@ class UserController extends Controller
     }
 
     /**
+     * Check if an email update exists for a user.
+     *
      * @OA\Get(
      *     path="/api/user/{user}/email-update",
      *     summary="Check if an email update exists for a user",
@@ -598,4 +595,225 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Create a new employee user (admin only).
+     *
+     * @OA\Post(
+     *     path="/api/user/create",
+     *     summary="Create an employee user",
+     *     tags={"Users"},
+     *     description="This endpoint allows an admin to create a new employee user.",
+     *     operationId="createEmployee",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"firstname", "lastname", "email", "password", "password_confirmation"},
+     *             @OA\Property(property="firstname", type="string", example="Anna"),
+     *             @OA\Property(property="lastname", type="string", example="Müller"),
+     *             @OA\Property(property="email", type="string", format="email", example="anna.mueller@example.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="Str0ng!Password2024"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="Str0ng!Password2024")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Employee user created successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="Employee created successfully."),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(
+     *                     property="user",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer", example=42),
+     *                     @OA\Property(property="firstname", type="string", example="Anna"),
+     *                     @OA\Property(property="lastname", type="string", example="Müller"),
+     *                     @OA\Property(property="email", type="string", example="anna.mueller@example.com"),
+     *                     @OA\Property(property="role", type="string", example="employee")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized - only admins can create employees",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="You are not authorized to perform this action.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={"email": {"The email has already been taken."}}
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="An unknown error occurred.")
+     *         )
+     *     )
+     * )
+     */
+    public function createEmployee(Request $request): JsonResponse
+    {
+        try {
+            $authUser = auth()->user();
+
+            if (!$authUser || !$authUser->role->isAdmin()) {
+                return response()->json([
+                    'status' => 'error',
+                    'error' => __('user.error_user_unauthorized'),
+                ], 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'firstname' => 'required|string|max:255',
+                'lastname' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'password' => [
+                    'required',
+                    'confirmed', // Must match password_confirmation
+                    PasswordRule::min(15)
+                        ->mixedCase()
+                        ->letters()
+                        ->numbers()
+                        ->symbols(),
+                ],
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $validated = $validator->validated();
+
+            $user = User::create([
+                'firstname' => $validated['firstname'],
+                'lastname' => $validated['lastname'],
+                'email' => $validated['email'],
+                'password_hash' => Hash::make($validated['password']),
+                'role' => 'employee',
+                'is_active' => true,
+                'email_verified_at' => now(),
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'firstname' => $user->firstname,
+                        'lastname' => $user->lastname,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                    ],
+                ],
+                'message' => __('user.employee_created'),
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Error creating employee', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'error' => __('validation.error_unknown'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get the authenticated user's profile.
+     *
+     * @OA\Get(
+     *     path="/api/user/info",
+     *     summary="Get authenticated user's profile",
+     *     description="Returns the profile information of the currently authenticated user, including 2FA status.",
+     *     operationId="showUserInfo",
+     *     tags={"Users"},
+     *     security={{"bearerAuth": {}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Profile retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(
+     *                 property="user",
+     *                 type="object",
+     *                 @OA\Property(property="firstname", type="string", example="John"),
+     *                 @OA\Property(property="lastname", type="string", example="Doe"),
+     *                 @OA\Property(property="email", type="string", format="email", example="john.doe@example.com"),
+     *                 @OA\Property(property="twofa_enabled", type="boolean", example=true)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized (no valid token)",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="Unauthorized.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Unexpected error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="An unexpected error occurred.")
+     *         )
+     *     )
+     * )
+     */
+    public function showUserInfo(): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'error' => __('validation.error_unauthorized'),
+                ], 401);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'user' => [
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'email' => $user->email,
+                    'twofa_enabled' => $user->twofa_enabled,
+                ],
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching authenticated user details', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'error' => __('validation.error_unknown'),
+            ], 500);
+        }
+    }
+
 }

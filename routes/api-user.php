@@ -80,18 +80,28 @@ Route::prefix('user')->group(function () {
         ->middleware(['auth:sanctum'])
         ->name('user.all');
 
-    // This route is used to get the information of a user
-    Route::get('/{id}', [UserController::class, 'show'])
+    // This route is used to create a new employee by the admin
+    Route::post('/create', [UserController::class, 'createEmployee'])
         ->middleware(['auth:sanctum'])
-        ->name('user.show');
+        ->name('user.create');
+
+    // This route is used to show a user his profile
+    Route::get('/info', [UserController::class, 'showUserInfo'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.info');
+
+    // This route is used to see if the user has changed his email
+    Route::get('/{user}/email-update', [UserController::class, 'checkEmailUpdate'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.email.update');
 
     // This route is used for an admin to change the information of a user
     Route::patch('/{user}', [UserController::class, 'updateUserByAdmin'])
         ->middleware(['auth:sanctum'])
         ->name('user.update.admin');
 
-    // This route is used to see if the user has changed his email
-    Route::get('/{user}/email-update', [UserController::class, 'checkEmailUpdate'])
+    // This route is used to get the information of a user
+    Route::get('/{user}', [UserController::class, 'show'])
         ->middleware(['auth:sanctum'])
-        ->name('user.email.update');
+        ->name('user.show');
 })->middleware([CheckOriginMiddleware::class]);
