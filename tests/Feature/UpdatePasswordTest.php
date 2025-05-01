@@ -61,7 +61,6 @@ class UpdatePasswordTest extends TestCase
         $response->assertStatus(422);
         $response->assertJson([
             'status' => 'error',
-            'message' => 'Validation error. Please check your data.'
         ]);
     }
 
@@ -86,7 +85,7 @@ class UpdatePasswordTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson([
             'status' => 'error',
-            'message' => 'The current password is incorrect.'
+            'error' => 'The current password is incorrect.'
         ]);
     }
 
@@ -111,7 +110,6 @@ class UpdatePasswordTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonStructure([
             'status',
-            'message',
             'errors'
         ]);
     }

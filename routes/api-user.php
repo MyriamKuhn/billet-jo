@@ -50,5 +50,20 @@ Route::prefix('auth')->group(function () {
     Route::put('/update-password', [AuthController::class,'updatePassword'])
         ->middleware(['auth:sanctum'])
         ->name('update.password');
+
+    // This route is used to update the email of the user
+    Route::put('/update-email', [AuthController::class,'updateEmail'])
+        ->middleware(['auth:sanctum'])
+        ->name('update.email');
+
+    // This route is used to verify the new email
+    Route::get('/email/verify-new-mail', [VerificationController::class, 'verifyNewEMail'])
+        ->middleware('signed')
+        ->name('verification.verify.new.email');
+
+    // This route is used to revoke the email change request
+    Route::get('/email/update-cancel/{token}/{old_email}', [VerificationController::class, 'cancelEmailUpdate'])
+        ->middleware('signed')
+        ->name('email.update.cancel');
 })->middleware([CheckOriginMiddleware::class]);
 

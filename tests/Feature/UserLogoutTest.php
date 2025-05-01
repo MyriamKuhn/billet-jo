@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
 use Tests\TestCase;
+use Illuminate\Support\Facades\Log;
 
 class UserLogoutTest extends TestCase
 {
@@ -49,7 +50,22 @@ class UserLogoutTest extends TestCase
         $response->assertStatus(400)
             ->assertJson([
                 'status' => 'error',
-                'message' => __('validation.no_active_token'),
+                'error' => __('You are not authenticated.'),
             ]);
+    }
+
+    public function testLogoutUnauthorized()
+    {
+        // Ne simule pas d'utilisateur authentifié
+        $this->withoutMiddleware();  // Ignore le middleware d'authentification pour ce test
+
+        // Effectue la requête de déconnexion sans être authentifié
+        $response = $this->postJson('/api/auth/logout');
+
+        $response->assertStatus(401)
+                ->assertJson([
+                    'status' => 'error',
+                    'error' => __('validation.error_unauthorized'),
+                ]);
     }
 }

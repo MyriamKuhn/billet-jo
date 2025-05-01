@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class ResetPasswordTest extends TestCase
 {
@@ -127,7 +127,7 @@ class ResetPasswordTest extends TestCase
         $response->assertStatus(400)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => __('The password reset token is invalid or has expired.'),
+                    'error' => __('The password reset token is invalid or has expired.'),
                 ]);
     }
 
@@ -145,7 +145,7 @@ class ResetPasswordTest extends TestCase
         $response->assertStatus(404)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => __('No user could be found with this email address.'),
+                    'error' => __('No user could be found with this email address.'),
                 ]);
     }
 
@@ -186,7 +186,7 @@ class ResetPasswordTest extends TestCase
         $response->assertStatus(500)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => __('validation.unknown_error'),
+                    'error' => 'An internal error occurred. Please try again later.',
                 ]);
     }
 
@@ -218,5 +218,74 @@ class ResetPasswordTest extends TestCase
         $response = $this->postJson('/api/auth/reset-password', $payload);
 
         $response->assertStatus(422);
+    }
+
+    public function testResetPasswordHandlesUnexpectedResponse()
+    {
+        // Données valides
+        $requestData = [
+            'email' => 'test@example.com',
+            'password' => 'StrongPassword123!',
+            'password_confirmation' => 'StrongPassword123!',
+            'token' => 'valid-token',
+        ];
+
+        // Fake un utilisateur existant
+        User::factory()->create(['email' => $requestData['email']]);
+
+        // Mock de PasswordFacade pour retourner une valeur inattendue
+        Password::shouldReceive('reset')
+            ->once()
+            ->andReturn('unexpected_response');
+
+        // Capture le log d’erreur
+        Log::shouldReceive('error')
+            ->once()
+            ->with('Unexpected password reset response.', [
+                'response' => 'unexpected_response',
+            ]);
+
+        // Appel de l’API
+        $response = $this->postJson('/api/auth/reset-password', $requestData);
+
+        // Vérifications
+        $response->assertStatus(500)
+            ->assertJson([
+                'status' => 'error',
+                'error' => __('validation.error_unknown'),
+            ]);
+    }
+
+    public function testUpdatePasswordUnauthorized()
+    {
+        // Aucune authentification ici
+
+        $response = $this->putJson('/api/auth/update-password', [
+            'current_password' => 'OldPassword123!',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
+        ]);
+
+        $response->assertStatus(401)
+            ->assertJson([
+                'message' => 'Unauthenticated.',
+            ]);
+    }
+
+    public function testUpdatePasswordUnauthorizedWhenUserIsNull()
+    {
+        $this->withoutMiddleware();
+
+        $response = $this->putJson('/api/auth/update-password', [
+            'current_password' => 'OldPassword123!',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
+        ]);
+
+        $response->assertStatus(401)
+            ->assertJson([
+                'status' => 'error',
+                'error' => __('validation.error_unauthorized'),
+            ]);
     }
 }

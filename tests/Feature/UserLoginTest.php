@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 use PragmaRX\Google2FA\Google2FA;
 use Mockery;
+use Illuminate\Support\Facades\Log;
 
 class UserLoginTest extends TestCase
 {
@@ -46,7 +47,7 @@ class UserLoginTest extends TestCase
         $response->assertStatus(401);
         $response->assertJson([
             'status' => 'error',
-            'message' => 'Invalid credentials. Please check your email address and password.',
+            'error' => 'Invalid credentials. Please check your email address and password.',
         ]);
     }
 
@@ -66,7 +67,7 @@ class UserLoginTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson([
             'status'=> 'error',
-            'message' => 'Your email address has not been verified. A new verification email has been sent.',
+            'error' => 'Your email address has not been verified. A new verification email has been sent.',
         ]);
     }
 
@@ -154,7 +155,7 @@ class UserLoginTest extends TestCase
         ]);
 
         $response->assertStatus(400);
-        $response->assertJson(['message' => 'The two-factor authentication code is invalid.']);
+        $response->assertJson(['error' => 'The two-factor authentication code is invalid.']);
     }
 
     public function testNotAllowsDisabledUserToLogin(): void
@@ -176,7 +177,7 @@ class UserLoginTest extends TestCase
         $response->assertStatus(403);  // Forbidden - compte désactivé
         $response->assertJson([
             'status' => 'error',
-            'message' => 'Your account has been disabled. Please contact support.',
+            'error' => 'Your account has been disabled. Please contact support.',
         ]);
     }
 
@@ -214,7 +215,7 @@ class UserLoginTest extends TestCase
         $response->assertStatus(400)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => __('validation.twofa_invalid'),
+                    'error' => __('validation.error_twofa_invalid'),
                 ]);
     }
 
@@ -254,5 +255,74 @@ class UserLoginTest extends TestCase
                 ]);
     }
 
+    public function testLoginFailsWithInvalidData()
+    {
+        $response = $this->postJson('/api/auth/login', [
+            'email' => 'invalidemail',
+            'password' => 'short',
+        ]);
 
+        $response->assertStatus(422)
+                ->assertJson([
+                    'status' => 'error',
+                ]);
+    }
+
+    public function testLoginFailsWhenTwofaIsEnabledButNoTwofaCode()
+    {
+        $user = User::factory()->create([
+            'twofa_enabled' => true,
+            'password_hash' => Hash::make('validpassword'), // Assure-toi que le mot de passe est valide
+        ]);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'validpassword',
+            'twofa_code' => null,
+        ]);
+
+        $response->assertStatus(400)
+                ->assertJson([
+                    'status' => 'error',
+                    'error' => __('validation.error_twofa_required'),
+                ]);
+    }
+
+    public function testLoginWithRememberToken()
+    {
+        $user = User::factory()->create([
+            'password_hash' => Hash::make('validpassword'),
+        ]);
+
+        $response = $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'validpassword',
+            'remember' => true, // L'utilisateur souhaite être "souvenu"
+        ]);
+
+        $response->assertStatus(200)
+                ->assertJson(['status' => 'success']);
+
+        // Vérifie que le token est bien créé et qu'il a une durée de 1 semaine
+        $token = $response->json('token');
+        $sanctumPayload = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+
+        $this->assertNotNull($sanctumPayload);  // Vérifie que le token existe
+        $this->assertGreaterThanOrEqual(now()->addWeeks(1)->timestamp, $sanctumPayload->expires_at->timestamp);
+    }
+
+    public function testEnableTwoFactorUnauthorized()
+    {
+        // Simule un utilisateur non authentifié
+        $this->withoutMiddleware();  // Ignore le middleware d'authentification pour ce test
+
+        // Effectue la requête de l'API sans être authentifié
+        $response = $this->postJson('/api/auth/enable2FA');
+
+        $response->assertStatus(401)
+                ->assertJson([
+                    'status' => 'error',
+                    'error' => __('validation.error_unauthorized'),
+                ]);
+    }
 }

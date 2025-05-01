@@ -9,15 +9,12 @@ use Tests\TestCase;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
 use App\Services\CartService;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
-use Mockery;
-use App\Services\CaptchaService;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Str;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Http;
 
 class UserRegisterTest extends TestCase
 {
@@ -156,7 +153,6 @@ class UserRegisterTest extends TestCase
         $response->assertStatus(422)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => __('validation.validation_failed'),
                     'errors' => [
                         'firstname' => ['The firstname field is required.'],
                     ]
@@ -179,7 +175,6 @@ class UserRegisterTest extends TestCase
         $response->assertStatus(422)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => __('validation.validation_failed'),
                     'errors' => [
                         'password' => ['The password field must be at least 15 characters.'],
                     ]
@@ -202,10 +197,75 @@ class UserRegisterTest extends TestCase
         $response->assertStatus(422)
                 ->assertJson([
                     'status' => 'error',
-                    'message' => __('validation.validation_failed'),
                     'errors' => [
                         'password' => ['The password field confirmation does not match.'],
                     ]
                 ]);
+    }
+
+    protected function validPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'firstname' => 'Myriam',
+            'lastname' => 'Kühn',
+            'email' => 'myriam@example.com',
+            'password' => 'StrongPassw0rd!',
+            'password_confirmation' => 'StrongPassw0rd!',
+            'captcha_token' => Str::random(32),
+        ], $overrides);
+    }
+
+    public function testItRegistersUserSuccessfullyInNonProductionEnvironment()
+    {
+        Event::fake();
+
+        $this->assertFalse(app()->environment('production'));
+
+        $response = $this->postJson('/api/auth/register', $this->validPayload());
+
+        $response->assertStatus(201)
+                ->assertJson(['status' => 'success']);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'myriam@example.com',
+        ]);
+
+        Event::assertDispatched(Registered::class);
+    }
+
+    public function testItFailsIfCaptchaIsInvalidInProductionEnvironment()
+    {
+        // Force environment to 'production'
+        $this->app['env'] = 'production';
+
+        Http::fake([
+            'www.google.com/recaptcha/api/siteverify' => Http::response(['success' => false], 200),
+        ]);
+
+        Log::shouldReceive('warning')->atLeast()->once();
+
+        $response = $this->postJson('/api/auth/register', $this->validPayload());
+
+        $response->assertStatus(422)
+                ->assertJson(['status' => 'error']);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'myriam@example.com',
+        ]);
+    }
+
+    public function testItHandlesExceptionDuringRegistration()
+    {
+        // Simuler une exception pendant la création du compte
+        $this->partialMock(AuthController::class, function ($mock) {
+            $mock->shouldAllowMockingProtectedMethods();
+            $mock->shouldReceive('register')->andThrow(new \Exception('Fake DB error'));
+        });
+
+        Log::shouldReceive('error')->once();
+
+        $response = $this->postJson('/api/auth/register', $this->validPayload());
+
+        $response->assertStatus(500);
     }
 }

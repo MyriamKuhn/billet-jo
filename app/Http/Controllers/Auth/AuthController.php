@@ -22,12 +22,19 @@ use Illuminate\Support\Facades\Password as PasswordFacade;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
 use App\Services\CaptchaService;
+use Illuminate\Support\Facades\Validator;
+use App\Notifications\VerifyNewEmailNotification;
+use App\Notifications\EmailUpdatedNotification;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Notification;
+use App\Models\EmailUpdate;
+use App\Helpers\EmailHelper;
 
 class AuthController extends Controller
 {
     public function __construct(private CaptchaService $captchaService) {}
 
-        /**
+    /**
      * Register a new user.
      *
      * @OA\Post(
@@ -52,6 +59,7 @@ class AuthController extends Controller
      *         response=201,
      *         description="User created successfull. Verification Email sended.",
      *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
      *             @OA\Property(property="message", type="string", example="Registration successful. Please check your emails.")
      *         )
      *     ),
@@ -59,7 +67,8 @@ class AuthController extends Controller
      *         response=422,
      *         description="Validation error or captcha verification failed.",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data."),
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="Captcha verification failed."),
      *             @OA\Property(
      *                 property="errors",
      *                 type="object",
@@ -68,37 +77,11 @@ class AuthController extends Controller
      *         )
      *     ),
      *     @OA\Response(
-     *         response=429,
-     *         description="Too many attempts. Please try again later.",
-     *         @OA\Header(
-     *             header="Retry-After",
-     *             description="Time to wait before retrying (in seconds)",
-     *             @OA\Schema(type="integer", example=60)
-     *         ),
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Too many attempts. Please try again later.")
-     *         )
-     *     ),
-     *     @OA\Response(
      *         response=500,
      *         description="Internal or database error.",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again."),
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Access denied",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Access denied. You do not have the necessary permissions."),
-     *             @OA\Property(property="errors", type="string", example="You do not have the necessary permissions.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Not authenticated",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="You must be logged in to perform this action.")
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again."),
      *         )
      *     )
      * )
@@ -107,7 +90,7 @@ class AuthController extends Controller
     {
         try {
             // Validation of the datas from the request
-            $validated = $request->validate([
+            $validator = Validator::make($request->all(), [
                 'firstname' => 'required|string|max:100',
                 'lastname' => 'required|string|max:100',
                 'email' => 'required|email|max:100|unique:users,email',
@@ -123,6 +106,14 @@ class AuthController extends Controller
                 'captcha_token' => 'required|string',
             ]);
 
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'errors' => $validator->errors()], 422);
+            }
+
+            $validated = $validator->validated();
+
             // Verification of the captcha only on the production environment
             // In local, we don't need to verify the captcha
             if (app()->environment('production')) {
@@ -130,10 +121,13 @@ class AuthController extends Controller
                 $captchaResult = $this->captchaService->verify($validated['captcha_token']);
 
                 if (!$captchaResult) {
-                    Log::warning('Échec de la vérification du captcha');
+                    Log::warning('Captcha verification failed', [
+                        'captcha_token' => $validated['captcha_token'],
+                        'ip_address' => $request->ip(),
+                    ]);
                     return response()->json([
                         'status' => 'error',
-                        'message' => __('validation.captcha_failed')
+                        'error' => __('validation.error_captcha_failed')
                     ], 422);
                 }
             }
@@ -155,59 +149,15 @@ class AuthController extends Controller
                 'message' => __('validation.account_created')
             ], 201);
 
-        } catch (ValidationException $e) {
-            Log::error('Validation error', [
-                'errors' => $e->validator->errors(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.validation_failed'),
-                'errors' => $e->validator->errors(),
-            ], 422);
-
-        } catch (QueryException $e) {
-            Log::error('Database error', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.unknown_error'),
-            ], 500);
-
-        } catch (AuthorizationException $e) {
-            Log::error('Access denied', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.access_denied'),
-                'errors' => $e->getMessage(),
-            ], 403);
-
-        } catch (ThrottleRequestsException $e) {
-            Log::warning('Too many attempts', [
-                'retry_after' => $e->getHeaders()['Retry-After'],
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.throttling_error'),
-            ], 429, ['Retry-After' => $e->getHeaders()['Retry-After']]);
-
         } catch (\Exception $e) {
-            Log::error('Unknown error', [
+            Log::error('Error occured during register user', [
                 'error' => $e->getMessage(),
                 'input' => $request->all(),
             ]);
 
             return response()->json([
                 'status'=> 'error',
-                'message' => __('validation.unknown_error'),
+                'error' => __('validation.error_unknown'),
             ], 500);
         }
     }
@@ -254,7 +204,7 @@ class AuthController extends Controller
      *         description="Validation error (email not verified or 2FA code not valid)",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data."),
+     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data."),
      *         )
      *     ),
      *     @OA\Response(
@@ -262,7 +212,7 @@ class AuthController extends Controller
      *         description="Invalid credentials.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Invalid credentials. Please check your email address and password.")
+     *             @OA\Property(property="error", type="string", example="Invalid credentials. Please check your email address and password.")
      *         )
      *     ),
      *     @OA\Response(
@@ -270,7 +220,7 @@ class AuthController extends Controller
      *         description="Account disabled or access denied.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Your account has been disabled. Please contact support.")
+     *             @OA\Property(property="error", type="string", example="Your account has been disabled. Please contact support.")
      *         )
      *     ),
      *     @OA\Response(
@@ -278,7 +228,7 @@ class AuthController extends Controller
      *         description="Too many attempts",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Too many attempts. Please try again later.")
+     *             @OA\Property(property="error", type="string", example="Too many attempts. Please try again later.")
      *         )
      *     ),
      *     @OA\Response(
@@ -286,7 +236,7 @@ class AuthController extends Controller
      *         description="Internal server error or database error.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *             @OA\Property(property="error", type="string", example="An internal error occurred. Please try again later.")
      *         )
      *     )
      * )
@@ -295,19 +245,28 @@ class AuthController extends Controller
     {
         try {
             // Validate the request data
-            $credentials = $request->validate([
+            $validator = Validator::make($request->all(), [
                 'email' => 'required|email',
                 'password' => 'required|string',
                 'remember' => 'boolean',
                 'twofa_code' => 'nullable|string',
             ]);
 
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $credentials = $validator->validated();
+
             // Check if the user exists and the password is correct
             $user = User::where('email', $credentials['email'])->first();
             if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => __('validation.invalid_credentials'),
+                    'error' => __('validation.error_invalid_credentials'),
                 ], 401);
             }
 
@@ -315,7 +274,7 @@ class AuthController extends Controller
             if (!$user->is_active) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => __('validation.account_disabled'),
+                    'error' => __('validation.error_account_disabled'),
                 ], 403);
             }
 
@@ -325,7 +284,7 @@ class AuthController extends Controller
 
                 return response()->json([
                     'status' => 'error',
-                    'message' => __('validation.email_not_verified'),
+                    'error' => __('validation.error_email_not_verified'),
                 ], 400);
             }
 
@@ -333,7 +292,7 @@ class AuthController extends Controller
             if ($user->twofa_enabled && !$credentials['twofa_code']) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => __('validation.twofa_required'),
+                    'error' => __('validation.error_twofa_required'),
                 ], 400);
             }
 
@@ -345,7 +304,7 @@ class AuthController extends Controller
                 if (!$google2fa->verifyKey($user->twofa_secret, $credentials['twofa_code'])) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => __('validation.twofa_invalid'),
+                        'error' => __('validation.error_twofa_invalid'),
                     ], 400);
                 }
             }
@@ -370,64 +329,22 @@ class AuthController extends Controller
                 ],
             ], 200);
 
-        } catch (ValidationException $e) {
-            Log::error('Validation error', [
-                'errors' => $e->validator->errors(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.validation_failed'),
-                'errors' => $e->validator->errors(),
-            ], 422);
-
-        } catch (QueryException $e) {
-            Log::error('Database error', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.unknown_error'),
-            ], 500);
-
-        } catch (AuthorizationException $e) {
-            Log::error('Access denied', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.access_denied'),
-                'errors' => $e->getMessage(),
-            ], 403);
-
-        } catch (ThrottleRequestsException $e) {
-            Log::warning('Too many attempts', [
-                'retry_after' => $e->getHeaders()['Retry-After'],
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.throttling_error'),
-            ], 429, ['Retry-After' => $e->getHeaders()['Retry-After']]);
-
         } catch (\Exception $e) {
-            Log::error('Unknown error', [
+            Log::error('Error during login', [
                 'error' => $e->getMessage(),
                 'input' => $request->all(),
             ]);
 
             return response()->json([
                 'status'=> 'error',
-                'message' => __('validation.unknown_error'),
+                'error' => __('validation.error_unknown'),
             ], 500);
         }
     }
 
     /**
+     * Enable two-factor authentication for the user.
+     *
      * @OA\Post(
      *     path="/api/auth/enable2FA",
      *     summary="Enable two-factor authentication for the user",
@@ -439,6 +356,7 @@ class AuthController extends Controller
      *         response=200,
      *         description="Two-factor authentication enabled successfully",
      *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
      *             @OA\Property(property="secret", type="string", description="Generated secret key for 2FA", example="JBSWY3DPEHPK3PXP"),
      *             @OA\Property(property="qrCodeUrl", type="string", description="URL to generate QR code for 2FA", example="otpauth://totp/Example%3Auser%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example")
      *         )
@@ -448,32 +366,15 @@ class AuthController extends Controller
      *         description="Authentication error: User must be logged in",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="You must be logged in to perform this action.")
+     *             @OA\Property(property="error", type="string", example="You must be logged in to perform this action.")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error: Input validation failed",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data."),
-     *             @OA\Property(property="errors", type="object", additionalProperties={@OA\Property(type="array", items=@OA\Property(type="string"))})
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Access denied: User does not have the necessary permissions",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Access denied. You do not have the necessary permissions.")
-     *         )
-     *    ),
      *     @OA\Response(
      *         response=500,
      *         description="Internal server error",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
      *         )
      *     )
      * )
@@ -481,6 +382,15 @@ class AuthController extends Controller
     public function enableTwoFactor(Request $request): JsonResponse
     {
         try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'error' => __('validation.error_unauthorized'),
+                ], 401);
+            }
+
             $google2fa = new Google2FA();
 
             // Generate a new secret key
@@ -500,53 +410,10 @@ class AuthController extends Controller
             );
 
             return response()->json([
+                'status'=> 'success',
                 'secret' => $secret,
                 'qrCodeUrl' => $qrCodeUrl,
-            ]);
-
-        } catch (AuthenticationException $e) {
-            Log::error('Authentication error', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status' => 'error',
-                'message' => __('validation.must_be_connected'),
-            ], 401);
-
-        } catch (ValidationException $e) {
-            Log::error('Validation error', [
-                'errors' => $e->validator->errors(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.validation_failed'),
-                'errors' => $e->validator->errors(),
-            ], 422);
-
-        } catch (QueryException $e) {
-            Log::error('Database error', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.unknown_error'),
-            ], 500);
-
-        } catch (AuthorizationException $e) {
-            Log::error('Access denied', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.access_denied'),
-                'errors' => $e->getMessage(),
-            ], 403);
+            ], 200);
 
         } catch (\Exception $e) {
             Log::error('Error enabling 2FA', [
@@ -555,7 +422,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => __('validation.unknown_error'),
+                'message' => __('validation.error_unknown'),
             ], 500);
         }
     }
@@ -585,7 +452,7 @@ class AuthController extends Controller
      *         description="No active token found.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="You are not authenticated.")
+     *             @OA\Property(property="error", type="string", example="You are not authenticated.")
      *         )
      *     ),
      *     @OA\Response(
@@ -593,7 +460,7 @@ class AuthController extends Controller
      *         description="Unknown error or Database error occurred while logging out.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Unknown error occurred.")
+     *             @OA\Property(property="error", type="string", example="Unknown error occurred.")
      *         )
      *     ),
      * )
@@ -601,18 +468,22 @@ class AuthController extends Controller
     public function logout(Request $request): JsonResponse
     {
         try {
-            $user = $request->user();
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'error' => __('validation.error_unauthorized'),
+                ], 401);
+            }
 
             $token = $user->currentAccessToken();
 
             // Check if the user is authenticated
             if (!$token || get_class($token) === TransientToken::class) {
-                Log::warning('Logout attempt without active token', [
-                    'user_id' => $user->id,
-                ]);
                 return response()->json([
                     'status' => 'error',
-                    'message' => __('validation.no_active_token'),
+                    'error' => __('validation.error_no_active_token'),
                 ], 400);
             }
 
@@ -624,17 +495,6 @@ class AuthController extends Controller
                 'message' => __('validation.logout_success'),
             ], 200);
 
-        } catch (QueryException $e) {
-            Log::error('Database error', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.unknown_error'),
-            ], 500);
-
         } catch (\Exception $e) {
             Log::error('Logout error', [
                 'error' => $e->getMessage(),
@@ -642,12 +502,14 @@ class AuthController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => __('validation.unknown_error'),
+                'error' => __('validation.error_unknown'),
             ], 500);
         }
     }
 
     /**
+     * Send a password reset link to the user's email address.
+     *
      * @OA\Post(
      *     path="/api/auth/forgot-password",
      *     summary="Send password reset link",
@@ -674,7 +536,7 @@ class AuthController extends Controller
      *         description="User not found",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="User not found."),
+     *             @OA\Property(property="error", type="string", example="User not found."),
      *         )
      *     ),
      *     @OA\Response(
@@ -682,7 +544,7 @@ class AuthController extends Controller
      *         description="Validation error",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data."),
+     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data."),
      *             @OA\Property(property="errors", type="object", additionalProperties={"type":"string"})
      *         )
      *     ),
@@ -695,7 +557,7 @@ class AuthController extends Controller
      *             @OA\Schema(type="integer", example=60)
      *         ),
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Too many attempts. Please try again later.")
+     *             @OA\Property(property="error", type="string", example="Too many attempts. Please try again later.")
      *         )
      *     ),
      *     @OA\Response(
@@ -703,7 +565,7 @@ class AuthController extends Controller
      *         description="Internal Server Error",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
      *         )
      *     )
      * )
@@ -711,12 +573,28 @@ class AuthController extends Controller
     public function forgotPassword(Request $request): JsonResponse
     {
         // Validate the request data
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email|exists:users,email',
         ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+
         try {
-            $user = User::where('email', $request->email)->first();
+            $user = User::where('email', $data['email'])->first();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'error' => __('validation.error_user_not_found'),
+                ], 404);
+            }
 
             // Generate a password reset token
             $token = PasswordFacade::createToken($user);
@@ -729,53 +607,22 @@ class AuthController extends Controller
                 'message' => __('validation.reset_link_sent'),
             ], 200);
 
-        } catch (QueryException $e) {
-            Log::error('Database error', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.unknown_error'),
-            ], 500);
-
-        } catch (ThrottleRequestsException $e) {
-            Log::warning('Too many attempts', [
-                'retry_after' => $e->getHeaders()['Retry-After'],
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.throttling_error'),
-            ], 429, ['Retry-After' => $e->getHeaders()['Retry-After']]);
-
-        } catch (ValidationException $e) {
-            Log::error('Validation error', [
-                'errors' => $e->validator->errors(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.validation_failed'),
-                'errors' => $e->validator->errors(),
-            ], 422);
-
         } catch (\Exception $e) {
-            Log::error('Unknown error', [
+            Log::error('Error while request email for password', [
                 'error' => $e->getMessage(),
                 'input' => $request->all(),
             ]);
 
             return response()->json([
                 'status'=> 'error',
-                'message' => __('validation.unknown_error'),
+                'error' => __('validation.error_unknown'),
             ], 500);
         }
     }
 
     /**
+     * Reset the user's password using the token sent to their email.
+     *
      * @OA\Post(
      *     path="/api/auth/reset-password",
      *     summary="Reset user password",
@@ -813,14 +660,14 @@ class AuthController extends Controller
      *         description="User not found",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="No user could be found with this email address.")
+     *             @OA\Property(property="error", type="string", example="No user could be found with this email address.")
      *         )
      *     ),
      *     @OA\Response(
      *         response=422,
      *         description="Validation error",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data."),
+     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data."),
      *             @OA\Property(
      *                 property="errors",
      *                 type="object",
@@ -842,14 +689,14 @@ class AuthController extends Controller
      *         description="Server error",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
      *         )
      *     )
      * )
      */
     public function resetPassword(Request $request): JsonResponse
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'token' => 'required',
             'email' => 'required|email',
             'password' => [
@@ -860,8 +707,17 @@ class AuthController extends Controller
                         ->letters()
                         ->numbers()
                         ->symbols(),
-                ],
+            ],
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
 
         try {
             $response = PasswordFacade::reset(
@@ -882,13 +738,13 @@ class AuthController extends Controller
                 case PasswordFacade::INVALID_TOKEN:
                     return response()->json([
                         'status' => 'error',
-                        'message' => __('validation.password_invalid_token'),
+                        'error' => __('validation.error_password_invalid_token'),
                     ], 400);
 
                 case PasswordFacade::INVALID_USER:
                     return response()->json([
                         'status' => 'error',
-                        'message' => __('validation.password_no_user'),
+                        'error' => __('validation.error_password_no_user'),
                     ], 404);
 
                 default:
@@ -897,21 +753,9 @@ class AuthController extends Controller
                     ]);
                     return response()->json([
                         'status' => 'error',
-                        'message' => __('validation.unknown_error'), // Ex: "An unexpected error occurred."
+                        'error' => __('validation.error_unknown'),
                     ], 500);
             }
-
-        } catch (ValidationException $e) {
-            Log::error('Validation error', [
-                'errors' => $e->validator->errors(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.validation_failed'),
-                'errors' => $e->validator->errors(),
-            ], 422);
 
         } catch (Throwable $e) {
             logger()->error('Exception during password reset.', [
@@ -921,12 +765,14 @@ class AuthController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => __('validation.unknown_error'),
+                'error' => __('validation.error_unknown'),
             ], 500);
         }
     }
 
     /**
+     * Update the user's password.
+     *
      * @OA\Put(
      *     path="/api/auth/update-password",
      *     summary="Change the user's password",
@@ -943,16 +789,19 @@ class AuthController extends Controller
      *             @OA\Property(
      *                 property="current_password",
      *                 type="string",
+     *                 example="StrongP@ssword2025!",
      *                 description="The current password of the user"
      *             ),
      *             @OA\Property(
      *                 property="password",
      *                 type="string",
+     *                 example="NewP@ssword2025!",
      *                 description="The new password to be set for the user"
      *             ),
      *             @OA\Property(
      *                 property="password_confirmation",
      *                 type="string",
+     *                 example="NewP@ssword2025!",
      *                 description="Confirmation of the new password"
      *             )
      *         )
@@ -972,7 +821,7 @@ class AuthController extends Controller
      *         @OA\JsonContent(
      *             type="object",
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="The current password is incorrect.")
+     *             @OA\Property(property="error", type="string", example="The current password is incorrect.")
      *         )
      *     ),
      *     @OA\Response(
@@ -981,7 +830,7 @@ class AuthController extends Controller
      *         @OA\JsonContent(
      *             type="object",
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Validation error. Please check your data.")
+     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data.")
      *         )
      *     ),
      *     @OA\Response(
@@ -990,7 +839,7 @@ class AuthController extends Controller
      *         @OA\JsonContent(
      *             type="object",
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="An unknown error occurred. Please try again.")
+     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
      *         )
      *     )
      * )
@@ -998,8 +847,8 @@ class AuthController extends Controller
     public function updatePassword(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'current_password' => ['required', 'string'],
+            $validator = Validator::make($request->all(), [
+                'current_password' => 'required|string',
                 'password' => [
                     'required',
                     'confirmed',
@@ -1011,12 +860,28 @@ class AuthController extends Controller
                 ],
             ]);
 
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $validated = $validator->validated();
+
             $user = Auth::user();
+
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'error' => __('validation.error_unauthorized'),
+                ], 401);
+            }
 
             if (!Hash::check($validated['current_password'], $user->password_hash)) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => __('validation.current_password_invalid'),
+                    'error' => __('validation.error_current_password_invalid'),
                 ], 400);
             }
 
@@ -1028,29 +893,6 @@ class AuthController extends Controller
                 'message' => __('validation.password_changed_success'),
             ], 200);
 
-        } catch (ValidationException $e) {
-            Log::error('Validation error', [
-                'errors' => $e->validator->errors(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.validation_failed'),
-                'errors' => $e->validator->errors(),
-            ], 422);
-
-        } catch (QueryException $e) {
-            Log::error('Database error', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.unknown_error'),
-            ], 500);
-
         } catch (\Exception $e) {
             Log::error('Unknown error', [
                 'error' => $e->getMessage(),
@@ -1059,7 +901,131 @@ class AuthController extends Controller
 
             return response()->json([
                 'status'=> 'error',
-                'message' => __('validation.unknown_error'),
+                'message' => __('validation.error_unknown'),
+            ], 500);
+        }
+    }
+
+    /**
+     * Update the user's email address.
+     *
+     * @OA\Put(
+     *     path="/api/auth/update-email",
+     *     summary="Change the user's email",
+     *     description="This endpoint allows an authenticated user to update their email address.",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="The email address to update",
+     *         @OA\JsonContent(
+     *             required={"email"},
+     *             @OA\Property(property="email", type="string", format="email", example="new.email@example.com")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="An email has been sent for verification.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="A verification email has been sent to your new address. Please check your inbox.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Error when the provided email is the current email.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="This email address is already your current address.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized user.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="You must be logged in to perform this action.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="The provided email is already in use.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="This email is already associated with an existing account.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Unknown error.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="An internal error occurred. Please try again later.")
+     *         )
+     *     )
+     * )
+     */
+    public function updateEmail(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            if (!$user) {
+                return response()->json([
+                    'status'=> 'error',
+                    'error' => __('validation.error_unauthorized')
+                ],401);
+            }
+
+            // Validation du nouvel email
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email|unique:users,email',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 'error',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            $newEmail = $request->email;
+            $oldEmail = $user->email;
+            $rawToken = Str::random(60);
+            $hashedToken = EmailHelper::hashToken($rawToken);
+
+            if ($newEmail === $oldEmail) {
+                return response()->json([
+                    'status'=> 'error',
+                    'error' => __('validation.error_email_already_current')
+                ], 400);
+            }
+
+            EmailUpdate::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'old_email' => $oldEmail,
+                    'new_email' => $newEmail,
+                    'token' => $hashedToken,
+                ]
+            );
+
+            // Envoi de l'email de vérification
+            Notification::route('mail', $newEmail)->notify(new VerifyNewEmailNotification($rawToken));
+
+            // Envoi d'un email d'information à l'ancienne adresse
+            $user->notify(new  EmailUpdatedNotification($newEmail, $oldEmail, $rawToken));
+
+            return response()->json(['message' => __('validation.email_sent_new_email')], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error during email update', [
+                'error' => $e->getMessage(),
+                'input' => $request->all(),
+            ]);
+
+            return response()->json([
+                'status'=> 'error',
+                'message' => __('validation.error_unknown'),
             ], 500);
         }
     }

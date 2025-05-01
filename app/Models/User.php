@@ -88,6 +88,20 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Cart::class);
     }
 
+    /**
+     * Associate the user with a email update.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<EmailUpdate, User>
+     */
+    public function emailUpdate()
+    {
+        return $this->hasOne(EmailUpdate::class);
+    }
+
+    /**
+     *  Send the email verification notification.
+     * @return void
+     */
     public function sendEmailVerificationNotification()
     {
         $this->notify(new VerifyEmailNotification());
