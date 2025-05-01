@@ -1,6 +1,107 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\VerificationController;
+use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\CheckOriginMiddleware;
 
-Route::get('/user/ping', [UserController::class, 'ping']);
+Route::prefix('auth')->group(function () {
+    // This route is used to register a new user
+    Route::post('/register', [AuthController::class, 'register'])
+        ->name('register')
+        ->middleware(['throttle:5,1']);
+
+    // This route is used to login a user
+    Route::post('/login', [AuthController::class, 'login'])
+        ->name('login')
+        ->middleware(['throttle:5,1']);
+
+    // This route is used to logout a user
+    Route::post('/logout', [AuthController::class,'logout'])
+        ->middleware('auth:sanctum')
+        ->name('logout');
+
+    // This route is used to enable the two-factor authentication for the user
+    Route::post('/enable2FA', [AuthController::class, 'enableTwoFactor'])
+        ->middleware('auth:sanctum')
+        ->name('enable2FA');
+
+    // This route is used to verify the email address of the user
+    Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verifyEMail'])
+        ->middleware(['signed'])
+        ->name('verification.verify');
+
+    // This route is used to resend the verification email to the user
+    Route::post('/email/resend-verification', [VerificationController::class, 'resendVerificationEmail'])
+        ->middleware(['auth:sanctum'])
+        ->name('verification.resend');
+
+    // This route is used to reset the password of the user
+    Route::post('/forgot-password', [AuthController::class,'forgotPassword'])
+        ->middleware(['throttle:5,1'])
+        ->name('forgot.password');
+
+    // This route is used to reset the password of the user
+    Route::post('/reset-password', [AuthController::class,'resetPassword'])
+        ->middleware(['throttle:5,1'])
+        ->name('reset.password');
+
+    // This route is used to update the password of the user
+    Route::patch('/update-password', [AuthController::class,'updatePassword'])
+        ->middleware(['auth:sanctum'])
+        ->name('update.password');
+
+    // This route is used to update the email of the user
+    Route::patch('/update-email', [AuthController::class,'updateEmail'])
+        ->middleware(['auth:sanctum'])
+        ->name('update.email');
+
+    // This route is used to verify the new email
+    Route::get('/email/verify-new-mail', [VerificationController::class, 'verifyNewEMail'])
+        ->middleware('signed')
+        ->name('verification.verify.new.email');
+
+    // This route is used to revoke the email change request
+    Route::get('/email/update-cancel/{token}/{old_email}', [VerificationController::class, 'cancelEmailUpdate'])
+        ->middleware('signed')
+        ->name('email.update.cancel');
+})->middleware([CheckOriginMiddleware::class]);
+
+
+Route::prefix('user')->group(function () {
+    // This route is used to update the users information
+    Route::patch('/update', [UserController::class, 'updateName'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.update');
+
+    // This route is used to get the list of all users
+    Route::get('/all', [UserController::class, 'index'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.all');
+
+    // This route is used to create a new employee by the admin
+    Route::post('/create', [UserController::class, 'createEmployee'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.create');
+
+    // This route is used to show a user his profile
+    Route::get('/info', [UserController::class, 'showUserInfo'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.info');
+
+    // This route is used to see if the user has changed his email
+    Route::get('/{user}/email-update', [UserController::class, 'checkEmailUpdate'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.email.update');
+
+    // This route is used for an admin to change the information of a user
+    Route::patch('/{user}', [UserController::class, 'updateUserByAdmin'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.update.admin');
+
+    // This route is used to get the information of a user
+    Route::get('/{user}', [UserController::class, 'show'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.show');
+})->middleware([CheckOriginMiddleware::class]);

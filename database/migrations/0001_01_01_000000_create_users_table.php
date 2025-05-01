@@ -26,6 +26,15 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        Schema::create('email_updates', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users');
+            $table->string('old_email', 100)->nullable();
+            $table->string('new_email', 100)->nullable();
+            $table->string('token', 255)->unique();
+            $table->timestamps();
+        });
+
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
