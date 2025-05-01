@@ -121,6 +121,6 @@ return [
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
-    ],
-
+        'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+    ]
 ];
