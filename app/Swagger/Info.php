@@ -47,7 +47,7 @@ The notification system, including emails and system messages, is managed intern
  *     ),
  *     @OA\Tag(
  *         name="Users",
- *         description="Account management"
+ *         description="User management"
  *     ),
  *     @OA\Tag(
  *         name="Tickets",

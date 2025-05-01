@@ -96,10 +96,10 @@ class UpdateMailTest extends TestCase
             'new_email' => 'new@example.com',
         ]);
 
-        Notification::assertSentTo($user, \App\Notifications\EmailUpdatedNotification::class);
+        Notification::assertSentTo($user, EmailUpdatedNotification::class);
         Notification::assertSentTo(
             new \Illuminate\Notifications\AnonymousNotifiable,
-            \App\Notifications\VerifyNewEmailNotification::class
+            VerifyNewEmailNotification::class
         );
     }
 
@@ -210,7 +210,7 @@ class UpdateMailTest extends TestCase
         $url = $mail->viewData['url'];
 
         // Créer un objet Request à partir de l'URL
-        $request = \Illuminate\Http\Request::create($url);
+        $request = Request::create($url);
 
         // Vérifier que l'URL contient le token
         $this->assertStringContainsString($token, $url);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\VerificationController;
 use Illuminate\Support\Facades\Route;
@@ -67,3 +68,15 @@ Route::prefix('auth')->group(function () {
         ->name('email.update.cancel');
 })->middleware([CheckOriginMiddleware::class]);
 
+
+Route::prefix('user')->group(function () {
+    // This route is used to update the users information
+    Route::put('/update', [UserController::class, 'updateName'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.update');
+
+    // This route is used to get the list of all users
+    Route::get('/all', [UserController::class, 'index'])
+        ->middleware(['auth:sanctum'])
+        ->name('user.all');
+})->middleware([CheckOriginMiddleware::class]);
