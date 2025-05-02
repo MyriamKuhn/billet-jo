@@ -25,6 +25,297 @@
         }
     ],
     "paths": {
+        "/api/products": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Get filtered list of products",
+                "description": "Returns a paginated and filtered list of available products according to query parameters. Cache is used to optimize performance.",
+                "operationId": "getProducts",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Filter products by name",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "description": "Filter products by category",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "location",
+                        "in": "query",
+                        "description": "Filter products by location",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Filter products by event date (format: Y-m-d)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "places",
+                        "in": "query",
+                        "description": "Filter products by minimum number of available places",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sort products by a specific field (name, price, product_details->date)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "name",
+                                "price",
+                                "product_details->date"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "order",
+                        "in": "query",
+                        "description": "Sort order (asc or desc)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of products per page (default 10)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "The page number for pagination (default 1)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Products retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Products retrieved successfully."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "Cérémonie d’ouverture officielle des JO"
+                                                    },
+                                                    "price": {
+                                                        "type": "string",
+                                                        "example": "100.00"
+                                                    },
+                                                    "sale": {
+                                                        "type": "string",
+                                                        "example": "0.00"
+                                                    },
+                                                    "stock_quantity": {
+                                                        "type": "integer",
+                                                        "example": 50
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-04-30T19:54:25.000000Z"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-04-30T19:54:25.000000Z"
+                                                    },
+                                                    "product_details": {
+                                                        "properties": {
+                                                            "places": {
+                                                                "type": "integer",
+                                                                "example": 1
+                                                            },
+                                                            "description": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string"
+                                                                },
+                                                                "example": [
+                                                                    "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024.",
+                                                                    "Vivez une soirée exceptionnelle où le sport, la culture et l’émotion se rencontrent dans un spectacle grandiose au cœur de la Ville Lumière."
+                                                                ]
+                                                            },
+                                                            "date": {
+                                                                "type": "string",
+                                                                "format": "date",
+                                                                "example": "2024-07-26"
+                                                            },
+                                                            "time": {
+                                                                "type": "string",
+                                                                "example": "19h30 (accès recommandé dès 18h00)"
+                                                            },
+                                                            "location": {
+                                                                "type": "string",
+                                                                "example": "Stade de France, Saint-Denis"
+                                                            },
+                                                            "category": {
+                                                                "type": "string",
+                                                                "example": "Cérémonies"
+                                                            },
+                                                            "image": {
+                                                                "type": "string",
+                                                                "example": "https://picsum.photos/seed/1/600/400"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "pagination": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 100
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request (invalid or unexpected parameters)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Unexpected parameter(s) detected: foo"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No products found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "error": {
+                                            "type": "string",
+                                            "example": "No products found."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "error": {
+                                            "type": "string",
+                                            "example": "An error occurred while fetching the products. Please try again later."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/user/all": {
             "get": {
                 "tags": [
@@ -3022,6 +3313,10 @@
         {
             "name": "Users",
             "description": "User management"
+        },
+        {
+            "name": "Products",
+            "description": "Management of products available for purchase"
         }
     ]
 }

@@ -92,4 +92,25 @@ class Product extends Model
     {
         return $this->hasMany(CartItem::class);
     }
+
+    /**
+     * Accessor for the product details.
+     *
+     * @param mixed $value
+     * @return array{category: mixed, date: mixed, description: mixed, image: mixed, location: mixed, places: int, time: mixed}
+     */
+    public function getProductDetailsAttribute($value)
+    {
+        $details = json_decode($value, true) ?? [];
+
+        return [
+            'places' => (int) ($details['places'] ?? 0),
+            'description' => $details['description'] ?? '',
+            'date' => $details['date'] ?? null,
+            'time' => $details['time'] ?? '',
+            'location' => $details['location'] ?? '',
+            'category' => $details['category'] ?? '',
+            'image' => $details['image'] ?? '',
+        ];
+    }
 }
