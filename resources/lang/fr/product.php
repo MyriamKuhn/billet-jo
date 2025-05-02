@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'products_retrieved' => 'Produits récupérés avec succès.',
+    'products_retrieved' => 'Produit(s) récupéré(s) avec succès.',
     // error messages
     'error_unexpected_parameter' => 'Paramètre(s) inattendu(s) détecté(s) : :params',
     'error_no_product_found' => 'Aucun produit trouvé',

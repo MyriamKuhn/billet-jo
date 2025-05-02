@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Services\ProductFilterService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Models\Product;
 
 class ProductController extends Controller
 {
@@ -468,5 +469,64 @@ class ProductController extends Controller
                 'error' => __('product.error_fetch_product')
             ], 500);  // Code HTTP 500 Internal Server Error
         }
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/products/{product}",
+     *     summary="Show a specific product by ID",
+     *     description="Returns the details of a specific product by its ID.",
+     *     operationId="getProductById",
+     *     tags={"Products"},
+     *     @OA\Parameter(
+     *         name="product",
+     *         in="path",
+     *         description="ID du produit",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Product retrieved successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="name", type="string", example="Billet concert"),
+     *                 @OA\Property(
+     *                     property="product_details",
+     *                     type="object",
+     *                     @OA\Property(property="places", type="integer", example=1),
+     *                     @OA\Property(property="description", type="string", example="Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle..."),
+     *                     @OA\Property(property="date", type="string", example="2024-07-26"),
+     *                     @OA\Property(property="time", type="string", example="19h30 (accès recommandé dès 18h00)"),
+     *                     @OA\Property(property="location", type="string", example="Stade de France, Saint-Denis"),
+     *                     @OA\Property(property="category", type="string", example="Cérémonies"),
+     *                     @OA\Property(property="image", type="string", example="https://picsum.photos/seed/1/600/400")
+     *                 ),
+     *                 @OA\Property(property="price", type="number", format="float", example=59.99),
+     *                 @OA\Property(property="sale", type="number", format="float", example=49.99),
+     *                 @OA\Property(property="stock_quantity", type="integer", example=100),
+     *                 @OA\Property(property="created_at", type="string", format="date-time", example="2023-01-01T00:00:00Z"),
+     *                 @OA\Property(property="updated_at", type="string", format="date-time", example="2023-04-01T12:00:00Z")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Produit non trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="No query results for model [App\Models\Product] 123")
+     *         )
+     *     )
+     * )
+     */
+    public function show(Product $product)
+    {
+        return response()->json([
+            'status' => 'success',
+            'message'=> __('product.product_retrieved'),
+            'data' => $product,
+        ]);
     }
 }

@@ -612,6 +612,131 @@
                 ]
             }
         },
+        "/api/products/{product}": {
+            "get": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Show a specific product by ID",
+                "description": "Returns the details of a specific product by its ID.",
+                "operationId": "getProductById",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID du produit",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Billet concert"
+                                                },
+                                                "product_details": {
+                                                    "properties": {
+                                                        "places": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "description": {
+                                                            "type": "string",
+                                                            "example": "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle..."
+                                                        },
+                                                        "date": {
+                                                            "type": "string",
+                                                            "example": "2024-07-26"
+                                                        },
+                                                        "time": {
+                                                            "type": "string",
+                                                            "example": "19h30 (accès recommandé dès 18h00)"
+                                                        },
+                                                        "location": {
+                                                            "type": "string",
+                                                            "example": "Stade de France, Saint-Denis"
+                                                        },
+                                                        "category": {
+                                                            "type": "string",
+                                                            "example": "Cérémonies"
+                                                        },
+                                                        "image": {
+                                                            "type": "string",
+                                                            "example": "https://picsum.photos/seed/1/600/400"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "price": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 59.99
+                                                },
+                                                "sale": {
+                                                    "type": "number",
+                                                    "format": "float",
+                                                    "example": 49.99
+                                                },
+                                                "stock_quantity": {
+                                                    "type": "integer",
+                                                    "example": 100
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2023-01-01T00:00:00Z"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time",
+                                                    "example": "2023-04-01T12:00:00Z"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Produit non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No query results for model [App\\Models\\Product] 123"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/user/all": {
             "get": {
                 "tags": [
