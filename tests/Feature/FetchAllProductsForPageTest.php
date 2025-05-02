@@ -103,7 +103,7 @@ class FetchAllProductsForPageTest extends TestCase
         // Vérifie que le message d'erreur est correct
         $response->assertJsonFragment([
             'status' => 'error',
-            'error' => 'No products found.'
+            'error' => 'No product found.'
         ]);
     }
 

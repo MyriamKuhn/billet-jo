@@ -7,9 +7,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ProductFilterService
 {
-    public function buildQuery(array $filters): Builder
+    public function buildQuery(array $filters, bool $onlyAvailableStock = true): Builder
     {
-        $query = Product::query()->where('stock_quantity', '>', 0);
+        $query = Product::query();
+
+        if ($onlyAvailableStock) {
+            $query->where('stock_quantity', '>', 0);
+        }
 
         if (isset($filters['name'])) {
             $query->where('name', 'LIKE', '%' . $filters['name'] . '%');
