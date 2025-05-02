@@ -102,8 +102,9 @@ class FetchAllProductsForAdminTest extends TestCase
 
         // Vérifie que le message d'erreur indique bien que le paramètre 'per_page' est trop grand
         $response->assertJsonFragment([
-            'status' => 'error',
-            'error' => 'The per page field must not be greater than 100.'
+            'per_page' => [
+                'The per page field must not be greater than 100.'
+            ]
         ]);
     }
 

@@ -9,6 +9,7 @@ use App\Services\ProductFilterService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use App\Models\Product;
+use App\Http\Requests\StoreProductRequest;
 
 class ProductController extends Controller
 {
@@ -191,7 +192,7 @@ class ProductController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
-                    'error' => $validator->errors()->first()
+                    'errors' => $validator->errors()
                 ], 400);
             }
 
@@ -423,7 +424,7 @@ class ProductController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
-                    'error' => $validator->errors()->first()
+                    'errors' => $validator->errors()
                 ], 400);
             }
 
@@ -472,6 +473,8 @@ class ProductController extends Controller
     }
 
     /**
+     * Show a specific product by ID.
+     *
      * @OA\Get(
      *     path="/api/products/{product}",
      *     summary="Show a specific product by ID",
@@ -528,5 +531,121 @@ class ProductController extends Controller
             'message'=> __('product.product_retrieved'),
             'data' => $product,
         ]);
+    }
+
+    /**
+     * Create a new product.
+     *
+     * @OA\Post(
+     *     path="/products",
+     *     summary="Create a new product",
+     *     description="This endpoint creates a new product in the system.",
+     *     tags={"Products"},
+     *     operationId="createProduct",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="application/json",
+     *             @OA\Schema(
+     *                 type="object",
+     *                 required={"name", "price", "stock_quantity", "product_details"},
+     *                 @OA\Property(property="name", type="string", example="Ticket - Finale 100m"),
+     *                 @OA\Property(property="price", type="number", format="float", example=120.00),
+     *                 @OA\Property(property="sale", type="number", format="float", example=99.00),
+     *                 @OA\Property(property="stock_quantity", type="integer", example=150),
+     *                 @OA\Property(
+     *                     property="product_details",
+     *                     type="object",
+     *                     required={"places", "description", "date", "time", "location", "category", "image"},
+     *                     @OA\Property(property="places", type="integer", example=1),
+     *                     @OA\Property(property="description", type="string", example="Finale du 100m hommes aux JO 2024"),
+     *                     @OA\Property(property="date", type="string", format="date", example="2024-08-04"),
+     *                     @OA\Property(property="time", type="string", example="21:00"),
+     *                     @OA\Property(property="location", type="string", example="Stade de France"),
+     *                     @OA\Property(property="category", type="string", example="Athlétisme"),
+     *                     @OA\Property(property="image", type="string", format="uri", example="https://example.com/image.jpg")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *         @OA\Response(
+     *         response=201,
+     *         description="Product created successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="message", type="string", example="Product created successfully."),
+     *             @OA\Property(property="product", type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="name", type="string", example="Ticket - Finale 100m"),
+     *                 @OA\Property(property="price", type="number", format="float", example=120.00),
+     *                 @OA\Property(property="sale", type="number", format="float", example=99.00),
+     *                 @OA\Property(property="stock_quantity", type="integer", example=150),
+     *                 @OA\Property(property="product_details", type="object",
+     *                     @OA\Property(property="places", type="integer", example=1),
+     *                     @OA\Property(property="description", type="string", example="Finale du 100m hommes aux JO 2024"),
+     *                     @OA\Property(property="date", type="string", format="date", example="2024-08-04"),
+     *                     @OA\Property(property="time", type="string", example="21:00"),
+     *                     @OA\Property(property="location", type="string", example="Stade de France"),
+     *                     @OA\Property(property="category", type="string", example="Athlétisme"),
+     *                     @OA\Property(property="image", type="string", format="uri", example="https://example.com/image.jpg")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=403,
+     *         description="Unauthorized",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="You are not authorized to create a product.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Server Error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="An error occurred while creating the products. Please try again later.")
+     *         )
+     *     )
+     * )
+     */
+    public function store(StoreProductRequest $request)
+    {
+        try {
+            $validated = $request->validated();
+
+            $product = Product::create([
+                'name' => $validated['name'],
+                'price' => $validated['price'],
+                'sale' => $validated['sale'] ?? null,
+                'stock_quantity' => $validated['stock_quantity'],
+                'product_details' => $validated['product_details'],
+            ]);
+
+            return response()->json([
+                'status'=> 'success',
+                'message' => __('product.product_created'),
+                'product' => $product,
+            ], 201);
+
+    } catch (\Exception $e) {
+            Log::error('Error creating product: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'error' => __('product.error_create_product')
+            ], 500);
+        }
     }
 }
