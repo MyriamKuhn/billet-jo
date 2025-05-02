@@ -2,5 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Middleware\CheckOriginMiddleware;
 
-Route::get('/product/ping', [ProductController::class, 'ping']);
+Route::prefix('product')->group(function () {
+
+})->middleware([CheckOriginMiddleware::class]);
+

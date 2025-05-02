@@ -113,4 +113,36 @@ class UpdatePasswordTest extends TestCase
             'errors'
         ]);
     }
+
+    public function testUpdatePasswordHandlesExceptionGracefully()
+    {
+        // Données de la requête
+        $data = [
+            'current_password' => 'currentPassword123!',
+            'password' => 'newPassword123!',
+            'password_confirmation' => 'newPassword123!',
+        ];
+
+        // Créer un utilisateur dans la base de données
+        $user = User::factory()->create([
+            'password_hash' => Hash::make('currentPassword123!'),
+        ]);
+
+        // Authentifier l'utilisateur
+        $this->actingAs($user);
+
+        // Simuler une exception dans la méthode save()
+        Hash::shouldReceive('make')->andThrow(new \Exception('Simulated error while updating password'));
+
+        // Appel de la méthode updatePassword
+        $response = $this->patchJson('/api/auth/update-password', $data);
+
+        // Vérifie que l'exception est bien gérée avec une réponse 500
+        $response->assertStatus(500);
+        $response->assertJson([
+            'status' => 'error',
+            'message' => __('validation.error_unknown'),
+        ]);
+    }
+
 }

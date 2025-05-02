@@ -3,18 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Models\EmailUpdate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Str;
-use App\Helpers\EmailHelper;
 use Tests\TestCase;
 use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Log;
 use App\Notifications\VerifyNewEmailNotification;
 use App\Notifications\EmailUpdatedNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class UpdateMailTest extends TestCase
 {
@@ -251,5 +248,38 @@ class UpdateMailTest extends TestCase
 
         // Vérifier la signature de l'URL avec la requête simulée
         $this->assertTrue(URL::hasValidSignature($request));
+    }
+
+    public function testUpdateEmailHandlesExceptionGracefully()
+    {
+        $user = User::factory()->create([
+            'email' => 'oldemail@example.com',
+        ]);
+
+        $this->actingAs($user);
+        $data = ['email' => 'newemail@example.com'];
+
+        // Simule une exception quand Laravel tente de faire une requête UPDATE/INSERT sur email_updates
+        DB::listen(function ($query) {
+            if (str_contains($query->sql, 'email_updates')) {
+                throw new \Exception('Simulated DB failure');
+            }
+        });
+
+        $response = $this->patchJson('/api/auth/update-email', $data);
+
+        $response->assertStatus(500);
+        $response->assertJson([
+            'status' => 'error',
+            'message' => __('validation.error_unknown'),
+        ]);
+    }
+
+    public function testToArrayReturnsEmptyArrayVerifyNewEmail()
+    {
+        $notification = new VerifyNewEmailNotification('fake-token');
+        $user = User::factory()->make();
+
+        $this->assertEquals([], $notification->toArray($user));
     }
 }

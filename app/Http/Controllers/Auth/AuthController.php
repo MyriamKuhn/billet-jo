@@ -386,7 +386,7 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            $google2fa = new Google2FA();
+            $google2fa = app(Google2FA::class);
 
             // Generate a new secret key
             $secret = $google2fa->generateSecretKey();
@@ -583,13 +583,6 @@ class AuthController extends Controller
 
         try {
             $user = User::where('email', $data['email'])->first();
-
-            if (!$user) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_user_not_found'),
-                ], 404);
-            }
 
             // Generate a password reset token
             $token = PasswordFacade::createToken($user);
@@ -987,13 +980,6 @@ class AuthController extends Controller
             $oldEmail = $user->email;
             $rawToken = Str::random(60);
             $hashedToken = EmailHelper::hashToken($rawToken);
-
-            if ($newEmail === $oldEmail) {
-                return response()->json([
-                    'status'=> 'error',
-                    'error' => __('validation.error_email_already_current')
-                ], 400);
-            }
 
             EmailUpdate::updateOrCreate(
                 ['user_id' => $user->id],

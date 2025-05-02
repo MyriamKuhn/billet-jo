@@ -159,7 +159,7 @@
                 ]
             }
         },
-        "/api/user/{id}": {
+        "/api/user/{user}": {
             "get": {
                 "tags": [
                     "Users"
@@ -915,14 +915,14 @@
                 ]
             }
         },
-        "/api/user/profile": {
+        "/api/user/info": {
             "get": {
                 "tags": [
                     "Users"
                 ],
                 "summary": "Get authenticated user's profile",
                 "description": "Returns the profile information of the currently authenticated user, including 2FA status.",
-                "operationId": "getAuthenticatedUserProfile",
+                "operationId": "showUserInfo",
                 "responses": {
                     "200": {
                         "description": "Profile retrieved successfully",
@@ -2808,9 +2808,13 @@
                     "product_details": {
                         "type": "object",
                         "example": {
-                            "category": "concert",
-                            "duration": "2h",
-                            "location": "Paris"
+                            "places": 1,
+                            "description": "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle...",
+                            "date": "2024-07-26",
+                            "time": "19h30 (accès recommandé dès 18h00)",
+                            "location": "Stade de France, Saint-Denis",
+                            "category": "Cérémonies",
+                            "image": "https://picsum.photos/seed/1/600/400"
                         }
                     },
                     "price": {

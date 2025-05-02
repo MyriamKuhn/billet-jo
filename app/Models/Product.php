@@ -15,7 +15,15 @@ use Illuminate\Database\Eloquent\Model;
  *     @OA\Property(
  *         property="product_details",
  *         type="object",
- *         example={"category": "concert", "duration": "2h", "location": "Paris"}
+ *         example={
+ *           "places": 1,
+ *           "description": "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle...",
+ *           "date": "2024-07-26",
+ *           "time": "19h30 (accès recommandé dès 18h00)",
+ *           "location": "Stade de France, Saint-Denis",
+ *           "category": "Cérémonies",
+ *           "image": "https://picsum.photos/seed/1/600/400"
+ *           },
  *     ),
  *     @OA\Property(property="price", type="number", format="float", example=59.99),
  *     @OA\Property(property="sale", type="number", format="float", example=49.99),

@@ -288,4 +288,47 @@ class ResetPasswordTest extends TestCase
                 'error' => __('validation.error_unauthorized'),
             ]);
     }
+
+    public function testForgotPasswordUserNotFound()
+    {
+        // Données de la requête
+        $data = ['email' => 'nonexistentuser@example.com'];
+
+        // Appel de la méthode forgotPassword avec un email inexistant
+        $response = $this->postJson('/api/auth/forgot-password', $data);
+
+        // Vérifie que la réponse est bien une erreur 404
+        $response->assertStatus(422);
+        $response->assertJson([
+            'status' => 'error',
+            'errors' => [
+                'email' => [
+                    'The selected email is invalid.' // Ce message peut dépendre de ta localisation ou validation spécifique
+                ]
+            ]
+        ]);
+    }
+
+    public function testForgotPasswordHandlesExceptionGracefully()
+    {
+        // Données de la requête
+        $data = ['email' => 'user@example.com'];
+
+        // Créer un utilisateur dans la base de données
+        $user = User::factory()->create(['email' => $data['email']]);
+
+        // Simuler une exception lors de la création du token ou de l'envoi de l'email
+        Password::shouldReceive('createToken')
+            ->andThrow(new \Exception('Simulated error while generating token'));
+
+        // Appel de la méthode forgotPassword
+        $response = $this->postJson('/api/auth/forgot-password', $data);
+
+        // Vérifie que l'exception est bien gérée avec une réponse 500
+        $response->assertStatus(500);
+        $response->assertJson([
+            'status' => 'error',
+            'error' => __('validation.error_unknown'),
+        ]);
+    }
 }
