@@ -34,7 +34,7 @@ class StoreProductRequest extends FormRequest
             'product_details.time' => ['required', 'string'],
             'product_details.location' => ['required', 'string'],
             'product_details.category' => ['required', 'string'],
-            'product_details.image' => ['required', 'url'],
+            'product_details.image' => ['required', 'string'],
         ];
     }
 }

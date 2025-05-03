@@ -24,7 +24,7 @@ Route::prefix('products')->group(function () {
         ->name('product.show');
 
     // This route is used to update an existing product.
-    Route::patch('/{product}', [ProductController::class, 'update'])
+    Route::put('/{product}', [ProductController::class, 'update'])
         ->name('product.update')
         ->middleware('auth:sanctum');
 })->middleware([CheckOriginMiddleware::class]);

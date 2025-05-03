@@ -537,7 +537,7 @@ class ProductController extends Controller
      * Create a new product.
      *
      * @OA\Post(
-     *     path="/products",
+     *     path="/api/products",
      *     summary="Create a new product",
      *     description="This endpoint creates a new product in the system.",
      *     tags={"Products"},
@@ -647,5 +647,95 @@ class ProductController extends Controller
                 'error' => __('product.error_create_product')
             ], 500);
         }
+    }
+
+    /**
+     * Update an existing product.
+     *
+     * @OA\Put(
+     *     path="/api/products/{product}",
+     *     summary="Modify an existing product (admin only)",
+     *     description="Modify the details of a product by its ID (admin only).",
+     *     operationId="updateProduct",
+     *     tags={"Products"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="product",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the product to update",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Product object that needs to be updated",
+     *         @OA\JsonContent(
+     *             required={"name", "price", "stock_quantity", "product_details"},
+     *             @OA\Property(property="name", type="string", example="Sample Product"),
+     *             @OA\Property(property="price", type="number", format="float", example=99.99),
+     *             @OA\Property(property="sale", type="number", format="float", example=10.5),
+     *             @OA\Property(property="stock_quantity", type="integer", example=100),
+     *             @OA\Property(
+     *                 property="product_details",
+     *                 type="object",
+     *                 @OA\Property(property="places", type="integer", example=200),
+     *                 @OA\Property(property="description", type="string", example="A sample description"),
+     *                 @OA\Property(property="date", type="string", format="date", example="2025-06-01"),
+     *                 @OA\Property(property="time", type="string", example="12:00"),
+     *                 @OA\Property(property="location", type="string", example="Stadium A"),
+     *                 @OA\Property(property="category", type="string", example="Sports"),
+     *                 @OA\Property(property="image", type="string", format="uri", example="http://example.com/product-image.jpg")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Product updated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Product updated successfully"),
+     *             @OA\Property(property="product", type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="name", type="string", example="Ticket - Finale 100m"),
+     *                 @OA\Property(property="price", type="number", format="float", example=120.00),
+     *                 @OA\Property(property="sale", type="number", format="float", example=99.00),
+     *                 @OA\Property(property="stock_quantity", type="integer", example=150),
+     *                 @OA\Property(property="product_details", type="object",
+     *                     @OA\Property(property="places", type="integer", example=1),
+     *                     @OA\Property(property="description", type="string", example="Finale du 100m hommes aux JO 2024"),
+     *                     @OA\Property(property="date", type="string", format="date", example="2024-08-04"),
+     *                     @OA\Property(property="time", type="string", example="21:00"),
+     *                     @OA\Property(property="location", type="string", example="Stade de France"),
+     *                     @OA\Property(property="category", type="string", example="Athlétisme"),
+     *                     @OA\Property(property="image", type="string", format="uri", example="https://example.com/image.jpg")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Bad request, validation failed",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="Validation failed for one or more fields.")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Internal server error",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="error", type="string", example="There was an error updating the product. Please try again.")
+     *         )
+     *     )
+     * )
+     */
+    public function update(StoreProductRequest $request, Product $product)
+    {
+        $product->update($request->validated());
+
+        return response()->json([
+            'message' => 'Product updated successfully',
+            'product' => $product
+        ], 200);
     }
 }

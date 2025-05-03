@@ -9,4 +9,5 @@ return [
     'error_fetch_product' => 'Une erreur est survenue lors de la récupération des produits. Veuillez réessayer plus tard.',
     'error_not_authorized' => 'Vous n\'êtes pas autorisé à effectuer cette action.',
     'error_create_product' => 'Une erreur est survenue lors de la création du produit. Veuillez réessayer plus tard.',
+    'error_update_product' => 'Une erreur est survenue lors de la mise à jour du produit. Veuillez réessayer plus tard.',
 ];
