@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Log;
+use Mockery;
 
 class UserLogoutTest extends TestCase
 {
@@ -67,5 +67,32 @@ class UserLogoutTest extends TestCase
                     'status' => 'error',
                     'error' => __('validation.error_unauthorized'),
                 ]);
+    }
+
+    public function testLogoutHandlesExceptionGracefully()
+    {
+        // Création d’un utilisateur
+        $user = User::factory()->create();
+
+        // Création d’un mock du token avec méthode delete() qui échoue
+        $mockToken = Mockery::mock(\Laravel\Sanctum\PersonalAccessToken::class);
+        $mockToken->shouldReceive('delete')->andThrow(new \Exception('Simulated logout failure'));
+
+        // Création d’un faux user avec currentAccessToken() qui renvoie le faux token
+        $mockUser = Mockery::mock(User::class)->makePartial();
+        $mockUser->shouldReceive('currentAccessToken')->andReturn($mockToken);
+
+        // Authentification avec l’utilisateur mocké
+        $this->be($mockUser);
+
+        // Appel de la route de logout
+        $response = $this->postJson('/api/auth/logout');
+
+        // Vérification que l’exception a bien été gérée
+        $response->assertStatus(500);
+        $response->assertJson([
+            'status' => 'error',
+            'error' => __('validation.error_unknown'),
+        ]);
     }
 }

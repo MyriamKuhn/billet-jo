@@ -113,4 +113,28 @@ class CreateEmployeeTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
     }
+
+    public function testCreateEmployeeThrowsExceptionAndReturns500()
+    {
+        $admin = User::factory()->create([
+            'role' => \App\Enums\UserRole::Admin->value,
+        ]);
+
+        // On force une erreur SQL en dépassant la longueur max de l'email unique (255+ caractères)
+        $longEmail = str_repeat('a', 300) . '@example.com';
+
+        $this->actingAs($admin)
+            ->postJson(route('user.create'), [
+                'firstname' => 'Jane',
+                'lastname' => 'Doe',
+                'email' => $longEmail, // provoque une erreur au niveau de la DB
+                'password' => 'SecurePassword123!',
+                'password_confirmation' => 'SecurePassword123!',
+            ])
+            ->assertStatus(500)
+            ->assertJson([
+                'status' => 'error',
+                'error' => __('validation.error_unknown'),
+            ]);
+    }
 }

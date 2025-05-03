@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 use PragmaRX\Google2FA\Google2FA;
 use Mockery;
-use Illuminate\Support\Facades\Log;
 
 class UserLoginTest extends TestCase
 {
@@ -324,5 +323,42 @@ class UserLoginTest extends TestCase
                     'status' => 'error',
                     'error' => __('validation.error_unauthorized'),
                 ]);
+    }
+
+    public function testLoginHandlesExceptionGracefully()
+    {
+        // On simule un utilisateur existant dans la base
+        $user = User::factory()->create([
+            'email' => 'jane@example.com',
+            'password_hash' => Hash::make('SecureP@ssw0rd123!'),
+            'email_verified_at' => now(),
+            'is_active' => true,
+            'twofa_enabled' => true,
+            'twofa_secret' => 'S3CR3TK3Y',
+        ]);
+
+        // On mock le service Google2FA pour déclencher une exception
+        $this->mock(Google2FA::class, function ($mock) {
+            $mock->shouldReceive('verifyKey')
+                ->andThrow(new \Exception('Simulated 2FA failure'));
+        });
+
+        // Données de connexion valides
+        $data = [
+            'email' => 'jane@example.com',
+            'password' => 'SecureP@ssw0rd123!',
+            'remember' => true,
+            'twofa_code' => '123456', // forcera le passage par google2fa
+        ];
+
+        // Requête vers la route de login
+        $response = $this->postJson('/api/auth/login', $data);
+
+        // Vérification de la réponse
+        $response->assertStatus(500);
+        $response->assertJson([
+            'status' => 'error',
+            'error' => __('validation.error_unknown'),
+        ]);
     }
 }

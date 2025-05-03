@@ -15,7 +15,15 @@ use Illuminate\Database\Eloquent\Model;
  *     @OA\Property(
  *         property="product_details",
  *         type="object",
- *         example={"category": "concert", "duration": "2h", "location": "Paris"}
+ *         example={
+ *           "places": 1,
+ *           "description": "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle...",
+ *           "date": "2024-07-26",
+ *           "time": "19h30 (accès recommandé dès 18h00)",
+ *           "location": "Stade de France, Saint-Denis",
+ *           "category": "Cérémonies",
+ *           "image": "https://picsum.photos/seed/1/600/400"
+ *           },
  *     ),
  *     @OA\Property(property="price", type="number", format="float", example=59.99),
  *     @OA\Property(property="sale", type="number", format="float", example=49.99),
@@ -83,5 +91,26 @@ class Product extends Model
     public function cartItems()
     {
         return $this->hasMany(CartItem::class);
+    }
+
+    /**
+     * Accessor for the product details.
+     *
+     * @param mixed $value
+     * @return array{category: mixed, date: mixed, description: mixed, image: mixed, location: mixed, places: int, time: mixed}
+     */
+    public function getProductDetailsAttribute($value)
+    {
+        $details = json_decode($value, true) ?? [];
+
+        return [
+            'places' => (int) ($details['places'] ?? 0),
+            'description' => $details['description'] ?? '',
+            'date' => $details['date'] ?? null,
+            'time' => $details['time'] ?? '',
+            'location' => $details['location'] ?? '',
+            'category' => $details['category'] ?? '',
+            'image' => $details['image'] ?? '',
+        ];
     }
 }

@@ -162,35 +162,23 @@ class UserController extends Controller
      */
     public function show(User $user): JsonResponse
     {
-        try {
-            $authUser = auth()->user();
+        $authUser = auth()->user();
 
-            if (!($authUser->role->isAdmin() || $authUser->role->isEmployee())) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('user.error_user_unauthorized'),
-                ], 403);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'user' => [
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'email' => $user->email,
-                ],
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error fetching user details', [
-                'error' => $e->getMessage(),
-            ]);
-
+        if (!($authUser->role->isAdmin() || $authUser->role->isEmployee())) {
             return response()->json([
                 'status' => 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
+                'error' => __('user.error_user_unauthorized'),
+            ], 403);
         }
+
+        return response()->json([
+            'status' => 'success',
+            'user' => [
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'email' => $user->email,
+            ],
+        ], 200);
     }
 
     /**
@@ -403,89 +391,77 @@ class UserController extends Controller
      */
     public function updateUserByAdmin(Request $request, User $user): JsonResponse
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'is_active' => 'nullable|boolean',
-                'twofa_enabled' => 'nullable|boolean',
-                'firstname' => 'nullable|string|max:255',
-                'lastname' => 'nullable|string|max:255',
-                'email' => 'nullable|email|unique:users,email,' . $user->id,
-                'role' => 'nullable|in:admin,employee,user',
-            ]);
+        $validator = Validator::make($request->all(), [
+            'is_active' => 'nullable|boolean',
+            'twofa_enabled' => 'nullable|boolean',
+            'firstname' => 'nullable|string|max:255',
+            'lastname' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:users,email,' . $user->id,
+            'role' => 'nullable|in:admin,employee,user',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $validated = $validator->validated();
-
-            $authUser = auth()->user();
-
-            if (!$authUser || !$authUser->role->isAdmin()) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('user.error_user_unauthorized'),
-                ], 403);
-            }
-
-            // Update is_active
-            if (isset($validated['is_active'])) {
-                $user->is_active = $validated['is_active'];
-            }
-
-            // Disable 2FA and reset twofa_secret
-            if (isset($validated['twofa_enabled']) && !$validated['twofa_enabled']) {
-                $user->twofa_enabled = false;
-                $user->twofa_secret = null; // reset twofa_secret
-            }
-
-            // Update firstname, lastname, and email
-            if (isset($validated['firstname'])) {
-                $user->firstname = $validated['firstname'];
-            }
-
-            if (isset($validated['lastname'])) {
-                $user->lastname = $validated['lastname'];
-            }
-
-            if (isset($validated['email'])) {
-                $user->email = $validated['email'];
-            }
-
-            if (isset($validated['role'])) {
-                $user->role = $validated['role'];
-            }
-
-            $user->save();
-
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'user' => [
-                        'firstname' => $user->firstname,
-                        'lastname' => $user->lastname,
-                        'email' => $user->email,
-                        'is_active' => $user->is_active,
-                        'twofa_enabled' => $user->twofa_enabled,
-                        'role' => $user->role,
-                    ],
-                ],
-                'message' => __('user.user_updated_admin'),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error updating user by admin', [
-                'error' => $e->getMessage(),
-            ]);
-
+        if ($validator->fails()) {
             return response()->json([
                 'status' => 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
+                'errors' => $validator->errors(),
+            ], 422);
         }
+
+        $validated = $validator->validated();
+
+        $authUser = auth()->user();
+
+        if (!$authUser || !$authUser->role->isAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'error' => __('user.error_user_unauthorized'),
+            ], 403);
+        }
+
+        // Update is_active
+        if (isset($validated['is_active'])) {
+            $user->is_active = $validated['is_active'];
+        }
+
+        // Disable 2FA and reset twofa_secret
+        if (isset($validated['twofa_enabled']) && !$validated['twofa_enabled']) {
+            $user->twofa_enabled = false;
+            $user->twofa_secret = null; // reset twofa_secret
+        }
+
+        // Update firstname, lastname, and email
+        if (isset($validated['firstname'])) {
+            $user->firstname = $validated['firstname'];
+        }
+
+        if (isset($validated['lastname'])) {
+            $user->lastname = $validated['lastname'];
+        }
+
+        if (isset($validated['email'])) {
+            $user->email = $validated['email'];
+        }
+
+        if (isset($validated['role'])) {
+            $user->role = $validated['role'];
+        }
+
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'user' => [
+                    'firstname' => $user->firstname,
+                    'lastname' => $user->lastname,
+                    'email' => $user->email,
+                    'is_active' => $user->is_active,
+                    'twofa_enabled' => $user->twofa_enabled,
+                    'role' => $user->role,
+                ],
+            ],
+            'message' => __('user.user_updated_admin'),
+        ], 200);
     }
 
     /**
@@ -553,47 +529,35 @@ class UserController extends Controller
      */
     public function checkEmailUpdate(User $user): JsonResponse
     {
-        try {
-            $authUser = auth()->user();
+        $authUser = auth()->user();
 
-            if (!$authUser || (!$authUser->role->isAdmin())) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('user.error_user_unauthorized'),
-                ], 403);
-            }
-
-            $emailUpdate = EmailUpdate::where('user_id', $user->id)->first();
-
-            if (!$emailUpdate) {
-                return response()->json([
-                    'status' => 'success',
-                    'data' => null,
-                    'message' => __('user.no_email_update'),
-                ], 200);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'old_email' => $emailUpdate->old_email,
-                    'new_email' => $emailUpdate->new_email,
-                    'created_at' => $emailUpdate->created_at,
-                    'updated_at' => $emailUpdate->updated_at,
-                ],
-                'message' => __('user.email_update_found'),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error checking email update', [
-                'error' => $e->getMessage(),
-            ]);
-
+        if (!$authUser || (!$authUser->role->isAdmin())) {
             return response()->json([
                 'status' => 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
+                'error' => __('user.error_user_unauthorized'),
+            ], 403);
         }
+
+        $emailUpdate = EmailUpdate::where('user_id', $user->id)->first();
+
+        if (!$emailUpdate) {
+            return response()->json([
+                'status' => 'success',
+                'data' => null,
+                'message' => __('user.no_email_update'),
+            ], 200);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'old_email' => $emailUpdate->old_email,
+                'new_email' => $emailUpdate->new_email,
+                'created_at' => $emailUpdate->created_at,
+                'updated_at' => $emailUpdate->updated_at,
+            ],
+            'message' => __('user.email_update_found'),
+        ], 200);
     }
 
     /**
@@ -784,36 +748,17 @@ class UserController extends Controller
      */
     public function showUserInfo(): JsonResponse
     {
-        try {
-            $user = auth()->user();
+        $user = auth()->user();
 
-            if (!$user) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_unauthorized'),
-                ], 401);
-            }
-
-            return response()->json([
-                'status' => 'success',
-                'user' => [
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'email' => $user->email,
-                    'twofa_enabled' => $user->twofa_enabled,
-                ],
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error fetching authenticated user details', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status' => 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json([
+            'status' => 'success',
+            'user' => [
+                'firstname' => $user->firstname,
+                'lastname' => $user->lastname,
+                'email' => $user->email,
+                'twofa_enabled' => $user->twofa_enabled,
+            ],
+        ], 200);
     }
 
 }
