@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Http;
+use App\Services\CaptchaService;
 
 class UserRegisterTest extends TestCase
 {
@@ -267,5 +268,60 @@ class UserRegisterTest extends TestCase
         $response = $this->postJson('/api/auth/register', $this->validPayload());
 
         $response->assertStatus(500);
+    }
+
+    public function testRegisterHandlesExceptionGracefully()
+    {
+        $this->app['env'] = 'production';
+
+        // On force une exception dans le bloc try en mockant captchaService
+        $this->mock(CaptchaService::class, function ($mock) {
+            $mock->shouldReceive('verify')->andThrow(new \Exception('Simulated captcha failure'));
+        });
+
+        // Données valides
+        $data = [
+            'firstname' => 'John',
+            'lastname' => 'Doe',
+            'email' => 'john@example.com',
+            'password' => 'SecureP@ssw0rd123!',
+            'password_confirmation' => 'SecureP@ssw0rd123!',
+            'captcha_token' => 'dummy-token',
+        ];
+
+        // Exécution de la requête
+        $response = $this->postJson('/api/auth/register', $data);
+
+        // On vérifie que l'erreur 500 a bien été renvoyée avec le bon message
+        $response->assertStatus(500);
+        $response->assertJson([
+            'status' => 'error',
+            'error' => __('validation.error_unknown'),
+        ]);
+    }
+
+    public function testEnableTwoFactorHandlesExceptionGracefully()
+    {
+        // Création d'un utilisateur connecté
+        $user = User::factory()->create();
+
+        // Authentification de l'utilisateur
+        $this->actingAs($user);
+
+        // Mock de Google2FA qui lance une exception
+        $this->mock(\PragmaRX\Google2FA\Google2FA::class, function ($mock) {
+            $mock->shouldReceive('generateSecretKey')
+                ->andThrow(new \Exception('Simulated Google2FA failure'));
+        });
+
+        // Appel de la route d’activation 2FA
+        $response = $this->postJson('/api/auth/enable2FA');
+
+        // Vérification de la réponse d'erreur
+        $response->assertStatus(500);
+        $response->assertJson([
+            'status' => 'error',
+            'message' => __('validation.error_unknown'),
+        ]);
     }
 }
