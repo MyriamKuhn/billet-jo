@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Models\CartItem;
 use App\Models\Product;
 
-class CartTableTest extends TestCase
+class CartModelTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -26,11 +26,6 @@ class CartTableTest extends TestCase
         }
     }
 
-    /**
-     * Test if the cart belongs to a user.
-     *
-     * @return void
-     */
     public function testCartBelongsToUser(): void
     {
         $user = User::factory()->create();
@@ -39,11 +34,6 @@ class CartTableTest extends TestCase
         $this->assertEquals($user->id, $cart->user->id);
     }
 
-    /**
-     * Test if the cart has many cart items.
-     *
-     * @return void
-     */
     public function testCartHasManyCartItems(): void
     {
         $cart = Cart::factory()->create();

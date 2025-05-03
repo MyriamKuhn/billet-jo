@@ -10,15 +10,10 @@ use App\Models\User;
 use App\Models\Ticket;
 use App\Models\Product;
 
-class PaymentTableTest extends TestCase
+class PaymentModelTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test if the payments table has the expected columns.
-     *
-     * @return void
-     */
     public function testPaymentsTableHasExpectedColumns(): void
     {
         $columns = ['id', 'uuid', 'amount', 'payment_method', 'status', 'transaction_id', 'paid_at', 'created_at', 'updated_at', 'user_id'];
@@ -31,11 +26,6 @@ class PaymentTableTest extends TestCase
         }
     }
 
-    /**
-     * Test if the payments table has the expected indexes.
-     *
-     * @return void
-     */
     public function testPaymentBelongsToUser(): void
     {
         $user = User::factory()->create();
@@ -44,11 +34,6 @@ class PaymentTableTest extends TestCase
         $this->assertEquals($user->id, $payment->user->id);
     }
 
-    /**
-     * Test if the payment has many tickets.
-     *
-     * @return void
-     */
     public function testPaymentHasManyTickets()
     {
         $payment = Payment::factory()->create();

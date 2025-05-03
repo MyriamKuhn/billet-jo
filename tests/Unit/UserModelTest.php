@@ -18,11 +18,6 @@ class UserModelTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test if the users table has the expected columns.
-     *
-     * @return void
-     */
     public function testUsersTableHasExpectedColumns(): void
     {
         $columns = [
@@ -36,11 +31,6 @@ class UserModelTest extends TestCase
         }
     }
 
-    /**
-     * Test if the users table has one Cart.
-     *
-     * @return void
-     */
     public function testUserHasOneCart(): void
     {
         $user = User::factory()->create();
@@ -50,11 +40,6 @@ class UserModelTest extends TestCase
         $this->assertTrue($user->cart->is($cart));
     }
 
-    /**
-     * Test if the user table has many payments.
-     *
-     * @return void
-     */
     public function testUserHasManyPayments(): void
     {
         $user = User::factory()->create();
@@ -66,11 +51,6 @@ class UserModelTest extends TestCase
         $this->assertTrue($user->payments->contains($payment2));
     }
 
-    /**
-     * Test if the user table has many tickets.
-     *
-     * @return void
-     */
     public function testUserHasManyTickets(): void
     {
         $user = User::factory()->create();
@@ -84,11 +64,6 @@ class UserModelTest extends TestCase
         $this->assertTrue($user->tickets->contains($ticket2));
     }
 
-    /**
-     * Test if mail is unique in the users table.
-     *
-     * @return void
-     */
     public function testEmailIsUnique(): void
     {
         $email = 'unique@example.com';

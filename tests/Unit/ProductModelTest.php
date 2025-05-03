@@ -12,15 +12,10 @@ use App\Models\Cart;
 use App\Models\User;
 use App\Models\Payment;
 
-class ProductTableTest extends TestCase
+class ProductModelTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test if the products table has the expected columns.
-     *
-     * @return void
-     */
     public function testProductsTableHasExpectedColumns(): void
     {
         $columns = ['id', 'name', 'product_details', 'price', 'sale', 'stock_quantity', 'created_at', 'updated_at'];
@@ -33,11 +28,6 @@ class ProductTableTest extends TestCase
         }
     }
 
-    /**
-     * Test if the products table has many CartItems.
-     *
-     * @return void
-     */
     public function testProductHasManyCartItems(): void
     {
         $product = Product::factory()->create();
@@ -50,11 +40,6 @@ class ProductTableTest extends TestCase
         $this->assertTrue($product->cartItems->contains($cartItem2));
     }
 
-    /**
-     * Test if the products table has many Tickets.
-     *
-     * @return void
-     */
     public function testProductHasManyTickets(): void
     {
         $product = Product::factory()->create();

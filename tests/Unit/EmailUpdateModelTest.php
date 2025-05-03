@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
-class EmailUpdateTableTest extends TestCase
+class EmailUpdateModelTest extends TestCase
 {
     use RefreshDatabase;
 

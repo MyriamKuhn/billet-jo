@@ -10,15 +10,10 @@ use App\Models\User;
 use App\Models\Product;
 use App\Models\Payment;
 
-class TicketTableTest extends TestCase
+class TicketModelTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test if the tickets table has the expected columns.
-     *
-     * @return void
-     */
     public function testTicketsTableHasExpectedColumns(): void
     {
         $columns = ['id', 'qr_code_link', 'pdf_link', 'is_used', 'is_refunded', 'created_at', 'updated_at', 'user_id', 'payment_id', 'product_id'];
@@ -31,11 +26,6 @@ class TicketTableTest extends TestCase
         }
     }
 
-    /**
-     * Test if the tickets table has the expected foreign keys.
-     *
-     * @return void
-     */
     public function testTicketBelongsToUserPaymentAndProduct(): void
     {
         $user = User::factory()->create();

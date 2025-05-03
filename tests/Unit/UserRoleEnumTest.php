@@ -5,7 +5,7 @@ namespace Tests\Unit;
 use App\Enums\UserRole;
 use PHPUnit\Framework\TestCase;
 
-class UserRoleTest extends TestCase
+class UserRoleEnumTest extends TestCase
 {
     public function testIsAdmin()
     {
