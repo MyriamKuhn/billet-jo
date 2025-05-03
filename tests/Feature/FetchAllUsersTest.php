@@ -8,6 +8,11 @@ use Tests\TestCase;
 use App\Models\User;
 use App\Enums\UserRole;
 use App\Http\Controllers\UserController;
+use Illuminate\Database\Eloquent\Builder;
+use Mockery;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Artisan;
 
 class FetchAllUsersTest extends TestCase
 {
@@ -78,5 +83,30 @@ class FetchAllUsersTest extends TestCase
             'lastname' => $user1->lastname,
             'email' => $user1->email,
         ]);
+    }
+
+    public function testIndexThrowsExceptionAndReturns500()
+    {
+        $admin = User::factory()->create([
+            'role' => UserRole::Admin->value,
+        ]);
+
+        // Renommer temporairement la table users pour provoquer une exception
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::statement('RENAME TABLE users TO users_backup');
+
+        try {
+            $this->actingAs($admin)
+                ->getJson(route('user.all'))
+                ->assertStatus(500)
+                ->assertJson([
+                    'status' => 'error',
+                    'error' => __('validation.error_unknown'),
+                ]);
+        } finally {
+            // Restaurer la table pour ne pas casser les autres tests
+            DB::statement('RENAME TABLE users_backup TO users');
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        }
     }
 }
