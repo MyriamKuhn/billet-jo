@@ -320,7 +320,7 @@ class VerificationController extends Controller
      *     )
      * )
      */
-    public function verifyNewEMail(Request $request): JsonResponse
+    public function verifyNewEMail(Request $request): JsonResponse|RedirectResponse
     {
         try {
             $token = $request->query('token');
@@ -353,18 +353,6 @@ class VerificationController extends Controller
             }
 
             $user = User::find($emailUpdate->user_id);
-
-            if (!$user) {
-                if (app()->environment('production')) {
-                    return redirect()->away('https://jo2024.mkcodecreation.dev/verification-result/invalid');
-                } else {
-                    return response()->json([
-                        'status' => 'error',
-                        'error' => __('validation.error_user_not_found'),
-                        'redirect_url' => 'https://jo2024.mkcodecreation.dev/verification-result/invalid'
-                    ], 404);
-                }
-            }
 
             // Update the user's email address
             $user->email = $emailUpdate->new_email;
@@ -454,7 +442,7 @@ class VerificationController extends Controller
      *     )
      * )
      */
-    public function cancelEmailUpdate(Request $request, $token, $oldEmail): JsonResponse
+    public function cancelEmailUpdate(Request $request, $token, $oldEmail): JsonResponse|RedirectResponse
     {
         try {
             $hashedToken = EmailHelper::hashToken($token);

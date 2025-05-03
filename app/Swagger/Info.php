@@ -63,7 +63,7 @@ The notification system, including emails and system messages, is managed intern
  *     ),
  *     @OA\Tag(
  *         name="Products",
- *         description="Management of products available for purchase"
+ *         description="Product management, including categories and details"
  *     ),
  * )
  */
