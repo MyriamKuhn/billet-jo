@@ -146,7 +146,7 @@ class VerificationController extends Controller
             event(new Verified($user));
 
             // Création du panier
-            $cartService->createCartForUser($user);
+            $cartService->getUserCart($user);
 
             if (app()->environment('production')) {
                 return redirect()->away('https://jo2024.mkcodecreation.dev/verification-result/success');

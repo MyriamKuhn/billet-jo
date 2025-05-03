@@ -131,7 +131,7 @@ class UserRegisterTest extends TestCase
 
         // Utiliser le CartService pour créer un panier pour l'utilisateur
         $cartService = new CartService();
-        $cartService->createCartForUser($user);
+        $cartService->getUserCart($user);
 
         // Vérifier que le panier a bien été créé
         $this->assertDatabaseHas('carts', [

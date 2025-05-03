@@ -10,8 +10,11 @@ use App\Models\Cart;
 use App\Models\Payment;
 use App\Models\Ticket;
 use App\Models\Product;
+use App\Models\EmailUpdate;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\VerifyEmailNotification;
 
-class UserTableTest extends TestCase
+class UserModelTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -43,7 +46,8 @@ class UserTableTest extends TestCase
         $user = User::factory()->create();
         $cart = Cart::factory()->create(['user_id' => $user->id]);
 
-        $this->assertEquals($user->id, $cart->user->id);
+        $this->assertNotNull($user->cart);
+        $this->assertTrue($user->cart->is($cart));
     }
 
     /**
@@ -94,5 +98,34 @@ class UserTableTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
 
         User::factory()->create(['email' => $email]);
+    }
+
+    public function testUserHasOneEmailUpdate(): void
+    {
+        $user = User::factory()->create();
+        $emailUpdate = EmailUpdate::factory()->create([
+            'user_id' => $user->id,
+        ]);
+
+        // La relation emailUpdate renvoie bien l'instance créée
+        $this->assertNotNull($user->emailUpdate);
+        $this->assertEquals($emailUpdate->id, $user->emailUpdate->id);
+    }
+
+    public function testSendEmailVerificationNotificationSendsNotification(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create([
+            'email_verified_at' => null, // pour simuler un user non vérifié
+        ]);
+
+        $user->sendEmailVerificationNotification();
+
+        // On vérifie qu'on a bien envoyé une VerifyEmailNotification à cet user
+        Notification::assertSentTo(
+            [$user],
+            VerifyEmailNotification::class
+        );
     }
 }

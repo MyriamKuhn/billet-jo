@@ -65,7 +65,7 @@ class VerificationControllerTest extends TestCase
         $user = User::factory()->create(['email_verified_at' => null]);
 
         $this->mock(CartService::class)
-            ->shouldReceive('createCartForUser')
+            ->shouldReceive('getUserCart')
             ->andThrow(new Exception('Simulated failure'));
 
         $url = URL::temporarySignedRoute(
