@@ -71,7 +71,7 @@ class UserUpdateNameTest extends TestCase
         // Then
         $response->assertStatus(401)
                 ->assertJson([
-                    'message' => 'Unauthenticated.',
+                    'message' => 'Authentication required',
                 ]);
     }
 

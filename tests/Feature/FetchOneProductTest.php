@@ -33,7 +33,8 @@ class FetchOneProductTest extends TestCase
 
         $response->assertStatus(404)
                 ->assertJson([
-                    'message' => 'No query results for model [App\\Models\\Product] 9999',
+                    'message' => 'Resource not found',
+                    'code' => 'not_found',
                 ]);
     }
 }

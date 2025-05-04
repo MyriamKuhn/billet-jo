@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Paris 2024 Olympic Games Ticketing API",
-        "description": "This API manages the entire ticket lifecycle for the Paris 2024 Olympic Games: user registration, shopping cart management, payment processing, ticket generation, and entry validation.\n\nThis project was developed as part of the **Bachelor's degree in Digital Solutions Development**. The architecture is based on a **modular Laravel monolith**, structured into internal services (users, tickets, cart, payment, etc.) organized as internal packages to ensure better organization, maintainability, and scalability.\n\nThe notification system, including emails and system messages, is managed internally through a dedicated Laravel service and is not exposed as a public API.\n\n**Note:** All API endpoints are protected by CORS (Cross-Origin Resource Sharing) to restrict access to authorized domains only, ensuring secure communication between the client and the server.",
+        "description": "This API manages the entire ticket lifecycle…",
         "contact": {
             "name": "Myriam Kühn",
             "url": "https://myriamkuhn.com/",
@@ -17,14 +17,151 @@
     "servers": [
         {
             "url": "http://localhost:8000",
-            "description": "Local development environment"
+            "description": "Local dev"
         },
         {
             "url": "https://api-jo2024.mkcodecreations.dev",
-            "description": "Production server"
+            "description": "Prod"
         }
     ],
     "paths": {
+        "/api/cart": {
+            "get": {
+                "tags": [
+                    "Carts"
+                ],
+                "summary": "Retrieve the current shopping cart",
+                "description": "Returns either a minimal user cart (id, user_id, cart_items…) or a guest cart (map productId⇒quantity). Accessible by guests **and** authenticated users. Provide a Bearer token to operate on the user’s cart, or omit it to operate on the guest cart.",
+                "operationId": "getCurrentCart",
+                "responses": {
+                    "200": {
+                        "description": "Cart retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "data"
+                                    ],
+                                    "oneOf": [
+                                        {
+                                            "$ref": "#/components/schemas/CartMinimal"
+                                        },
+                                        {
+                                            "title": "GuestCartResponse",
+                                            "properties": {
+                                                "data": {
+                                                    "description": "Map of product IDs to quantities",
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "integer",
+                                                        "example": 2
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
+                    }
+                }
+            }
+        },
+        "/api/cart/items/{product}": {
+            "patch": {
+                "tags": [
+                    "Carts"
+                ],
+                "summary": "Set the quantity of a cart item (0 to remove)",
+                "description": "Accessible by guests **and** authenticated users. Provide a Bearer token to operate on the user’s cart, or omit it to operate on the guest cart.",
+                "operationId": "updateCartItem",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID of the product to update",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "quantity": {
+                                        "description": "New quantity (0 to remove item)",
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "$ref": "#/components/responses/NoContent"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
+                    }
+                }
+            }
+        },
+        "/api/cart/items": {
+            "delete": {
+                "tags": [
+                    "Carts"
+                ],
+                "summary": "Clear the entire cart (authenticated users only)",
+                "description": "Clear the entire cart of the authenticated user.",
+                "operationId": "823e170674e885d4d258f01dffa19120",
+                "responses": {
+                    "204": {
+                        "$ref": "#/components/responses/NoContent"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/products": {
             "get": {
                 "tags": [
@@ -3761,6 +3898,151 @@
     },
     "components": {
         "schemas": {
+            "CartItemMinimal": {
+                "title": "CartItemMinimal",
+                "required": [
+                    "id",
+                    "quantity",
+                    "unit_price",
+                    "total_price",
+                    "product"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 7
+                    },
+                    "product_id": {
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "unit_price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 53.99
+                    },
+                    "total_price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 161.97
+                    },
+                    "discount_rate": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 0.1,
+                        "nullable": true
+                    },
+                    "original_price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 59.99,
+                        "nullable": true
+                    },
+                    "product": {
+                        "required": [
+                            "name",
+                            "image",
+                            "date",
+                            "location"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "example": "Billet concert"
+                            },
+                            "image": {
+                                "type": "string",
+                                "example": "name-of-image.jpg"
+                            },
+                            "date": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2024-07-26"
+                            },
+                            "location": {
+                                "type": "string",
+                                "example": "Stade de France"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "CartMinimal": {
+                "title": "CartMinimal",
+                "required": [
+                    "id",
+                    "user_id",
+                    "cart_items"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "cart_items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CartItemMinimal"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ProductDetails": {
+                "title": "ProductDetails",
+                "required": [
+                    "places",
+                    "description",
+                    "date",
+                    "time",
+                    "location",
+                    "category",
+                    "image"
+                ],
+                "properties": {
+                    "places": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Assistez à un moment historique…"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-07-26"
+                    },
+                    "time": {
+                        "type": "string",
+                        "example": "19h30"
+                    },
+                    "location": {
+                        "type": "string",
+                        "example": "Stade de France"
+                    },
+                    "category": {
+                        "type": "string",
+                        "example": "Cérémonies"
+                    },
+                    "image": {
+                        "type": "string",
+                        "format": "uri",
+                        "example": "https://…"
+                    }
+                },
+                "type": "object"
+            },
             "Cart": {
                 "required": [
                     "id",
@@ -4169,10 +4451,169 @@
                 "type": "object"
             }
         },
+        "responses": {
+            "Unauthenticated": {
+                "description": "Authentication required",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Authentication required"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "unauthenticated"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "Forbidden": {
+                "description": "Forbidden",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "You do not have permission to perform this action"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "forbidden"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "NotFound": {
+                "description": "Resource not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Resource not found"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "not_found"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "ValidationError": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "errors"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "The given data was invalid"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "validation_error"
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "InternalError": {
+                "description": "Internal server error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Unexpected error"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "internal_error"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "ServiceUnavailable": {
+                "description": "Service temporarily unavailable",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Service temporarily unavailable"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "service_unavailable"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "NoContent": {
+                "description": "Operation successful, no content"
+            }
+        },
         "securitySchemes": {
             "bearerAuth": {
                 "type": "http",
-                "description": "Enter your Bearer token in the Authorization header, starting with 'Bearer 'followed by a space and your token. For example: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`",
+                "description": "Use `Bearer {token}` in Authorization header",
                 "bearerFormat": "JWT",
                 "scheme": "bearer"
             }
@@ -4185,7 +4626,11 @@
         },
         {
             "name": "Users",
-            "description": "User management"
+            "description": "Operations related to user management"
+        },
+        {
+            "name": "Carts",
+            "description": "Operations about shopping cart"
         },
         {
             "name": "Products",

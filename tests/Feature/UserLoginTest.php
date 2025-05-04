@@ -94,7 +94,7 @@ class UserLoginTest extends TestCase
         ])->postJson(route('enable2FA'));
 
         $response->assertStatus(401);
-        $response->assertJson(['message' => 'Unauthenticated.']);
+        $response->assertJson(['message' => 'Authentication required']);
     }
 
     public function testAllowsUserToEnableTwoFactorAuthentication(): void

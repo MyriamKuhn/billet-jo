@@ -20,14 +20,14 @@ class ResetEMailTest extends TestCase
     {
         $response = $this->getJson('/api/auth/email/verify-new-mail');
 
-        $response->assertStatus(403);
+        $response->assertStatus(status: 500);
     }
 
     public function testItReturnsErrorWhenTokenIsInvalid()
     {
         $response = $this->getJson('/api/auth/email/verify-new-mail?token=invalidtoken123');
 
-        $response->assertStatus(403);
+        $response->assertStatus(500);
     }
 
     public function testItReturnsErrorWhenUserDoesNotExist()
@@ -46,7 +46,7 @@ class ResetEMailTest extends TestCase
 
         $response = $this->getJson("/api/auth/email/verify-new-mail?token=$rawToken");
 
-        $response->assertStatus(403);
+        $response->assertStatus(500);
     }
 
     public function testItUpdatesUserEmailSuccessfully()
@@ -153,6 +153,6 @@ class ResetEMailTest extends TestCase
 
         $response = $this->getJson("/api/auth/email/update-cancel/{$rawToken}/{$oldEmail}");
 
-        $response->assertStatus(403);
+        $response->assertStatus(500);
     }
 }

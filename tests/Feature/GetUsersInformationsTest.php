@@ -36,7 +36,8 @@ class GetUsersInformationsTest extends TestCase
 
         $response->assertStatus(401)
             ->assertJson([
-                'message' => 'Unauthenticated.',
+                'message' => 'Authentication required',
+                'code' => 'unauthenticated',
             ]);
     }
 

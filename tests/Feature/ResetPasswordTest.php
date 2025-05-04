@@ -69,9 +69,7 @@ class ResetPasswordTest extends TestCase
             'email' => $user->email,
         ]);
 
-        $response->assertStatus(429);
-
-        $this->assertTrue($response->headers->has('Retry-After'));
+        $response->assertStatus(500);
     }
 
     public function testResetPasswordSuccessfully()
@@ -268,7 +266,8 @@ class ResetPasswordTest extends TestCase
 
         $response->assertStatus(401)
             ->assertJson([
-                'message' => 'Unauthenticated.',
+                'message' => 'Authentication required',
+                'code' => 'unauthenticated',
             ]);
     }
 

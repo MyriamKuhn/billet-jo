@@ -130,7 +130,7 @@ class UserRegisterTest extends TestCase
         $this->get($verificationUrl)->assertStatus(200);
 
         // Utiliser le CartService pour créer un panier pour l'utilisateur
-        $cartService = new CartService();
+        $cartService = new CartService(Log::channel('stack'));
         $cartService->getUserCart($user);
 
         // Vérifier que le panier a bien été créé

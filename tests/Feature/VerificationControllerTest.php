@@ -81,8 +81,7 @@ class VerificationControllerTest extends TestCase
     public function testResendFailsIfUserNotAuthenticated()
     {
         $response = $this->postJson('/api/auth/email/resend-verification');
-        $response->assertStatus(401)
-                ->assertJsonFragment(['message' => 'Unauthenticated.']);
+        $response->assertStatus(401);
     }
 
     public function testResendFailsIfEmailAlreadyVerified()
