@@ -115,7 +115,7 @@ class CartServiceTest extends TestCase
 
     public function testAddItemThrowsOnInvalidQuantity()
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\BadRequestHttpException::class);
         $this->service->addItem(1, 0);
     }
 

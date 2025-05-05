@@ -30,8 +30,21 @@ class ProductController extends Controller
      *     path="/api/products",
      *     operationId="getProductsList",
      *     tags={"Products"},
-     *     summary="Retrieve a paginated list of products",
-     *     description="Returns products with optional filtering, sorting and pagination. Only in-stock items are shown.",
+     *     summary="Retrieve a paginated list of in-stock products",
+     *     description="
+Returns a paginated list of products that are currently in stock.
+
+**Optional query parameters**:
+- `name`       — filter by product name
+- `category`   — filter by category
+- `location`   — filter by location
+- `date`       — filter by date (YYYY-MM-DD)
+- `places`     — filter by minimum number of places
+- `sort_by`    — sort field (`name`, `price`, `product_details->date`)
+- `order`      — sort direction (`asc`, `desc`)
+- `per_page`   — items per page (default: 15)
+- `page`       — page number (default: 1)
+",
      *
      *     @OA\Parameter(name="name",     in="query", description="Filter by product name",     @OA\Schema(type="string")),
      *     @OA\Parameter(name="category", in="query", description="Filter by category",        @OA\Schema(type="string")),
@@ -90,8 +103,14 @@ class ProductController extends Controller
      *
      * @OA\Get(
      *     path="/api/products/all",
-     *     summary="Get filtered list of all products (for admin only)",
-     *     description="Returns a paginated and filtered list of all products. Cache is used to optimize performance. Only for admin.",
+     *     summary="Retrieve all products (admin only)",
+ *     description="
+Returns a paginated list of all products (including out-of-stock), with optional filtering and sorting.
+
+- **Caching enabled** for better performance
+- **Authentication**: Bearer token (admin only)
+- **Same query parameters** as `/api/products`
+",
      *     operationId="getProducts",
      *     tags={"Products"},
      *     security={{"bearerAuth": {}}},
@@ -159,7 +178,8 @@ class ProductController extends Controller
      *     path="/api/products/{product}",
      *     operationId="getProductById",
      *     tags={"Products"},
-     *     summary="Get a product’s details",
+     *     summary="Get product details",
+     *     description="Returns the full details of a single product identified by its ID.",
      *     @OA\Parameter(
      *         name="product",
      *         in="path",
@@ -195,7 +215,14 @@ class ProductController extends Controller
      *     path="/api/products",
      *     operationId="createProduct",
      *     tags={"Products"},
-     *     summary="Create a new product (admin only)",
+     *     summary="Create a new product",
+     *     description="
+Creates a new product record.
+
+**Requirements**:
+- Bearer authentication (admin only)
+- Valid payload per `StoreProduct` schema
+",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\RequestBody(
@@ -228,7 +255,14 @@ class ProductController extends Controller
      *     path="/api/products/{product}",
      *     operationId="updateProduct",
      *     tags={"Products"},
-     *     summary="Modify a product's details (only for admin)",
+     *     summary="Update product details",
+     *     description="
+Updates the details of an existing product.
+
+**Requirements**:
+- Bearer authentication (admin only)
+- Valid payload per `StoreProduct` schema
+",
      *     security={{"bearerAuth":{}}},
      *
      *     @OA\Parameter(

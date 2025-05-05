@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Paris 2024 Olympic Games Ticketing API",
-        "description": "This API manages the entire ticket lifecycle…",
+        "description": "\nThis API manages the entire ticket lifecycle for the Paris 2024 Olympic Games, covering:\n\n- User registration and profile management\n\n- Shopping cart and payment processing\n\n- Ticket generation and entry validation\n\n\nDeveloped as part of a Bachelor's in Digital Solutions Development, it follows a modular Laravel monolith architecture,\norganized into internal packages (users, tickets, cart, payment, etc.) for maintainability and scalability.\n\nNotifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.\n\nAccess is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).",
         "contact": {
             "name": "Myriam Kühn",
             "url": "https://myriamkuhn.com/",
@@ -30,8 +30,8 @@
                 "tags": [
                     "Carts"
                 ],
-                "summary": "Retrieve the current shopping cart",
-                "description": "Returns either a minimal user cart (id, user_id, cart_items…) or a guest cart (map productId⇒quantity). Accessible by guests **and** authenticated users. Provide a Bearer token to operate on the user’s cart, or omit it to operate on the guest cart.",
+                "summary": "Retrieve current shopping cart",
+                "description": "\nReturns the current cart contents:\n\n- **Authenticated users**: full cart model (cart ID, user ID, items with product details)\n- **Guests**: a simple map of product IDs to quantities\n\nProvide a Bearer token to operate on the user’s cart; omit it to operate on the guest cart.\n",
                 "operationId": "getCurrentCart",
                 "responses": {
                     "200": {
@@ -79,8 +79,8 @@
                 "tags": [
                     "Carts"
                 ],
-                "summary": "Set the quantity of a cart item (0 to remove)",
-                "description": "Accessible by guests **and** authenticated users. Provide a Bearer token to operate on the user’s cart, or omit it to operate on the guest cart.",
+                "summary": "Set cart item quantity or remove item",
+                "description": "\nUpdates the quantity for a given product in the current cart:\n\n- **quantity > 0**: set the new quantity\n- **quantity = 0**: remove the item from the cart\n\nAccessible by guests and authenticated users. Provide a Bearer token to update the user’s cart; omit it to update the guest cart.\n",
                 "operationId": "updateCartItem",
                 "parameters": [
                     {
@@ -138,8 +138,8 @@
                 "tags": [
                     "Carts"
                 ],
-                "summary": "Clear the entire cart (authenticated users only)",
-                "description": "Clear the entire cart of the authenticated user.",
+                "summary": "Clear authenticated user's cart",
+                "description": "Deletes every item from the current authenticated user’s shopping cart. Requires a valid Bearer token.",
                 "operationId": "823e170674e885d4d258f01dffa19120",
                 "responses": {
                     "204": {
@@ -167,8 +167,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Retrieve a paginated list of products",
-                "description": "Returns products with optional filtering, sorting and pagination. Only in-stock items are shown.",
+                "summary": "Retrieve a paginated list of in-stock products",
+                "description": "\nReturns a paginated list of products that are currently in stock.\n\n**Optional query parameters**:\n- `name`       — filter by product name\n- `category`   — filter by category\n- `location`   — filter by location\n- `date`       — filter by date (YYYY-MM-DD)\n- `places`     — filter by minimum number of places\n- `sort_by`    — sort field (`name`, `price`, `product_details->date`)\n- `order`      — sort direction (`asc`, `desc`)\n- `per_page`   — items per page (default: 15)\n- `page`       — page number (default: 1)\n",
                 "operationId": "getProductsList",
                 "parameters": [
                     {
@@ -308,8 +308,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Create a new product (admin only)",
-                "description": "Create a new product (admin only).",
+                "summary": "Create a new product",
+                "description": "\nCreates a new product record.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n",
                 "operationId": "createProduct",
                 "requestBody": {
                     "required": true,
@@ -353,8 +353,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Get filtered list of all products (for admin only)",
-                "description": "Returns a paginated and filtered list of all products. Cache is used to optimize performance. Only for admin.",
+                "summary": "Retrieve all products (admin only)",
+                "description": "\nReturns a paginated list of all products (including out-of-stock), with optional filtering and sorting.\n\n- **Caching enabled** for better performance\n- **Authentication**: Bearer token (admin only)\n- **Same query parameters** as `/api/products`\n",
                 "operationId": "getProducts",
                 "parameters": [
                     {
@@ -513,8 +513,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Get a product’s details",
-                "description": "Retrieve a single product by its ID.",
+                "summary": "Get product details",
+                "description": "Returns the full details of a single product identified by its ID.",
                 "operationId": "getProductById",
                 "parameters": [
                     {
@@ -556,8 +556,8 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Modify a product's details (only for admin)",
-                "description": "Update an existing product (admin only).",
+                "summary": "Update product details",
+                "description": "\nUpdates the details of an existing product.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n",
                 "operationId": "updateProduct",
                 "parameters": [
                     {
@@ -611,25 +611,21 @@
                 ]
             }
         },
-        "/api/user/all": {
+        "/api/users": {
             "get": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Retrieve the list of all users",
-                "description": "This endpoint returns a list of all users, accessible only to admins.",
-                "operationId": "4a5ea8acc8be65dbe322c97650d62bcc",
+                "summary": "Retrieve all users (admin only)",
+                "description": "Returns a list of all users. Requires administrator privileges.",
+                "operationId": "566aed8efb436ca506e0ef51a032ecd9",
                 "responses": {
                     "200": {
-                        "description": "Successfully retrieved the users list",
+                        "description": "Users retrieved successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "data": {
                                             "properties": {
                                                 "users": {
@@ -698,44 +694,10 @@
                         }
                     },
                     "403": {
-                        "description": "Forbidden: User is not an admin or unauthorized",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "You are not authorized to perform this action."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/Forbidden"
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -745,49 +707,48 @@
                 ]
             }
         },
-        "/api/user/{user}": {
+        "/api/users/{user}": {
             "get": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Retrieve a specific user by ID",
-                "description": "Fetch details of a user by ID. Only admins and employees can access this.",
+                "summary": "Get user details by ID (admin or employee only)",
+                "description": "Returns firstname, lastname and email of the specified user. Requires admin or employee privileges.",
                 "operationId": "getUserById",
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "user",
                         "in": "path",
                         "description": "ID of the user to retrieve",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "format": "int64",
+                            "example": 42
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "User found",
+                        "description": "User retrieved successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "user": {
                                             "properties": {
                                                 "firstname": {
                                                     "type": "string",
-                                                    "example": "John"
+                                                    "example": "Jane"
                                                 },
                                                 "lastname": {
                                                     "type": "string",
-                                                    "example": "Doe"
+                                                    "example": "Smith"
                                                 },
                                                 "email": {
                                                     "type": "string",
-                                                    "example": "john.doe@example.com"
+                                                    "format": "email",
+                                                    "example": "jane.smith@example.com"
                                                 }
                                             },
                                             "type": "object"
@@ -799,200 +760,13 @@
                         }
                     },
                     "403": {
-                        "description": "Unauthorized, only admins and employees are allowed",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "You are not authorized to perform this action."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/Forbidden"
                     },
                     "404": {
-                        "description": "User not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "User not found"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/user/update": {
-            "patch": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Change user's first and last name",
-                "description": "Allows the authenticated user to update their firstname and lastname.",
-                "operationId": "updateUserName",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "firstname",
-                                    "lastname"
-                                ],
-                                "properties": {
-                                    "firstname": {
-                                        "type": "string",
-                                        "maxLength": 255,
-                                        "example": "Myriam"
-                                    },
-                                    "lastname": {
-                                        "type": "string",
-                                        "maxLength": 255,
-                                        "example": "Kühn"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "User name updated successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "User updated successfully"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "firstname": {
-                                                            "type": "string",
-                                                            "example": "Myriam"
-                                                        },
-                                                        "lastname": {
-                                                            "type": "string",
-                                                            "example": "Kühn"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Unauthorized"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation failed",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "errors": {
-                                            "properties": {
-                                                "firstname": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string",
-                                                        "example": "The firstname field is required."
-                                                    }
-                                                },
-                                                "lastname": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string",
-                                                        "example": "The lastname field is required."
-                                                    }
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "500": {
-                        "description": "Server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -1000,15 +774,13 @@
                         "bearerAuth": []
                     }
                 ]
-            }
-        },
-        "/user/{user}": {
+            },
             "patch": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Change user informations by admin",
-                "description": "Allows an admin to update a user's information.",
+                "summary": "Modify a user's details (admin only)",
+                "description": "Allows an administrator to update a user's status, 2FA setting, name, email, or role.",
                 "operationId": "updateUserByAdmin",
                 "parameters": [
                     {
@@ -1017,7 +789,9 @@
                         "description": "ID of the user to update",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "integer",
+                            "format": "int64",
+                            "example": 123
                         }
                     }
                 ],
@@ -1037,18 +811,16 @@
                                     },
                                     "firstname": {
                                         "type": "string",
-                                        "maxLength": 255,
-                                        "example": "Myriam"
+                                        "example": "Alice"
                                     },
                                     "lastname": {
                                         "type": "string",
-                                        "maxLength": 255,
-                                        "example": "Kühn"
+                                        "example": "Dupont"
                                     },
                                     "email": {
                                         "type": "string",
                                         "format": "email",
-                                        "example": "myriam@example.com"
+                                        "example": "alice@example.com"
                                     },
                                     "role": {
                                         "type": "string",
@@ -1057,7 +829,7 @@
                                             "employee",
                                             "user"
                                         ],
-                                        "example": "admin"
+                                        "example": "employee"
                                     }
                                 },
                                 "type": "object"
@@ -1066,124 +838,17 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "User updated successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "firstname": {
-                                                            "type": "string",
-                                                            "example": "Myriam"
-                                                        },
-                                                        "lastname": {
-                                                            "type": "string",
-                                                            "example": "Kühn"
-                                                        },
-                                                        "email": {
-                                                            "type": "string",
-                                                            "format": "email",
-                                                            "example": "myriam@example.com"
-                                                        },
-                                                        "is_active": {
-                                                            "type": "boolean",
-                                                            "example": true
-                                                        },
-                                                        "twofa_enabled": {
-                                                            "type": "boolean",
-                                                            "example": false
-                                                        },
-                                                        "role": {
-                                                            "type": "string",
-                                                            "enum": [
-                                                                "admin",
-                                                                "employee",
-                                                                "user"
-                                                            ],
-                                                            "example": "admin"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "The user has been updated successfully."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                    "204": {
+                        "description": "User updated successfully, no content"
                     },
                     "403": {
-                        "description": "Unauthorized access",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "You are not authorized to perform this action."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/Forbidden"
                     },
                     "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "errors": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/ValidationError"
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -1193,322 +858,14 @@
                 ]
             }
         },
-        "/api/user/{user}/email-update": {
+        "/api/users/me": {
             "get": {
                 "tags": [
                     "Users"
                 ],
-                "summary": "Check if an email update exists for a user",
-                "description": "Accessible only by admins. Returns the latest email update request for the given user if it exists.",
-                "operationId": "ee7945005289a5fa36349d05a5673332",
-                "parameters": [
-                    {
-                        "name": "user",
-                        "in": "path",
-                        "description": "ID of the user to check for email update",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Email update found or not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "oneOf": [
-                                        {
-                                            "properties": {
-                                                "status": {
-                                                    "type": "string",
-                                                    "example": "success"
-                                                },
-                                                "data": {
-                                                    "properties": {
-                                                        "old_email": {
-                                                            "type": "string",
-                                                            "format": "email",
-                                                            "example": "old@example.com"
-                                                        },
-                                                        "new_email": {
-                                                            "type": "string",
-                                                            "format": "email",
-                                                            "example": "new@example.com"
-                                                        },
-                                                        "created_at": {
-                                                            "type": "string",
-                                                            "format": "date-time",
-                                                            "example": "2025-05-01T10:00:00Z"
-                                                        },
-                                                        "updated_at": {
-                                                            "type": "string",
-                                                            "format": "date-time",
-                                                            "example": "2025-05-01T10:30:00Z"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "Email update found."
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        {
-                                            "properties": {
-                                                "status": {
-                                                    "type": "string",
-                                                    "example": "success"
-                                                },
-                                                "data": {
-                                                    "type": "string",
-                                                    "example": null,
-                                                    "nullable": true
-                                                },
-                                                "message": {
-                                                    "type": "string",
-                                                    "example": "No email update found."
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Unauthorized access (non-admin user)",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "You are not authorized to perform this action."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/user/create": {
-            "post": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Create an employee user",
-                "description": "This endpoint allows an admin to create a new employee user.",
-                "operationId": "createEmployee",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "firstname",
-                                    "lastname",
-                                    "email",
-                                    "password",
-                                    "password_confirmation"
-                                ],
-                                "properties": {
-                                    "firstname": {
-                                        "type": "string",
-                                        "example": "Anna"
-                                    },
-                                    "lastname": {
-                                        "type": "string",
-                                        "example": "Müller"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "example": "anna.mueller@example.com"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "example": "Str0ng!Password2024"
-                                    },
-                                    "password_confirmation": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "example": "Str0ng!Password2024"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Employee user created successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Employee created successfully."
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "user": {
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "integer",
-                                                            "example": 42
-                                                        },
-                                                        "firstname": {
-                                                            "type": "string",
-                                                            "example": "Anna"
-                                                        },
-                                                        "lastname": {
-                                                            "type": "string",
-                                                            "example": "Müller"
-                                                        },
-                                                        "email": {
-                                                            "type": "string",
-                                                            "example": "anna.mueller@example.com"
-                                                        },
-                                                        "role": {
-                                                            "type": "string",
-                                                            "example": "employee"
-                                                        }
-                                                    },
-                                                    "type": "object"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Unauthorized - only admins can create employees",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "You are not authorized to perform this action."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "errors": {
-                                            "type": "object",
-                                            "example": {
-                                                "email": [
-                                                    "The email has already been taken."
-                                                ]
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/user/info": {
-            "get": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Get authenticated user's profile",
-                "description": "Returns the profile information of the currently authenticated user, including 2FA status.",
-                "operationId": "showUserInfo",
+                "summary": "Get current user profile",
+                "description": "Returns the authenticated user's firstname, lastname, email, and 2FA status.",
+                "operationId": "getCurrentUserProfile",
                 "responses": {
                     "200": {
                         "description": "Profile retrieved successfully",
@@ -1549,18 +906,135 @@
                         }
                     },
                     "401": {
-                        "description": "Unauthorized (no valid token)",
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Modify current user firstname and lastname",
+                "description": "Allows an authenticated user to update their firstname and lastname.",
+                "operationId": "updateCurrentUserName",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "firstname",
+                                    "lastname"
+                                ],
+                                "properties": {
+                                    "firstname": {
+                                        "type": "string",
+                                        "example": "Alice"
+                                    },
+                                    "lastname": {
+                                        "type": "string",
+                                        "example": "Dupont"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Name updated successfully, no content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/email/{user}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Check pending email change for a user (admin only)",
+                "description": "Admin-only. Returns the pending email update data for the specified user, or null if none.",
+                "operationId": "checkEmailUpdate",
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "description": "ID of the user to check",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pending email update retrieved or none",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
+                                        "data": {
+                                            "nullable": true,
+                                            "oneOf": [
+                                                {
+                                                    "title": "EmailUpdate",
+                                                    "properties": {
+                                                        "old_email": {
+                                                            "type": "string",
+                                                            "format": "email",
+                                                            "example": "old@example.com"
+                                                        },
+                                                        "new_email": {
+                                                            "type": "string",
+                                                            "format": "email",
+                                                            "example": "new@example.com"
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string",
+                                                            "format": "date-time",
+                                                            "example": "2025-05-02T12:00:00Z"
+                                                        },
+                                                        "updated_at": {
+                                                            "type": "string",
+                                                            "format": "date-time",
+                                                            "example": "2025-05-03T12:00:00Z"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                {
+                                                    "type": "null"
+                                                }
+                                            ]
                                         },
-                                        "error": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "Unauthorized."
+                                            "example": "Pending email update retrieved"
                                         }
                                     },
                                     "type": "object"
@@ -1568,25 +1042,82 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
                     "500": {
-                        "description": "Unexpected error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unexpected error occurred."
-                                        }
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/employees": {
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Create a new employee (admin only)",
+                "description": "Allows an administrator to create a new employee account.\nThe new user is immediately active and email‐verified. Password must meet security requirements.",
+                "operationId": "createEmployee",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "firstname",
+                                    "lastname",
+                                    "email",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "firstname": {
+                                        "type": "string",
+                                        "example": "Alice"
                                     },
-                                    "type": "object"
-                                }
+                                    "lastname": {
+                                        "type": "string",
+                                        "example": "Dupont"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "alice@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Str0ngP@ssword2025!"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "Str0ngP@ssword2025!"
+                                    }
+                                },
+                                "type": "object"
                             }
                         }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Employee created successfully, no content"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -1602,53 +1133,14 @@
                     "Authentication"
                 ],
                 "summary": "Register a new user",
-                "description": "Allows a user to create an account. Requires a secure password (at least 15 characters, with uppercase letters, lowercase letters, numbers, and symbols), validation via Google reCAPTCHA to prevent abuse, and email confirmation after registration. Account creation attempts are protected by throttling to prevent spam. A verification email is sent to validate the user's email address. The API also protects against unauthorized access with a restrictive CORS configuration.",
+                "description": "\nThis endpoint allows a visitor to create a new user account with built-in protections:\n- **Strong password enforcement**: minimum 15 characters, mixed case, numbers & symbols\n- **Google reCAPTCHA** verification to block bots and automated abuse\n- **Throttling** (e.g. 5 requests/minute) to limit spam & brute-force attempts\n- **Email confirmation**: a verification link is sent after registration\n",
                 "operationId": "registerUser",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "firstname",
-                                    "lastname",
-                                    "email",
-                                    "password",
-                                    "password_confirmation",
-                                    "captcha_token"
-                                ],
-                                "properties": {
-                                    "firstname": {
-                                        "type": "string",
-                                        "maxLength": 100,
-                                        "example": "John"
-                                    },
-                                    "lastname": {
-                                        "type": "string",
-                                        "maxLength": 100,
-                                        "example": "Doe"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "example": "john@example.com"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "example": "MegaGreatPassword@2025"
-                                    },
-                                    "password_confirmation": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "example": "MegaGreatPassword@2025"
-                                    },
-                                    "captcha_token": {
-                                        "type": "string",
-                                        "example": "03AGdBq27..."
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/RegisterUser"
                             }
                         }
                     }
@@ -1675,54 +1167,13 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error or captcha verification failed.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Captcha verification failed."
-                                        },
-                                        "errors": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "string"
-                                                },
-                                                "property": null
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
                     },
                     "500": {
-                        "description": "Internal or database error.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred. Please try again."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 }
             }
@@ -1732,19 +1183,18 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Login user",
-                "description": "Allows a user to log in with their email and password, and receive an authentication token. Admins can disable accounts, and users can choose to remember their login or activate two-factor authentication (2FA).",
-                "operationId": "login",
+                "summary": "Authenticate user",
+                "description": "\nThis endpoint allows a user to log in and receive an authentication token:\n\n- **Email & password** credentials are required\n- **Remember me** option for extended session duration (1 week)\n- **Two-factor authentication (2FA)** code if enabled\n- **Throttling** to limit brute-force attempts\n    ",
+                "operationId": "authLogin",
                 "requestBody": {
-                    "description": "Login credentials (email and password are mandatory)",
+                    "description": "User login credentials",
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
                                     "email",
-                                    "password",
-                                    "remember"
+                                    "password"
                                 ],
                                 "properties": {
                                     "email": {
@@ -1758,12 +1208,12 @@
                                         "example": "MyGreatPassword@123"
                                     },
                                     "remember": {
-                                        "description": "Optional: Whether the user wants to stay logged in",
+                                        "description": "Stay logged in for one week",
                                         "type": "boolean",
                                         "example": true
                                     },
                                     "twofa_code": {
-                                        "description": "Optional: Two-factor authentication code",
+                                        "description": "2FA code if enabled",
                                         "type": "string",
                                         "example": "123456"
                                     }
@@ -1775,22 +1225,18 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Connection successful. Returns the authentication token and user information.",
+                        "description": "Authentication successful. Returns a token and user information.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Login successful."
+                                            "example": "Logged in successfully"
                                         },
                                         "token": {
                                             "type": "string",
-                                            "example": "token_example"
+                                            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJI…"
                                         },
                                         "user": {
                                             "properties": {
@@ -1828,18 +1274,18 @@
                         }
                     },
                     "400": {
-                        "description": "Validation error (email not verified or 2FA code not valid)",
+                        "description": "Bad request (e.g. email not verified or missing/invalid 2FA code)",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Two-factor authentication code is required"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "Validation error. Please check your data."
+                                            "example": "twofa_required"
                                         }
                                     },
                                     "type": "object"
@@ -1848,18 +1294,18 @@
                         }
                     },
                     "401": {
-                        "description": "Invalid credentials.",
+                        "description": "Unauthorized (invalid credentials)",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Invalid credentials"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "Invalid credentials. Please check your email address and password."
+                                            "example": "invalid_credentials"
                                         }
                                     },
                                     "type": "object"
@@ -1868,18 +1314,18 @@
                         }
                     },
                     "403": {
-                        "description": "Account disabled or access denied.",
+                        "description": "Forbidden (account disabled)",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Account disabled"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "Your account has been disabled. Please contact support."
+                                            "example": "account_disabled"
                                         }
                                     },
                                     "type": "object"
@@ -1888,56 +1334,22 @@
                         }
                     },
                     "429": {
-                        "description": "Too many attempts",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Too many attempts. Please try again later."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/TooManyRequests"
                     },
                     "500": {
-                        "description": "Internal server error or database error.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An internal error occurred. Please try again later."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 }
             }
         },
-        "/api/auth/enable2FA": {
+        "/api/auth/2fa/enable": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Enable two-factor authentication for the user",
-                "description": "Generates a new secret key for two-factor authentication and returns the QR code URL.",
-                "operationId": "enableTwoFactor",
+                "summary": "Enable two-factor authentication",
+                "description": "\nGenerates a new secret key for two-factor authentication and returns an OTP-Auth URL.\nRequires the user to be authenticated via Bearer token.\n",
+                "operationId": "authEnableTwoFactor",
                 "responses": {
                     "200": {
                         "description": "Two-factor authentication enabled successfully",
@@ -1945,10 +1357,6 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "secret": {
                                             "description": "Generated secret key for 2FA",
                                             "type": "string",
@@ -1965,19 +1373,19 @@
                             }
                         }
                     },
-                    "401": {
-                        "description": "Authentication error: User must be logged in",
+                    "400": {
+                        "description": "Two-factor authentication already enabled",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Two-factor authentication is already enabled"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "You must be logged in to perform this action."
+                                            "example": "twofa_already_enabled"
                                         }
                                     },
                                     "type": "object"
@@ -1985,25 +1393,14 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "500": {
-                        "description": "Internal server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred. Please try again."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
                     }
                 },
                 "security": [
@@ -2018,23 +1415,19 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Logout a user and invalidate their current access token",
-                "description": "Logs out the user by deleting their current active token.",
-                "operationId": "logoutUser",
+                "summary": "Revoke the current authentication token",
+                "description": "Revokes the token used for authentication. Requires a valid Bearer token.",
+                "operationId": "authLogout",
                 "responses": {
                     "200": {
-                        "description": "Successfully logged out.",
+                        "description": "Logout successful",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Successfully logged out."
+                                            "example": "Logged out successfully"
                                         }
                                     },
                                     "type": "object"
@@ -2043,18 +1436,18 @@
                         }
                     },
                     "400": {
-                        "description": "No active token found.",
+                        "description": "Bad request (no active token)",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "No active token found"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "You are not authenticated."
+                                            "example": "no_active_token"
                                         }
                                     },
                                     "type": "object"
@@ -2062,25 +1455,14 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "500": {
-                        "description": "Unknown error or Database error occurred while logging out.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Unknown error occurred."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
                     }
                 },
                 "security": [
@@ -2090,14 +1472,14 @@
                 ]
             }
         },
-        "/api/auth/forgot-password": {
+        "/api/auth/password/forgot": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
                 "summary": "Send password reset link",
-                "description": "This endpoint sends a password reset link to the user's email address.",
-                "operationId": "forgotPassword",
+                "description": "\nSends an email containing a password reset link to the user.\n\n- Requires a valid email of an existing user.\n- Response does not reveal if the email is registered, to prevent enumeration.\n    ",
+                "operationId": "authForgotPassword",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2120,38 +1502,14 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Password reset link sent successfully",
+                        "description": "Reset link sent successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "A password reset link has been sent to your email address."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "User not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "User not found."
+                                            "example": "Password reset link sent"
                                         }
                                     },
                                     "type": "object"
@@ -2160,69 +1518,24 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Validation error. Please check your data."
-                                        },
-                                        "errors": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/ValidationError"
                     },
                     "429": {
-                        "description": "Too many attempts. Please try again later.",
-                        "headers": {
-                            "Retry-After": {
-                                "description": "Time to wait before retrying (in seconds)",
-                                "schema": {
-                                    "type": "integer",
-                                    "example": 60
-                                }
-                            }
-                        },
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Too many attempts. Please try again later."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/TooManyRequests"
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Internal server error or email send failure",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Unable to send reset link"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "An unknown error occurred. Please try again."
+                                            "example": "reset_link_failed"
                                         }
                                     },
                                     "type": "object"
@@ -2233,14 +1546,14 @@
                 }
             }
         },
-        "/api/auth/reset-password": {
+        "/api/auth/password/reset": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Reset user password",
-                "description": "Allows a user to reset their password using a valid token sent by email.",
-                "operationId": "resetPassword",
+                "summary": "Reset password with token",
+                "description": "\nAllows a user to reset their password using a valid reset token:\n\n- `token`: the password reset token\n- `email`: user’s email (must exist)\n- `password` + `password_confirmation`: new secure password (min 15 chars, mixed case, numbers, symbols)\n",
+                "operationId": "authResetPassword",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2285,10 +1598,6 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
                                             "example": "Your password has been reset successfully."
@@ -2300,18 +1609,18 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid token",
+                        "description": "Invalid or expired token",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "The password reset token is invalid or has expired."
+                                            "example": "Invalid password reset token"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "invalid_token"
                                         }
                                     },
                                     "type": "object"
@@ -2320,18 +1629,18 @@
                         }
                     },
                     "404": {
-                        "description": "User not found",
+                        "description": "Email not found",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "No user found with this email"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "No user could be found with this email address."
+                                            "example": "user_not_found"
                                         }
                                     },
                                     "type": "object"
@@ -2340,53 +1649,24 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Validation error. Please check your data."
-                                        },
-                                        "errors": {
-                                            "properties": {
-                                                "email": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string",
-                                                        "example": "The email field is required."
-                                                    }
-                                                },
-                                                "password": {
-                                                    "type": "array",
-                                                    "items": {
-                                                        "type": "string",
-                                                        "example": "The password must be at least 15 characters."
-                                                    }
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
                     },
                     "500": {
-                        "description": "Server error",
+                        "description": "Internal server error",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Unexpected error during password reset"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "An unknown error occurred. Please try again."
+                                            "example": "internal_error"
                                         }
                                     },
                                     "type": "object"
@@ -2397,14 +1677,14 @@
                 }
             }
         },
-        "/api/auth/update-password": {
+        "/api/auth/password": {
             "patch": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Change the user's password",
-                "description": "This endpoint allows the user to change their password. It requires the current password and the new one.",
-                "operationId": "188d762d2069ae4a7561445c943879a3",
+                "summary": "Change password",
+                "description": "\nAllows an authenticated user to change their password:\n\n- Provide `current_password` to verify identity\n- Set a new secure password (min. 15 chars, mixed case, numbers & symbols)\n",
+                "operationId": "authUpdatePassword",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2439,18 +1719,14 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Password updated successfully",
+                        "description": "Password changed successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Your password has been successfully changed."
+                                            "example": "Password changed successfully"
                                         }
                                     },
                                     "type": "object"
@@ -2464,59 +1740,31 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Current password is incorrect"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "The current password is incorrect."
+                                            "example": "invalid_current_password"
                                         }
                                     },
                                     "type": "object"
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "422": {
-                        "description": "Validation error, invalid input data",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Validation error. Please check your data."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/ValidationError"
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred. Please try again."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
                     }
                 },
                 "security": [
@@ -2526,16 +1774,16 @@
                 ]
             }
         },
-        "/api/auth/update-email": {
+        "/api/auth/email": {
             "patch": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Change the user's email",
-                "description": "This endpoint allows an authenticated user to update their email address.",
-                "operationId": "d8b905497c78c91c64c977aabfd31630",
+                "summary": "Request email update",
+                "description": "\nSends a verification link to the new email address and notifies the old address.\nRequires authentication via Bearer token.\n",
+                "operationId": "authUpdateEmail",
                 "requestBody": {
-                    "description": "The email address to update",
+                    "description": "New unique email address",
                     "required": true,
                     "content": {
                         "application/json": {
@@ -2557,14 +1805,14 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "An email has been sent for verification.",
+                        "description": "Verification email sent to the new address",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "A verification email has been sent to your new address. Please check your inbox."
+                                            "example": "Verification email sent to the new address"
                                         }
                                     },
                                     "type": "object"
@@ -2593,38 +1841,84 @@
                         }
                     },
                     "401": {
-                        "description": "Unauthorized user.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "You must be logged in to perform this action."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "422": {
-                        "description": "The provided email is already in use.",
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "description": "Email update failure",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Unable to process email update"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "This email is already associated with an existing account."
+                                            "example": "email_update_failed"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/2fa/disable": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Disable two-factor authentication",
+                "description": "Disables 2FA for the authenticated user after verifying the provided 2FA code.",
+                "operationId": "disableTwoFactor",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "twofa_code"
+                                ],
+                                "properties": {
+                                    "twofa_code": {
+                                        "description": "Current 2FA code from the authenticator app",
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Two-factor authentication disabled successfully, no content"
+                    },
+                    "400": {
+                        "description": "Invalid or missing 2FA code",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid two-factor authentication code"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "twofa_invalid_code"
                                         }
                                     },
                                     "type": "object"
@@ -2632,25 +1926,11 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "500": {
-                        "description": "Unknown error.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An internal error occurred. Please try again later."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -2665,24 +1945,25 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Verify the user's email address",
-                "description": "This route verifies a user's email address via a link sent to them. Based on the result, it returns a redirection URL. This operation is intended to be used exclusively through links sent by email.",
-                "operationId": "verifyEmail",
+                "summary": "Verify user email",
+                "description": "\nValidates the email verification link.\n- In **production**, redirects the user to the frontend at `/verification-result/{success|invalid|already-verified|error}`.\n- In **non-production**, returns a JSON payload with `message` and `redirect_url`.\n",
+                "operationId": "authVerifyEmail",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "User ID to verify",
+                        "description": "ID of the user to verify",
                         "required": true,
                         "schema": {
                             "type": "integer",
+                            "format": "int64",
                             "example": 1
                         }
                     },
                     {
                         "name": "hash",
                         "in": "path",
-                        "description": "Hash of the user's email address",
+                        "description": "SHA1 hash from the verification link",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -2692,7 +1973,7 @@
                     {
                         "name": "expires",
                         "in": "query",
-                        "description": "Expiration timestamp of the link",
+                        "description": "Expiration timestamp of the signed URL",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -2702,7 +1983,7 @@
                     {
                         "name": "signature",
                         "in": "query",
-                        "description": "Signed URL signature",
+                        "description": "Signature of the signed URL",
                         "required": true,
                         "schema": {
                             "type": "string",
@@ -2712,26 +1993,34 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Email verified successfully",
+                        "description": "Email verified successfully (JSON response in non-production)",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Your email address has been successfully verified."
+                                            "example": "Email verified successfully"
                                         },
                                         "redirect_url": {
                                             "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/success"
+                                            "example": "https://frontend.example.com/verification-result/success"
                                         }
                                     },
                                     "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "302": {
+                        "description": "Redirect to frontend verification result page (production)",
+                        "headers": {
+                            "Location": {
+                                "description": "Redirect URL",
+                                "schema": {
+                                    "type": "string",
+                                    "example": "https://frontend.example.com/verification-result/success"
                                 }
                             }
                         }
@@ -2742,18 +2031,17 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Invalid verification link"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "The verification link is invalid."
+                                            "example": "invalid_verification_link"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/invalid"
+                                            "example": "https://frontend.example.com/verification-result/invalid"
                                         }
                                     },
                                     "type": "object"
@@ -2767,18 +2055,17 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "User not found"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "User not found."
+                                            "example": "user_not_found"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/invalid"
+                                            "example": "https://frontend.example.com/verification-result/invalid"
                                         }
                                     },
                                     "type": "object"
@@ -2792,18 +2079,17 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Email already verified"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "Your email address has already been verified."
+                                            "example": "already_verified"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/already-verified"
+                                            "example": "https://frontend.example.com/verification-result/already-verified"
                                         }
                                     },
                                     "type": "object"
@@ -2812,23 +2098,22 @@
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Unexpected error",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Unexpected error"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "An unknown error occurred. Please try again later"
+                                            "example": "internal_error"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/error"
+                                            "example": "https://frontend.example.com/verification-result/error"
                                         }
                                     },
                                     "type": "object"
@@ -2839,48 +2124,24 @@
                 }
             }
         },
-        "/api/auth/email/resend-verification": {
+        "/api/auth/email/resend": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Resend email verification link",
-                "description": "This endpoint allows a logged-in user to request a resend of the email verification link if their email address has not been verified yet.",
-                "operationId": "resendVerificationEmail",
+                "summary": "Resend verification email",
+                "description": "Sends a new email verification link to the authenticated user. Requires a valid Bearer token.",
+                "operationId": "authResendVerificationEmail",
                 "responses": {
                     "200": {
-                        "description": "Email verification link resent successfully",
+                        "description": "Verification email resent successfully",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "A new verification email has been sent."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Email already verified",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "Your email address has already been verified."
+                                            "example": "Verification email resent"
                                         }
                                     },
                                     "type": "object"
@@ -2889,18 +2150,21 @@
                         }
                     },
                     "401": {
-                        "description": "Not authenticated",
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "409": {
+                        "description": "Email already verified",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Email already verified"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "You must be logged in to perform this action."
+                                            "example": "already_verified"
                                         }
                                     },
                                     "type": "object"
@@ -2909,24 +2173,7 @@
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "An unknown error occurred. Please try again later"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -2936,58 +2183,75 @@
                 ]
             }
         },
-        "/api/auth/email/verify-new-mail": {
+        "/api/auth/email/change/verify": {
             "get": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Verify a user's new email address",
-                "description": "Verifies a new email using a token sent to the user's new email address. The token must be passed as a query parameter.",
-                "operationId": "verifyNewEmail",
+                "summary": "Verify new email address",
+                "description": "\nValidates the token for a pending email change.\n- In **production**, redirects to the front at `/verification-result/{success|invalid|error}`.\n- In **non-production**, returns JSON with `message` and `redirect_url`.\n",
+                "operationId": "authVerifyNewEmail",
                 "parameters": [
                     {
                         "name": "token",
                         "in": "query",
-                        "description": "The token used to verify the email update",
+                        "description": "Raw verification token from the email link",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "abc123hashsecure"
+                            "example": "03AGdBq26…"
+                        }
+                    },
+                    {
+                        "name": "expires",
+                        "in": "query",
+                        "description": "Expiration timestamp of the signed URL",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1714687561
                         }
                     },
                     {
                         "name": "signature",
                         "in": "query",
-                        "description": "The signature to validate the token",
+                        "description": "Signature of the signed URL",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "xyz456signature"
+                            "example": "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Email updated successfully",
+                        "description": "Email updated successfully (JSON in non-production)",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Your email has been updated successfully."
+                                            "example": "Email updated successfully"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/success"
+                                            "example": "https://frontend.example.com/verification-result/success"
                                         }
                                     },
                                     "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "302": {
+                        "description": "Redirect to frontend result page (production)",
+                        "headers": {
+                            "Location": {
+                                "description": "Redirect URL",
+                                "schema": {
+                                    "type": "string",
+                                    "example": "https://frontend.example.com/verification-result/success"
                                 }
                             }
                         }
@@ -2998,18 +2262,17 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Invalid or expired verification token"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "Invalid or missing verification token."
+                                            "example": "verification_token_missing"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/invalid"
+                                            "example": "https://frontend.example.com/verification-result/invalid"
                                         }
                                     },
                                     "type": "object"
@@ -3018,23 +2281,22 @@
                         }
                     },
                     "404": {
-                        "description": "Token used or user not found",
+                        "description": "Email request not found",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Email request not found"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "This verification token is no longer valid."
+                                            "example": "email_not_found"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/invalid"
+                                            "example": "https://frontend.example.com/verification-result/invalid"
                                         }
                                     },
                                     "type": "object"
@@ -3043,23 +2305,22 @@
                         }
                     },
                     "500": {
-                        "description": "Server error",
+                        "description": "Unexpected error",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Unexpected error"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "An unknown error occurred."
+                                            "example": "internal_error"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/error"
+                                            "example": "https://frontend.example.com/verification-result/error"
                                         }
                                     },
                                     "type": "object"
@@ -3070,56 +2331,71 @@
                 }
             }
         },
-        "/api/auth/email/cancel-update/{token}/{old_email}": {
+        "/api/auth/email/change/cancel/{token}/{old_email}": {
             "get": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Cancel a pending email update request",
-                "description": "Cancels a pending email update request using a signed URL. The link is valid for 48 hours.",
-                "operationId": "cancelEmailUpdate",
+                "summary": "Cancel email change request",
+                "description": "\nValidates the token for a pending email change and restores the old email during 48 hours.\n- In **production**, redirects the user to `/verification-result/{success|invalid|error}`.\n- In **non-production**, returns JSON with `message` and `redirect_url`.\n",
+                "operationId": "authCancelEmailUpdate",
                 "parameters": [
                     {
                         "name": "token",
                         "in": "path",
-                        "description": "Verification token (plain, not hashed)",
+                        "description": "Raw token from the email update link",
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "d7f9b27dcbf04431c9c45a271c..."
+                            "example": "03AGdBq26…"
                         }
                     },
                     {
                         "name": "old_email",
                         "in": "path",
-                        "description": "The user's current (old) email address",
+                        "description": "Previous email address before the update",
                         "required": true,
                         "schema": {
                             "type": "string",
                             "format": "email",
-                            "example": "old@example.com"
+                            "example": "old.user@example.com"
+                        }
+                    },
+                    {
+                        "name": "expires",
+                        "in": "query",
+                        "description": "Expiration timestamp of the signed URL",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1714687561
+                        }
+                    },
+                    {
+                        "name": "signature",
+                        "in": "query",
+                        "description": "Signature of the signed URL",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "The email update request was successfully canceled",
+                        "description": "Email update canceled successfully (JSON in non-production)",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "message": {
                                             "type": "string",
-                                            "example": "Your email update request has been cancelled."
+                                            "example": "Email update canceled"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/success"
+                                            "example": "https://frontend.example.com/verification-result/success"
                                         }
                                     },
                                     "type": "object"
@@ -3127,24 +2403,35 @@
                             }
                         }
                     },
+                    "302": {
+                        "description": "Redirect to frontend result page (production)",
+                        "headers": {
+                            "Location": {
+                                "description": "Redirect URL",
+                                "schema": {
+                                    "type": "string",
+                                    "example": "https://frontend.example.com/verification-result/success"
+                                }
+                            }
+                        }
+                    },
                     "404": {
-                        "description": "No matching email update request found",
+                        "description": "Email update request not found or already processed",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Email update request not found"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "Email update request not found."
+                                            "example": "email_update_not_found"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/invalid"
+                                            "example": "https://frontend.example.com/verification-result/invalid"
                                         }
                                     },
                                     "type": "object"
@@ -3153,23 +2440,22 @@
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Unexpected error",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "error"
+                                            "example": "Unexpected error"
                                         },
-                                        "error": {
+                                        "code": {
                                             "type": "string",
-                                            "example": "An unknown error occurred. Please try again later"
+                                            "example": "internal_error"
                                         },
                                         "redirect_url": {
-                                            "description": "Used for redirection only in production. In development, a JSON response will be returned.",
                                             "type": "string",
-                                            "example": "https://jo2024.mkcodecreation.dev/verification-result/error"
+                                            "example": "https://frontend.example.com/verification-result/error"
                                         }
                                     },
                                     "type": "object"
@@ -3183,6 +2469,46 @@
     },
     "components": {
         "schemas": {
+            "RegisterUser": {
+                "required": [
+                    "firstname",
+                    "lastname",
+                    "email",
+                    "password",
+                    "password_confirmation",
+                    "captcha_token"
+                ],
+                "properties": {
+                    "firstname": {
+                        "type": "string",
+                        "example": "Jean"
+                    },
+                    "lastname": {
+                        "type": "string",
+                        "example": "Dupont"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jean.dupont@example.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Str0ngP@ssw0rd!"
+                    },
+                    "password_confirmation": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Str0ngP@ssw0rd!"
+                    },
+                    "captcha_token": {
+                        "type": "string",
+                        "example": "03AGdBq24…"
+                    }
+                },
+                "type": "object"
+            },
             "StoreProduct": {
                 "title": "StoreProduct",
                 "required": [
@@ -4088,5 +3414,9 @@
             "name": "Products",
             "description": "Product management, including categories and details"
         }
-    ]
+    ],
+    "externalDocs": {
+        "description": "Full API documentation",
+        "url": "https://docs.paris2024.example.com"
+    }
 }

@@ -29,5 +29,5 @@ Route::prefix('products')->group(function () {
         ->name('products.update')
         ->middleware('auth:sanctum');
 
-})->middleware([CheckOriginMiddleware::class]);
+})->middleware(CheckOriginMiddleware::class);
 

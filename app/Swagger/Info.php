@@ -7,10 +7,30 @@ namespace App\Swagger;
  *   @OA\Info(
  *     title="Paris 2024 Olympic Games Ticketing API",
  *     version="1.0.0",
- *     description="This API manages the entire ticket lifecycle…",
+ *     description="
+This API manages the entire ticket lifecycle for the Paris 2024 Olympic Games, covering:
+
+- User registration and profile management
+
+- Shopping cart and payment processing
+
+- Ticket generation and entry validation
+
+
+Developed as part of a Bachelor's in Digital Solutions Development, it follows a modular Laravel monolith architecture,
+organized into internal packages (users, tickets, cart, payment, etc.) for maintainability and scalability.
+
+Notifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.
+
+Access is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).",
  *     @OA\Contact(name="Myriam Kühn", email="myriam.kuehn@free.fr", url="https://myriamkuhn.com/"),
  *     @OA\License(name="MIT", url="https://opensource.org/licenses/MIT")
  *   ),
+ *   @OA\ExternalDocumentation(
+ *     description="Full API documentation",
+ *     url="https://docs.paris2024.example.com"
+ *   ),
+ *
  *   @OA\Server(url="http://localhost:8000", description="Local dev"),
  *   @OA\Server(url="https://api-jo2024.mkcodecreations.dev", description="Prod"),
  *

@@ -30,6 +30,7 @@ class ProductControllerTest extends TestCase
         $paginator = new LengthAwarePaginator($products, 3, 15, 1);
 
         // Mock du service de listing
+        /** @var \Mockery\MockInterface&\App\Services\ProductListingService $listingServiceMock */
         $listingServiceMock = Mockery::mock(ProductListingService::class);
         $listingServiceMock
             ->shouldReceive('handle')
@@ -55,6 +56,7 @@ class ProductControllerTest extends TestCase
     {
         $paginator = new LengthAwarePaginator([], 0, 15, 1);
 
+        /** @var \Mockery\MockInterface&\App\Services\ProductListingService $listingServiceMock */
         $listingServiceMock = Mockery::mock(ProductListingService::class);
         $listingServiceMock
             ->shouldReceive('handle')
@@ -103,6 +105,7 @@ class ProductControllerTest extends TestCase
         ]);
 
         // 3) Mock du ProductManagementService
+        /** @var \Mockery\MockInterface&\App\Services\ProductListingService $managementServiceMock */
         $managementServiceMock = Mockery::mock(ProductManagementService::class);
         $managementServiceMock
             ->shouldReceive('create')
@@ -144,6 +147,7 @@ class ProductControllerTest extends TestCase
         ];
 
         // 4) Mock du service avec un type matcher pour le Product
+        /** @var \Mockery\MockInterface&\App\Services\ProductListingService $managementServiceMock */
         $managementServiceMock = Mockery::mock(ProductManagementService::class);
         $managementServiceMock
             ->shouldReceive('update')
@@ -170,6 +174,7 @@ class ProductControllerTest extends TestCase
         $products = Product::factory()->count(2)->make();
         $paginator = new LengthAwarePaginator($products, 2, 15, 1);
 
+        /** @var \Mockery\MockInterface&\App\Services\ProductListingService $listingServiceMock */
         $listingServiceMock = Mockery::mock(ProductListingService::class);
         $listingServiceMock
             ->shouldReceive('handle')
@@ -193,6 +198,7 @@ class ProductControllerTest extends TestCase
 
         $paginator = new LengthAwarePaginator([], 0, 15, 1);
 
+        /** @var \Mockery\MockInterface&\App\Services\ProductListingService $listingServiceMock */
         $listingServiceMock = Mockery::mock(ProductListingService::class);
         $listingServiceMock
             ->shouldReceive('handle')

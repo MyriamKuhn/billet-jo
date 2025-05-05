@@ -27,8 +27,15 @@ class CartController extends Controller
      *     operationId="getCurrentCart",
      *     path="/api/cart",
      *     tags={"Carts"},
-     *     summary="Retrieve the current shopping cart",
-     *     description="Returns either a minimal user cart (id, user_id, cart_items…) or a guest cart (map productId⇒quantity). Accessible by guests **and** authenticated users. Provide a Bearer token to operate on the user’s cart, or omit it to operate on the guest cart.",
+     *     summary="Retrieve current shopping cart",
+ *     description="
+Returns the current cart contents:
+
+- **Authenticated users**: full cart model (cart ID, user ID, items with product details)
+- **Guests**: a simple map of product IDs to quantities
+
+Provide a Bearer token to operate on the user’s cart; omit it to operate on the guest cart.
+",
      *     @OA\Response(
      *         response=200,
      *         description="Cart retrieved successfully",
@@ -86,8 +93,15 @@ class CartController extends Controller
      *     path="/api/cart/items/{product}",
      *     operationId="updateCartItem",
      *     tags={"Carts"},
-     *     summary="Set the quantity of a cart item (0 to remove)",
-     *     description="Accessible by guests **and** authenticated users. Provide a Bearer token to operate on the user’s cart, or omit it to operate on the guest cart.",
+     *     summary="Set cart item quantity or remove item",
+     *     description="
+Updates the quantity for a given product in the current cart:
+
+- **quantity > 0**: set the new quantity
+- **quantity = 0**: remove the item from the cart
+
+Accessible by guests and authenticated users. Provide a Bearer token to update the user’s cart; omit it to update the guest cart.
+",
      *     @OA\Parameter(
      *         name="product",
      *         in="path",
@@ -147,7 +161,8 @@ class CartController extends Controller
      * @OA\Delete(
      *     path="/api/cart/items",
      *     tags={"Carts"},
-     *     summary="Clear the entire cart (authenticated users only)",
+     *     summary="Clear authenticated user's cart",
+     *     description="Deletes every item from the current authenticated user’s shopping cart. Requires a valid Bearer token.",
      *     security={{"bearerAuth":{}}},
      *     @OA\Response(response=204, ref="#/components/responses/NoContent"),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),

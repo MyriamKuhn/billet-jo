@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'recaptcha' => [
+        'secret'          => env('RECAPTCHA_SECRET_KEY'),
+        'site_verify_url' => 'https://www.google.com/recaptcha/api/siteverify',
+        // 'threshold'     => 0.5, // seulement pour reCAPTCHA v3
+    ],
+
 ];

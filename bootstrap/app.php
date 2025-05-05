@@ -16,6 +16,8 @@ use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Predis\Connection\ConnectionException as RedisConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Database\QueryException;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -35,6 +37,52 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SetLocalLanguages::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $base = config('app.frontend_url') . '/verification-result';
+        $exceptions->render(function (\App\Exceptions\Auth\UserNotFoundException $e, Request $request) use ($base) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message'      => 'User not found',
+                    'code'         => 'user_not_found',
+                    'redirect_url' => "$base/invalid",
+                ], 404);
+            }
+        });
+        $exceptions->render(function (\App\Exceptions\Auth\InvalidVerificationLinkException $e, Request $request) use ($base) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message'      => 'Invalid verification link',
+                    'code'         => 'invalid_verification_link',
+                    'redirect_url' => "$base/invalid",
+                ], 400);
+            }
+        });
+        $exceptions->render(function (\App\Exceptions\Auth\AlreadyVerifiedException $e, Request $request) use ($base) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message'      => 'Email is already verified',
+                    'code'         => 'already_verified',
+                    'redirect_url' => "$base/already-verified",
+                ], 409);
+            }
+        });
+        $exceptions->render(function (\App\Exceptions\Auth\MissingVerificationTokenException $e, Request $request) use ($base) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message'      => 'Invalid or expired verification token',
+                    'code'         => 'verification_token_missing',
+                    'redirect_url' => "$base/invalid",
+                ], 400);
+            }
+        });
+        $exceptions->render(function (\App\Exceptions\Auth\EmailUpdateNotFoundException $e, Request $request) use ($base) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message'      => 'Email request not found',
+                    'code'         => 'email_not_found',
+                    'redirect_url' => "$base/invalid",
+                ], 404);
+            }
+        });
         $exceptions->render(function (BadRequestHttpException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
@@ -106,6 +154,19 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Service temporarily unavailable',
                     'code' => 'service_unavailable'
                 ], 503);
+            }
+        });
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Database error',
+                    'code'    => 'database_error',
+                ], 500);
+            }
+        });
+        $exceptions->render(function (HttpResponseException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return $e->getResponse();
             }
         });
         $exceptions->render(function (\Throwable $e, Request $request) {

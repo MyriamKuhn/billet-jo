@@ -11,7 +11,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(\App\Services\Auth\CaptchaService::class, function ($app) {
+            $recaptcha = config('services.recaptcha');
+            return new \App\Services\Auth\CaptchaService(
+                $recaptcha['secret'] ?? '',
+                $recaptcha['site_verify_url']
+            );
+        });
     }
 
     /**

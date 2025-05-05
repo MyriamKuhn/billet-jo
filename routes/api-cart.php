@@ -19,4 +19,4 @@ Route::prefix('cart')->group(function () {
     Route::patch('/items/{product}', [CartController::class, 'updateItem'])
         ->name('cart.items.update');
 
-})->middleware([CheckOriginMiddleware::class]);
+})->middleware(CheckOriginMiddleware::class);

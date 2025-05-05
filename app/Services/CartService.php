@@ -11,6 +11,7 @@ use Predis\Connection\ConnectionException as RedisConnectionException;
 use Illuminate\Database\QueryException;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class CartService
 {
@@ -88,7 +89,7 @@ class CartService
      *
      * @param  int  $productId  The ID of the product to add.
      * @param  int  $qty        The quantity to add (must be at least 1).
-     * @throws \InvalidArgumentException            If the quantity is less than 1.
+     * @throws BadRequestHttpException            If the quantity is less than 1.
      * @throws \Illuminate\Database\QueryException If a database error occurs while updating a user cart.
      * @return void
      */
@@ -96,7 +97,7 @@ class CartService
     {
         if ($qty < 1) {
             // Validate quantity
-            throw new \InvalidArgumentException('Quantity must be at least 1.');
+            throw new BadRequestHttpException('Quantity must be at least 1');
         }
 
         if (auth()->check()) {
