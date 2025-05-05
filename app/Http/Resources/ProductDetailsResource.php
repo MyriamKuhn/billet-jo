@@ -16,7 +16,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *   @OA\Property(property="time",        type="string",                 example="19h30"),
  *   @OA\Property(property="location",    type="string",                 example="Stade de France"),
  *   @OA\Property(property="category",    type="string",                 example="Cérémonies"),
- *   @OA\Property(property="image",       type="string",  format="uri",  example="https://…")
+ *   @OA\Property(property="image",       type="string",                 example="image.png"),
  * )
  */
 class ProductDetailsResource extends JsonResource

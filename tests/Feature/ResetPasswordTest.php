@@ -69,7 +69,7 @@ class ResetPasswordTest extends TestCase
             'email' => $user->email,
         ]);
 
-        $response->assertStatus(500);
+        $response->assertStatus(429);
     }
 
     public function testResetPasswordSuccessfully()

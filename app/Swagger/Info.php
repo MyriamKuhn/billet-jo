@@ -23,6 +23,15 @@ namespace App\Swagger;
  *       description="Use `Bearer {token}` in Authorization header"
  *     ),
  *
+ *    @OA\Response(
+ *      response="BadRequest",
+ *      description="Bad request",
+ *      @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="Bad request"),
+ *        @OA\Property(property="code",    type="string", example="bad_request")
+ *        )
+ *    ),
  *     @OA\Response(
  *       response="Unauthenticated",
  *       description="Authentication required",
@@ -51,6 +60,24 @@ namespace App\Swagger;
  *       )
  *     ),
  *     @OA\Response(
+ *       response="MethodNotAllowed",
+ *       description="Method not allowed",
+ *       @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="Method not allowed"),
+ *        @OA\Property(property="code",    type="string", example="method_not_allowed")
+ *        )
+ *     ),
+ *     @OA\Response(
+ *       response="CSRFTokenMismatch",
+ *       description="CSRF token mismatch",
+ *       @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="CSRF token mismatch"),
+ *        @OA\Property(property="code",    type="string", example="csrf_token_mismatch")
+ *       )
+ *     ),
+ *     @OA\Response(
  *       response="ValidationError",
  *       description="Validation error",
  *       @OA\JsonContent(
@@ -65,6 +92,15 @@ namespace App\Swagger;
  *             @OA\Items(type="string")
  *           )
  *         )
+ *       )
+ *     ),
+ *     @OA\Response(
+ *       response="TooManyRequests",
+ *       description="Too many requests",
+ *       @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="Too many requests"),
+ *        @OA\Property(property="code",    type="string", example="too_many_requests")
  *       )
  *     ),
  *     @OA\Response(

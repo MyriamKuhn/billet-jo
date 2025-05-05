@@ -4,7 +4,23 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-
+/**
+ * @OA\Schema(
+ *   schema="MinimalProduct",
+ *   title="MinimalProduct",
+ *   type="object",
+ *   required={"id","name","price","sale","stock_quantity","product_details"},
+ *   @OA\Property(property="id", type="integer", example=1),
+ *   @OA\Property(property="name", type="string", example="Sample Product"),
+ *   @OA\Property(property="price", type="number", format="float", example=49.99),
+ *   @OA\Property(property="sale", type="number", format="float", example=0.10),
+ *   @OA\Property(property="stock_quantity", type="integer", example=20),
+ *   @OA\Property(
+ *     property="product_details",
+ *     ref="#/components/schemas/ProductDetails"
+ *   )
+ * )
+ */
 class ProductResource extends JsonResource
 {
     public function toArray($request): array

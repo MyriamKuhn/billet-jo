@@ -335,7 +335,7 @@ class CartServiceTest extends TestCase
     public function testRemoveItemFromUserLogsAndRethrowsDatabaseExceptions()
     {
         // 1) Prépare un faux logger et s’attend à un appel à error()
-        $logger = Mockery::mock(\Psr\Log\LoggerInterface::class);
+        $logger = Mockery::mock(LoggerInterface::class);
         $logger->shouldReceive('error')
             ->once()
             ->with(
@@ -360,11 +360,11 @@ class CartServiceTest extends TestCase
         $fakeRelation->shouldReceive('first')->andReturn($fakeItem);
 
         // 5) Stub d’un vrai App\Models\Cart dont cartItems() renvoie la relation
-        $fakeCart = Mockery::mock(\App\Models\Cart::class);
+        $fakeCart = Mockery::mock(Cart::class);
         $fakeCart->shouldReceive('cartItems')->andReturn($fakeRelation);
 
         // 6) Partial‐mock de CartService avec notre logger, pour surcharger getUserCart()
-        $service = Mockery::mock(\App\Services\CartService::class, [$logger])
+        $service = Mockery::mock(CartService::class, [$logger])
                         ->makePartial()
                         ->shouldAllowMockingProtectedMethods();
         $service->shouldReceive('getUserCart')
@@ -503,7 +503,7 @@ class CartServiceTest extends TestCase
         Redis::shouldReceive('expire')->never();
 
         // 1) Prépare un faux logger et attend un appel à error()
-        $logger = Mockery::mock(\Psr\Log\LoggerInterface::class);
+        $logger = Mockery::mock(LoggerInterface::class);
         $logger->shouldReceive('error')
             ->once()
             ->with(
@@ -543,7 +543,7 @@ class CartServiceTest extends TestCase
         // 4) On injecte un logger qui **ne doit pas** recevoir d’erreur
         $this->app->instance(
             LoggerInterface::class,
-            Mockery::mock(\Psr\Log\LoggerInterface::class)
+            Mockery::mock(LoggerInterface::class)
                 ->shouldNotReceive('error')
                 ->getMock()
         );
