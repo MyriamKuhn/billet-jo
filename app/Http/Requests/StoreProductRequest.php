@@ -3,8 +3,23 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\Enums\UserRole;
 
+/**
+ * @OA\Schema(
+ *   schema="StoreProduct",
+ *   title="StoreProduct",
+ *   type="object",
+ *   required={"name","price","stock_quantity","product_details"},
+ *   @OA\Property(property="name",           type="string",  example="Sample Product"),
+ *   @OA\Property(property="price",          type="number",  format="float", example=49.99),
+ *   @OA\Property(property="sale",           type="number",  format="float", example=39.99),
+ *   @OA\Property(property="stock_quantity", type="integer", example=100),
+ *   @OA\Property(
+ *     property="product_details",
+ *     ref="#/components/schemas/ProductDetails"
+ *   )
+ * )
+ */
 class StoreProductRequest extends FormRequest
 {
     /**

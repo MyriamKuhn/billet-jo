@@ -2,520 +2,481 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use App\Services\CartService;
-use Exception;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\App;
 use Tests\TestCase;
-use App\Models\EmailUpdate;
-use App\Helpers\EmailHelper;
-use Mockery;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use Illuminate\Support\Str;
+use App\Services\Auth\EmailVerificationService;
+use App\Services\CartService;
+use App\Services\Auth\EmailUpdateService;
+use App\Exceptions\Auth\UserNotFoundException;
+use App\Exceptions\Auth\InvalidVerificationLinkException;
+use Illuminate\Routing\Middleware\ValidateSignature;
+use App\Exceptions\Auth\AlreadyVerifiedException;
+use App\Exceptions\Auth\MissingVerificationTokenException;
+use App\Exceptions\Auth\EmailUpdateNotFoundException;
 
 class VerificationControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function testVerificationFailsIfUserNotFound()
+    protected function setUp(): void
     {
-        $this->withoutMiddleware([
-            \Illuminate\Routing\Middleware\ValidateSignature::class,
-        ]);
-
-        $response = $this->getJson('/api/auth/email/verify/999/invalidhash');
-        $response->assertStatus(404);
+        parent::setUp();
+        // Mock services
+        $this->mock(EmailVerificationService::class);
+        $this->mock(CartService::class);
+        $this->mock(EmailUpdateService::class);
+        // Ensure environment is non-production and frontend_url is set
+        config()->set('app.env', 'testing');
+        config()->set('app.frontend_url', 'http://frontend.test');
     }
 
-    public function testVerificationFailsIfHashDoesNotMatch()
+    public function testVerifyReturnsJsonOnSuccess()
     {
         $user = User::factory()->create(['email_verified_at' => null]);
-        $wrongHash = sha1('wrong@example.com');
+        $id = $user->id;
+        $hash = sha1($user->email);
 
-        $this->withoutMiddleware([
-            \Illuminate\Routing\Middleware\ValidateSignature::class,
-        ]);
-
-        $response = $this->getJson("/api/auth/email/verify/{$user->id}/{$wrongHash}");
-        $response->assertStatus(400);
-    }
-
-    public function testVerificationFailsIfEmailAlreadyVerified()
-    {
-        $user = User::factory()->create(['email_verified_at' => now()]);
-
-        $url = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->getEmailForVerification())]
-        );
-
-        $response = $this->getJson($url);
-
-        $response->assertStatus(409);
-    }
-
-    public function testVerificationFailsWithException()
-    {
-        Log::shouldReceive('error')->once();
-
-        $user = User::factory()->create(['email_verified_at' => null]);
+        $this->mock(EmailVerificationService::class)
+            ->shouldReceive('verify')
+            ->with($id, $hash)
+            ->once()
+            ->andReturn($user);
 
         $this->mock(CartService::class)
-            ->shouldReceive('createCartForUser')
-            ->andThrow(new Exception('Simulated failure'));
+            ->shouldReceive('getUserCart')
+            ->with($user)
+            ->once();
 
-        $url = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->getEmailForVerification())]
-        );
+        $url = "/api/auth/email/verify/{$id}/{$hash}?expires=123&signature=abc";
+
+        // ← Ajoute cette ligne :
+        $this->withoutMiddleware(ValidateSignature::class);
 
         $response = $this->getJson($url);
-        $response->assertStatus(500);
+        $response->assertOk()
+                ->assertJson([
+                    'message'      => 'Email verified successfully',
+                    'redirect_url' => config('app.frontend_url') . '/verification-result/success',
+                ]);
     }
 
-    public function testResendFailsIfUserNotAuthenticated()
+    public function testResendReturns200()
     {
-        $response = $this->postJson('/api/auth/email/resend-verification');
-        $response->assertStatus(401)
-                ->assertJsonFragment(['message' => 'Unauthenticated.']);
+        $user = User::factory()->create();
+        /** @var string $data */
+        $data = ['message' => 'Verification email resent'];
+
+        /** @noinspection PhpParamsInspection */
+        $this->mock(EmailVerificationService::class)
+            ->shouldReceive('resend')
+            ->withArgs(fn($u) => $u->id === $user->id)
+            ->once()
+            ->andReturn($data);
+
+        Sanctum::actingAs($user, ['*']);
+        $this->postJson('/api/auth/email/resend')
+            ->assertOk()
+            ->assertJson($data);
     }
 
-    public function testResendFailsIfEmailAlreadyVerified()
+    public function testVerifyNewReturnsJsonOnSuccess()
     {
-        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user = User::factory()->create();
+        $token = Str::random(40);
 
-        $response = $this->actingAs($user)->postJson('/api/auth/email/resend-verification');
-        $response->assertStatus(409);
+        // Mock uniquement le service de changement d'email
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('verifyNewEmail')
+            ->with($token)
+            ->once()
+            ->andReturn($user);
+
+        $url = "/api/auth/email/change/verify?token={$token}&expires=123&signature=abc";
+
+        // On désactive la validation de signature pour bypasser le middleware
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        $response = $this->getJson($url);
+
+        $response->assertOk()
+                ->assertJson([
+                    'message'      => 'Email updated successfully',
+                    'redirect_url' => config('app.frontend_url') . '/verification-result/success',
+                ]);
     }
 
-    public function testResendSucceedsForUnverifiedUser()
+    public function testCancelChangeReturnsJsonOnSuccess()
     {
-        Notification::fake();
+        $user  = User::factory()->create();
+        $token = Str::random(40);
+        $old   = 'old@example.com';
+
+        // 1) Mock uniquement le service d’EmailUpdate
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('cancelEmailUpdate')
+            ->with($token, $old)
+            ->once()
+            ->andReturn($user);
+
+        // 2) Construire l’URL signée factice
+        $url = "/api/auth/email/change/cancel/{$token}/{$old}?expires=123&signature=abc";
+
+        // 3) Bypass de la validation de signature
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 4) Exécution de la requête
+        $response = $this->getJson($url);
+
+        // 5) Assertions
+        $response->assertOk()
+                ->assertJson([
+                    'message'      => 'Email update canceled',
+                    'redirect_url' => config('app.frontend_url') . '/verification-result/success',
+                ]);
+    }
+
+    public function testVerifyRedirectsToSuccessOnProduction()
+    {
+        // 0) Forcer l'environnement "production" dans le container
+        $this->app['env'] = 'production';
+        // Et définir un frontend_url factice
+        config()->set('app.frontend_url', 'https://frontend.test');
 
         $user = User::factory()->create(['email_verified_at' => null]);
+        $id   = $user->id;
+        $hash = sha1($user->email);
+        $base = config('app.frontend_url') . '/verification-result';
 
-        $response = $this->actingAs($user)->postJson('/api/auth/email/resend-verification');
-        $response->assertStatus(200)
-                ->assertJsonFragment(['message' => __('validation.email_verification_resend')]);
+        // 1) Succès : verificationService->verify() retourne un User
+        $this->mock(EmailVerificationService::class)
+            ->shouldReceive('verify')
+            ->with($id, $hash)
+            ->once()
+            ->andReturn($user);
 
-        Notification::assertSentTo($user, \App\Notifications\VerifyEmailNotification::class);
+        // 2) getUserCart() doit être appelé
+        $this->mock(CartService::class)
+            ->shouldReceive('getUserCart')
+            ->with($user)
+            ->once();
+
+        $url = "/api/auth/email/verify/{$id}/{$hash}?expires=123&signature=abc";
+
+        // 3) Désactiver la validation de signature Laravel
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 4) Exécuter la requête : on attend 302 vers /success
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/success");
     }
 
-    public function testResendVerificationEmailUnauthorized()
+    public function testVerifyRedirectsToInvalidWhenUserNotFound()
     {
-        // Simule un utilisateur non authentifié
-        $this->withoutMiddleware();  // Ignore le middleware d'authentification pour ce test
-
-        // Effectue la requête de l'API sans être authentifié
-        $response = $this->postJson('/api/auth/email/resend-verification');
-
-        $response->assertStatus(401)
-                ->assertJson([
-                    'status' => 'error',
-                    'error' => __('validation.error_unauthorized'),
-                ]);
-    }
-
-    public function testInvalidUserIdRedirectsAwayInProduction()
-    {
-        $this->withoutMiddleware();
-
+        // 0) Forcer l’environnement "production" et frontend_url
         $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
+        $base = config('app.frontend_url') . '/verification-result';
 
-        $response = $this->get('/api/auth/email/verify/999/invalidhash');
+        $id   = 999;
+        $hash = 'fakehash';
+        $url  = "/api/auth/email/verify/{$id}/{$hash}?expires=123&signature=abc";
 
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/invalid');
+        // 1) Mock qui lance UserNotFoundException
+        $this->mock(EmailVerificationService::class)
+            ->shouldReceive('verify')
+            ->with($id, $hash)
+            ->once()
+            ->andThrow(new UserNotFoundException());
+
+        // 2) Bypass de la validation de signature
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) On s’attend à être redirigé vers /invalid
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/invalid");
     }
 
-    public function testInvalidHashRedirectsAwayInProduction()
+    public function testVerifyRedirectsToInvalidWhenLinkIsInvalid()
     {
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement et le frontend_url
         $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
+        $base = config('app.frontend_url') . '/verification-result';
 
-        // Créer un utilisateur
-        $user = User::factory()->create([
-            'email' => 'oldemail@example.com',
-            'email_verified_at' => null, // Assure-toi que l'email n'est pas vérifié
-        ]);
+        $id   = 999;
+        $hash = 'fakehash';
+        $url  = "/api/auth/email/verify/{$id}/{$hash}?expires=123&signature=abc";
 
-        $response = $this->get("/api/auth/email/verify/{$user->id}/invalidhash");
+        // 1) Mock qui lance InvalidVerificationLinkException
+        $this->mock(EmailVerificationService::class)
+            ->shouldReceive('verify')
+            ->with($id, $hash)
+            ->once()
+            ->andThrow(new InvalidVerificationLinkException());
 
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/invalid');
+        // 2) Bypass du middleware de signature
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) On s’attend à une redirection 302 vers /invalid
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/invalid");
     }
 
-    public function testAlreadyVerifiedEmailRedirectsAwayInProduction()
+    public function testVerifyRedirectsToAlreadyVerifiedIfAlreadyVerifiedException()
     {
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement “production” et frontend_url
         $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
+        $base = config('app.frontend_url') . '/verification-result';
 
-        // Créer un utilisateur avec un email déjà vérifié
-        $user = User::factory()->create([
-            'email' => 'oldemail@example.com',
-            'email_verified_at' => now(), // L'email est vérifié
-        ]);
+        $id   = 1;
+        $hash = 'anyhash';
+        $url  = "/api/auth/email/verify/{$id}/{$hash}?expires=123&signature=abc";
 
-        $response = $this->get("/api/auth/email/verify/{$user->id}/" . sha1($user->getEmailForVerification()));
+        // 1) Mock qui lance AlreadyVerifiedException
+        $this->mock(EmailVerificationService::class)
+            ->shouldReceive('verify')
+            ->with($id, $hash)
+            ->once()
+            ->andThrow(new AlreadyVerifiedException());
 
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/already-verified');
+        // 2) Bypass de la validation de signature
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) On s’attend à une redirection 302 vers /already-verified
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/already-verified");
     }
 
-    public function testSuccessfulEmailVerificationRedirectsAwayInProduction()
+    public function testVerifyRedirectsToErrorOnUnexpectedException()
     {
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement "production" et frontend_url
         $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
+        $base = config('app.frontend_url') . '/verification-result';
 
-        // Créer un utilisateur sans email vérifié
-        $user = User::factory()->create([
-            'email' => 'oldemail@example.com',
-            'email_verified_at' => null,
-        ]);
+        $id   = 1;
+        $hash = 'anyhash';
+        $url  = "/api/auth/email/verify/{$id}/{$hash}?expires=123&signature=abc";
 
-        $response = $this->get("/api/auth/email/verify/{$user->id}/" . sha1($user->getEmailForVerification()));
+        // 1) Mock qui lance une exception inattendue
+        $this->mock(EmailVerificationService::class)
+            ->shouldReceive('verify')
+            ->with($id, $hash)
+            ->once()
+            ->andThrow(new \RuntimeException('boom'));
 
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/success');
+        // 2) Bypass du ValidateSignature middleware
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) Appel et assertion de redirection vers /error
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/error");
     }
 
-    public function testSuccessfulEmailVerificationReturnsJsonInDevelopment()
+    public function testVerifyNewRedirectsToSuccessOnProduction()
     {
-        $this->withoutMiddleware();
-        $this->app['env'] = 'local'; // ou 'testing'
-
-        // Créer un utilisateur sans email vérifié
-        $user = User::factory()->create([
-            'email' => 'oldemail@example.com',
-            'email_verified_at' => null,
-        ]);
-
-        $response = $this->get("/api/auth/email/verify/{$user->id}/" . sha1($user->getEmailForVerification()));
-
-        $response->assertStatus(200);
-        $response->assertJson([
-            'status' => 'success',
-            'message' => __('validation.email_verification_success'),
-            'redirect_url' => 'https://jo2024.mkcodecreation.dev/verification-result/success',
-        ]);
-    }
-
-    public function testInvalidUserIdReturnsJsonInDevelopment()
-    {
-        $this->withoutMiddleware();
-        $this->app['env'] = 'local';
-
-        $response = $this->get('/api/auth/email/verify/999/invalidhash');
-
-        $response->assertStatus(404);
-        $response->assertJson([
-            'status' => 'error',
-            'error' => __('validation.error_user_not_found'),
-            'redirect_url' => 'https://jo2024.mkcodecreation.dev/verification-result/invalid',
-        ]);
-    }
-
-    public function testVerifyNewEmailRedirectsIfNoToken()
-    {
-        // Simuler l'environnement de production
+        // 0) Forcer l’environnement et configurer le frontend_url
         $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
 
-        // Désactiver les middlewares pour ce test
-        $this->withoutMiddleware();
+        $user  = User::factory()->create();
+        $token = 'sometoken';
+        $base  = config('app.frontend_url') . '/verification-result';
+        $url   = "/api/auth/email/change/verify?token={$token}&expires=123&signature=abc";
 
-        // Créer un utilisateur pour le test
-        $user = User::factory()->create();
+        // 1) Mock verifyNewEmail et getUserCart
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('verifyNewEmail')
+            ->with($token)
+            ->once()
+            ->andReturn($user);
 
-        // Effectuer la requête sans passer de token
-        $response = $this->get('/api/auth/email/verify-new-mail');
+        $this->mock(CartService::class)
+            ->shouldReceive('getUserCart')
+            ->with($user)
+            ->once();
 
-        // Vérifier la redirection
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/invalid');
+        // 2) Bypass signature validation
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) Appel avec get() pour capter la redirection
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/success");
     }
 
-    public function testVerifyNewEmailReturnsErrorIfEmailUpdateNotFound()
+    public function testVerifyNewRedirectsToInvalidWhenTokenMissing()
     {
-        // Fake environment non-production
-        app()->detectEnvironment(fn () => 'local');
-        // Désactiver les middlewares pour ce test uniquement
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement et frontend_url
+        $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
+        $base = config('app.frontend_url') . '/verification-result';
 
-        // Simuler un token
-        $token = 'fake-token';
-        $hashedToken = EmailHelper::hashToken($token);
+        $token = 'badtoken';
+        $url   = "/api/auth/email/change/verify?token={$token}&expires=123&signature=abc";
 
-        // Assurer que le token n'existe pas en base
-        EmailUpdate::where('token', $hashedToken)->delete();
+        // Mock qui lance MissingVerificationTokenException
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('verifyNewEmail')
+            ->with($token)
+            ->once()
+            ->andThrow(new MissingVerificationTokenException());
 
-        // Appeler la route avec le token
-        $response = $this->getJson(route('verification.verify.new.email', ['token' => $token]));
+        // Bypass du middleware de signature
+        $this->withoutMiddleware(ValidateSignature::class);
 
-        // Assertions
-        $response->assertStatus(404);
-        $response->assertJson([
-            'status' => 'error',
-            'error' => __('validation.error_email_verification_used'),
-            'redirect_url' => 'https://jo2024.mkcodecreation.dev/verification-result/invalid',
-        ]);
+        // On s’attend à une redirection 302 vers /invalid
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/invalid");
     }
 
-    public function testVerifyNewEmailReturnsErrorIfEmailUpdateNotFoundInProduction()
+    public function testVerifyNewRedirectsToInvalidWhenRequestNotFound()
     {
-        // Fake environment non-production
-        app()->detectEnvironment(fn () => 'production');
-        // Désactiver les middlewares pour ce test uniquement
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement et frontend_url
+        $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
+        $base = config('app.frontend_url') . '/verification-result';
 
-        // Simuler un token
-        $token = 'fake-token';
-        $hashedToken = EmailHelper::hashToken($token);
+        $token = 'badtoken';
+        $url   = "/api/auth/email/change/verify?token={$token}&expires=123&signature=abc";
 
-        // Assurer que le token n'existe pas en base
-        EmailUpdate::where('token', $hashedToken)->delete();
+        // Mock qui lance EmailUpdateNotFoundException
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('verifyNewEmail')
+            ->with($token)
+            ->once()
+            ->andThrow(new EmailUpdateNotFoundException());
 
-        // Appeler la route avec le token
-        $response = $this->get(route('verification.verify.new.email', ['token' => $token]));
+        // Bypass du middleware de signature
+        $this->withoutMiddleware(ValidateSignature::class);
 
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/invalid');
+        // On s’attend à une redirection 302 vers /invalid
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/invalid");
     }
 
-    public function testCancelEmailUpdateRedirectsInProduction()
+    public function testVerifyNewRedirectsToErrorOnUnexpectedException()
     {
-        // Fake environment non-production
-        app()->detectEnvironment(fn () => 'production');
-        // Désactiver les middlewares pour ce test uniquement
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement en production et définir frontend_url
+        $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
+        $base = config('app.frontend_url') . '/verification-result';
 
-        // Créer un EmailUpdate valide
-        $user = User::factory()->create();
-        $emailUpdate = EmailUpdate::factory()->create([
-            'token' => EmailHelper::hashToken('test-token'),
-            'old_email' => 'old@example.com',
-            'user_id' => $user->id,
-        ]);
+        $token = 'othertoken';
+        $url   = "/api/auth/email/change/verify?token={$token}&expires=123&signature=abc";
 
-        // Simuler la requête de l'utilisateur avec un token et un ancien email
-        $response = $this->get(route('email.update.cancel', [
-            'token' => 'test-token',
-            'old_email' => 'old@example.com'
-        ]));
+        // 1) Mock qui lance une exception inattendue
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('verifyNewEmail')
+            ->with($token)
+            ->once()
+            ->andThrow(new \RuntimeException('boom'));
 
-        // Vérification de la redirection dans l'environnement de production
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/success');
+        // 2) Bypass du middleware ValidateSignature
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) Appel et assertion de redirection /error
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/error");
     }
 
-    public function testCancelEmailUpdateReturnsJsonInNonProduction()
+    public function testCancelChangeRedirectsToSuccessOnProduction()
     {
-        // Simuler un environnement non-production
-        app()->detectEnvironment(fn() => 'local');
-        // Désactiver les middlewares pour ce test uniquement
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement en production et frontend_url
+        $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
 
-        // Créer un EmailUpdate valide
-        $user = User::factory()->create();
-        $emailUpdate = EmailUpdate::factory()->create([
-            'token' => EmailHelper::hashToken('test-token'),
-            'old_email' => 'old@example.com',
-            'user_id' => $user->id,
-        ]);
+        $user     = User::factory()->create();
+        $token    = 'goodtoken';
+        $oldEmail = 'old@example.com';
+        $base     = config('app.frontend_url') . '/verification-result';
+        $url      = "/api/auth/email/change/cancel/{$token}/{$oldEmail}?expires=123&signature=abc";
 
-        // Simuler la requête de l'utilisateur avec un token et un ancien email
-        $response = $this->getJson(route('email.update.cancel', [
-            'token' => 'test-token',
-            'old_email' => 'old@example.com'
-        ]));
+        // 1) Mock success
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('cancelEmailUpdate')
+            ->with($token, $oldEmail)
+            ->once()
+            ->andReturn($user);
 
-        // Vérification de la réponse JSON
-        $response->assertStatus(200);
-        $response->assertJson([
-            'status' => 'success',
-            'message' => __('validation.email_update_canceled'),
-            'redirect_url' => 'https://jo2024.mkcodecreation.dev/verification-result/success'
-        ]);
+        $this->mock(CartService::class)
+            ->shouldReceive('getUserCart')
+            ->with($user)
+            ->once();
+
+        // 2) Bypass signature validation
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) Appel et assertion de redirection 302 → /success
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/success");
     }
 
-    public function testCancelEmailUpdateNotFoundRedirectInProduction()
+    public function testCancelChangeRedirectsToInvalidWhenRequestNotFound()
     {
-        // Simuler un environnement de production
-        app()->detectEnvironment(fn() => 'production');
-        // Désactiver les middlewares pour ce test uniquement
-        $this->withoutMiddleware();
+        // 0) Forcer l’environnement en production et frontend_url
+        $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
 
-        // Cas où l'EmailUpdate n'existe pas
-        $response = $this->getJson(route('email.update.cancel', [
-            'token' => 'invalid-token',
-            'old_email' => 'old@example.com'
-        ]));
+        $token    = 'badtoken';
+        $oldEmail = 'old@example.com';
+        $base     = config('app.frontend_url') . '/verification-result';
+        $url      = "/api/auth/email/change/cancel/{$token}/{$oldEmail}?expires=123&signature=abc";
 
-        // Vérification de la redirection vers l'URL "invalid" en production
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/invalid');
+        // 1) Mock not found
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('cancelEmailUpdate')
+            ->with($token, $oldEmail)
+            ->once()
+            ->andThrow(new EmailUpdateNotFoundException());
+
+        // 2) Bypass signature validation
+        $this->withoutMiddleware(ValidateSignature::class);
+
+        // 3) Exécution et assertion de redirection vers /invalid
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/invalid");
     }
 
-    public function testResendVerificationEmailHandlesException()
+    public function testCancelChangeRedirectsToErrorOnUnexpectedException()
     {
-        $user = User::factory()->unverified()->create();
+        // 0) Forcer l’environnement en production et configurer frontend_url
+        $this->app['env'] = 'production';
+        config()->set('app.frontend_url', 'https://frontend.test');
 
-        // Se connecter avec Sanctum par exemple
-        $this->actingAs($user);
+        $token    = 'othertoken';
+        $oldEmail = 'old@example.com';
+        $base     = config('app.frontend_url') . '/verification-result';
+        $url      = "/api/auth/email/change/cancel/{$token}/{$oldEmail}?expires=123&signature=abc";
 
-        // On simule une exception au moment de l'envoi de la notification
-        Notification::fake();
-        Notification::shouldReceive('send')
-            ->andThrow(new Exception('SMTP failure'));
+        // 1) Mock qui lance une exception inattendue
+        $this->mock(EmailUpdateService::class)
+            ->shouldReceive('cancelEmailUpdate')
+            ->with($token, $oldEmail)
+            ->once()
+            ->andThrow(new \RuntimeException('boom'));
 
-        $response = $this->postJson('/api/auth/email/resend-verification');
+        // 2) Bypass du middleware de signature
+        $this->withoutMiddleware(ValidateSignature::class);
 
-        $response->assertStatus(500)
-                ->assertJson([
-                    'status' => 'error',
-                    'error' => __('validation.error_unknown'),
-                ]);
-    }
-
-    public function testVerifyNewEmailHandlesException()
-    {
-        $signedUrl = URL::signedRoute('verification.verify.new.email', ['token' => 'fake']);
-
-        try {
-            Schema::rename('email_updates', 'email_updates_temp');
-
-            $response = $this->getJson($signedUrl);
-
-            $response->assertStatus(500)
-                    ->assertJson([
-                        'status' => 'error',
-                        'error' => __('validation.error_unknown'),
-                        'redirect_url' => 'https://jo2024.mkcodecreation.dev/verification-result/error',
-                    ]);
-        } finally {
-            Schema::rename('email_updates_temp', 'email_updates');
-        }
-    }
-
-    public function testCancelEmailUpdateHandlesException()
-    {
-        // Génère une URL signée avec un token et un email fictifs
-        $signedUrl = URL::signedRoute('email.update.cancel', [
-            'token' => 'faketoken',
-            'old_email' => 'old@example.com',
-        ]);
-
-        try {
-            // Renomme temporairement la table pour provoquer une exception
-            Schema::rename('email_updates', 'email_updates_temp');
-
-            $response = $this->getJson($signedUrl);
-
-            $response->assertStatus(500)
-                    ->assertJson([
-                        'status' => 'error',
-                        'error' => __('validation.error_unknown'),
-                        'redirect_url' => 'https://jo2024.mkcodecreation.dev/verification-result/error'
-                    ]);
-        } finally {
-            // Restaure la table
-            Schema::rename('email_updates_temp', 'email_updates');
-        }
-    }
-
-    public function testVerifyEmailHandlesExceptionInProduction()
-    {
-        // Simule l'environnement production
-        app()->detectEnvironment(fn() => 'production');
-
-        // Crée une URL signée correspondant à ta route
-        $signedUrl = URL::signedRoute('verification.verify', [
-            'id' => 999999, // ID inexistant ou provoquant une erreur
-            'hash' => sha1('fake@example.com'),
-        ]);
-
-        try {
-            // Provoque une exception en renommant la table 'users'
-            Schema::rename('users', 'users_temp');
-
-            $response = $this->get($signedUrl);
-
-            $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/error');
-        } finally {
-            // Restaure la table
-            Schema::rename('users_temp', 'users');
-        }
-    }
-
-    public function testVerifyNewEmailRedirectsToSuccessInProduction()
-    {
-        // Simule l'environnement de production
-        app()->detectEnvironment(fn() => 'production');
-
-        // Crée un utilisateur pour le test
-        $user = User::create([
-            'name' => 'Test User',
-            'firstname' => 'Test',
-            'lastname' => 'User',
-            'email' => 'test@example.com',
-            'password_hash' => bcrypt('password'),
-        ]);
-
-        // Crée un token valide pour l'exemple
-        $token = 'valid-token';
-        $hashedToken = EmailHelper::hashToken($token);
-
-        // Simule une entrée en base de données pour l'email
-        $emailUpdate = EmailUpdate::create([
-            'token' => $hashedToken,
-            'new_email' => 'new@example.com',
-            'user_id' => $user->id, // Utilise l'ID de l'utilisateur créé
-        ]);
-
-        // Crée une URL avec un token valide
-        $url = URL::temporarySignedRoute('verification.verify.new.email', now()->addMinutes(30), ['token' => $token]);
-
-        // Exécute la requête
-        $response = $this->get($url);
-
-        // Vérifie que la redirection se fait vers l'URL de succès
-        $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/success');
-    }
-
-    public function testVerifyNewEmailHandlesExceptionInProduction()
-    {
-        app()->detectEnvironment(fn() => 'production');
-
-        $signedUrl = URL::signedRoute('verification.verify.new.email', ['token' => 'fake']);
-
-        try {
-            Schema::rename('email_updates', 'email_updates_temp');
-
-            $response = $this->getJson($signedUrl);
-
-            $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/error');
-        } finally {
-            Schema::rename('email_updates_temp', 'email_updates');
-        }
-    }
-
-    public function testCancelEmailUpdateHandlesExceptionInProduction()
-    {
-        app()->detectEnvironment(fn() => 'production');
-
-        // Génère une URL signée avec un token et un email fictifs
-        $signedUrl = URL::signedRoute('email.update.cancel', [
-            'token' => 'faketoken',
-            'old_email' => 'old@example.com',
-        ]);
-
-        try {
-            // Renomme temporairement la table pour provoquer une exception
-            Schema::rename('email_updates', 'email_updates_temp');
-
-            $response = $this->getJson($signedUrl);
-
-            $response->assertRedirect('https://jo2024.mkcodecreation.dev/verification-result/error');
-        } finally {
-            // Restaure la table
-            Schema::rename('email_updates_temp', 'email_updates');
-        }
+        // 3) Appel et assertion de redirection vers /error
+        $this->get($url)
+            ->assertStatus(302)
+            ->assertRedirect("{$base}/error");
     }
 }
 

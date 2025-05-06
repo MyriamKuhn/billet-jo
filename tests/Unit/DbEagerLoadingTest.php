@@ -13,11 +13,6 @@ class DbEagerLoadingTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     *  Test if the Payment model has a relationship with Ticket model and if it can be eager loaded.
-     *
-     * @return void
-     */
     public function testPaymentHasManyTicketsEagerLoading()
     {
         $payment = Payment::factory()->create(); // Crée un paiement
@@ -31,11 +26,6 @@ class DbEagerLoadingTest extends TestCase
         $this->assertCount(1, $paymentWithTickets->tickets); // Vérifie qu'il y a bien un ticket associé
     }
 
-    /**
-     * Test if eager loading prevents N+1 problem.
-     *
-     * @return void
-     */
     public function testPaymentEagerLoadingPreventsNPlusOne()
     {
         Payment::factory()->count(5)->create()->each(function ($payment) {
@@ -52,11 +42,6 @@ class DbEagerLoadingTest extends TestCase
         $this->assertCount(2, $queries, 'Le problème N+1 a été détecté, trop de requêtes exécutées malgré l’eager loading.');
     }
 
-    /**
-     * Test if eager loading with constraints works correctly.
-     *
-     * @return void
-     */
     public function testPaymentWithoutEagerLoadingCausesNPlusOne()
     {
         Payment::factory()->count(5)->create()->each(function ($payment) {

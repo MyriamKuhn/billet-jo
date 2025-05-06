@@ -11,12 +11,7 @@ class DbPerformanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test of the performance of the relationship between Payment and Ticket.
-     *
-     * @return void
-     */
-    public function testPaymentHasManyTicketsPerformance()
+        public function testPaymentHasManyTicketsPerformance()
     {
         $payment = Payment::factory()->create(); // Crée un paiement
         $ticket = Ticket::factory()->create(['payment_id' => $payment->id]); // Crée un ticket lié au paiement
