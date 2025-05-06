@@ -66,8 +66,8 @@ class EmailUpdatedNotification extends Notification
     protected function getCancelLink($notifiable)
     {
         return URL::temporarySignedRoute(
-            'email.update.cancel', // Route to cancel the update
-            now()->addHours(48), // URL will be valid for 60 minutes
+            'auth.email.change.cancel', // Route to cancel the update
+            now()->addHours(48), // URL will be valid for 48 hours
             [
                 'token' => $this->rawToken,
                 'old_email' => $this->oldEmail

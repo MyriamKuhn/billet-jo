@@ -54,7 +54,7 @@ class VerifyEmailNotification extends Notification
     protected function verificationUrl($notifiable)
     {
         return URL::temporarySignedRoute( //Generate a temporary signed URL
-            'verification.verify',
+            'auth.email.verify',
             now()->addMinutes(60), //The URL will be valid for 60 minutes
             [
                 'id' => $notifiable->getKey(),

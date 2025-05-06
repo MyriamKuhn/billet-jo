@@ -47,6 +47,9 @@ return [
                     base_path('app'),
                 ],
             ],
+            'produces' => [
+                'application/json',
+            ],
         ],
     ],
     'defaults' => [
