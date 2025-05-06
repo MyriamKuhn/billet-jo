@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Requests;
 
 use App\Http\Requests\AdminProductRequest;
 use App\Models\User;

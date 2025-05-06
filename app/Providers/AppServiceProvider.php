@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Http\Client\Factory as HttpClient;
+use App\Services\Auth\CaptchaService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -11,11 +13,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(\App\Services\Auth\CaptchaService::class, function ($app) {
-            $recaptcha = config('services.recaptcha');
-            return new \App\Services\Auth\CaptchaService(
-                $recaptcha['secret'] ?? '',
-                $recaptcha['site_verify_url']
+        $this->app->singleton(CaptchaService::class, function ($app) {
+            $recaptcha = config('services.recaptcha', []);
+
+            return new CaptchaService(
+                $recaptcha['secret']            ?? '',
+                $recaptcha['site_verify_url']   ?? '',
+                $app->make(HttpClient::class)
             );
         });
     }

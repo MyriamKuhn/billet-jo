@@ -71,10 +71,6 @@ class UserService
      */
     public function updateName(User $user, array $data): array
     {
-        if (!$user) {
-            throw new AuthenticationException();
-        }
-
         $user->update([
             'firstname' => $data['firstname'],
             'lastname'  => $data['lastname'],

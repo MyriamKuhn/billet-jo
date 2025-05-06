@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Requests;
 
 use App\Http\Requests\IndexProductRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;

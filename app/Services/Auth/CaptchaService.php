@@ -4,10 +4,11 @@ namespace App\Services\Auth;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Client\Factory as HttpClient;
 
 class CaptchaService
 {
-    public function __construct(protected string $secret, protected string $verifyUrl) {}
+    public function __construct(protected string $secret, protected string $verifyUrl, protected HttpClient $http) {}
 
     /**
      * Verify the captcha token with Google reCAPTCHA.
@@ -23,7 +24,8 @@ class CaptchaService
         }
 
         try {
-            $response = Http::retry(3, 100)
+            $response = $this->http
+                ->retry(3, 100)
                 ->asForm()
                 ->post($this->verifyUrl, [
                     'secret'   => $this->secret,
@@ -31,8 +33,8 @@ class CaptchaService
                 ]);
 
             // If google returns a HTTP error, we log it and return false
-            if (! $response->successful()) {
-                Log::warning('reCAPTCHA HTTP error', [
+            if (!$response->successful()) {
+                Log::warning('reCAPTCHA verification invalid', [
                     'status' => $response->status(),
                     'body'   => $response->body(),
                 ]);
