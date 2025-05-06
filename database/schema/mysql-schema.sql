@@ -145,11 +145,15 @@ CREATE TABLE `payments` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `uuid` char(36) NOT NULL,
   `invoice_link` varchar(255) NOT NULL,
+  `cart_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`cart_snapshot`)),
   `amount` decimal(15,2) NOT NULL,
   `payment_method` enum('paypal','stripe') NOT NULL,
   `status` enum('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
   `transaction_id` varchar(255) DEFAULT NULL,
+  `client_secret` varchar(255) DEFAULT NULL,
   `paid_at` timestamp NULL DEFAULT NULL,
+  `refunded_at` timestamp NULL DEFAULT NULL,
+  `refunded_amount` decimal(15,2) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `user_id` bigint(20) unsigned NOT NULL,
@@ -158,6 +162,7 @@ CREATE TABLE `payments` (
   UNIQUE KEY `payments_invoice_link_unique` (`invoice_link`),
   KEY `payments_user_id_foreign` (`user_id`),
   KEY `payments_transaction_id_index` (`transaction_id`),
+  KEY `payments_paid_at_index` (`paid_at`),
   CONSTRAINT `payments_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

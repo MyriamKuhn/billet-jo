@@ -2843,7 +2843,9 @@
             "Payment": {
                 "required": [
                     "id",
+                    "uuid",
                     "invoice_link",
+                    "cart_snapshot",
                     "amount",
                     "payment_method",
                     "status",
@@ -2862,6 +2864,12 @@
                         "type": "string",
                         "example": "http://example.com/invoice/12345"
                     },
+                    "cart_snapshot": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
                     "amount": {
                         "type": "number",
                         "format": "float",
@@ -2870,29 +2878,43 @@
                     "payment_method": {
                         "type": "string",
                         "enum": [
-                            "credit_card",
                             "paypal",
-                            "bank_transfer"
+                            "stripe"
                         ],
-                        "example": "credit_card"
+                        "example": "paypal"
                     },
                     "status": {
                         "type": "string",
                         "enum": [
                             "pending",
-                            "completed",
-                            "failed"
+                            "paid",
+                            "failed",
+                            "refunded"
                         ],
-                        "example": "completed"
+                        "example": "paid"
                     },
                     "transaction_id": {
                         "type": "string",
-                        "example": "abc123xyz"
+                        "example": "pi_abc123"
+                    },
+                    "client_secret": {
+                        "type": "string",
+                        "example": "cs_test_456"
                     },
                     "paid_at": {
                         "type": "string",
                         "format": "date-time",
                         "example": "2023-04-01T12:00:00Z"
+                    },
+                    "refunded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-02T15:00:00Z"
+                    },
+                    "refunded_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 50
                     },
                     "user_id": {
                         "type": "integer",
