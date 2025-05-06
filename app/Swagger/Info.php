@@ -4,67 +4,155 @@ namespace App\Swagger;
 
 /**
  * @OA\OpenApi(
- *     @OA\Info(
- *         title="Paris 2024 Olympic Games Ticketing API",
- *         version="1.0.0",
- *         description="This API manages the entire ticket lifecycle for the Paris 2024 Olympic Games: user registration, shopping cart management, payment processing, ticket generation, and entry validation.
+ *   @OA\Info(
+ *     title="Paris 2024 Olympic Games Ticketing API",
+ *     version="1.0.0",
+ *     description="
+This API manages the entire ticket lifecycle for the Paris 2024 Olympic Games, covering:
 
-This project was developed as part of the **Bachelor's degree in Digital Solutions Development**. The architecture is based on a **modular Laravel monolith**, structured into internal services (users, tickets, cart, payment, etc.) organized as internal packages to ensure better organization, maintainability, and scalability.
+- User registration and profile management
 
-The notification system, including emails and system messages, is managed internally through a dedicated Laravel service and is not exposed as a public API.
+- Shopping cart and payment processing
 
-**Note:** All API endpoints are protected by CORS (Cross-Origin Resource Sharing) to restrict access to authorized domains only, ensuring secure communication between the client and the server.",
- *         @OA\Contact(
- *             name="Myriam Kühn",
- *             email="myriam.kuehn@free.fr",
- *             url="https://myriamkuhn.com/"
- *         ),
- *         @OA\License(
- *             name="MIT",
- *             url="https://opensource.org/licenses/MIT"
+- Ticket generation and entry validation
+
+
+Developed as part of a Bachelor's in Digital Solutions Development, it follows a modular Laravel monolith architecture,
+organized into internal packages (users, tickets, cart, payment, etc.) for maintainability and scalability.
+
+Notifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.
+
+Access is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).",
+ *     @OA\Contact(name="Myriam Kühn", email="myriam.kuehn@free.fr", url="https://myriamkuhn.com/"),
+ *     @OA\License(name="MIT", url="https://opensource.org/licenses/MIT")
+ *   ),
+ *   @OA\ExternalDocumentation(
+ *     description="Full API documentation",
+ *     url="https://docs.paris2024.example.com"
+ *   ),
+ *
+ *   @OA\Server(url="http://localhost:8000", description="Local dev"),
+ *   @OA\Server(url="https://api-jo2024.mkcodecreations.dev", description="Prod"),
+ *
+ *   @OA\Components(
+ *     @OA\SecurityScheme(
+ *       securityScheme="bearerAuth",
+ *       type="http",
+ *       scheme="bearer",
+ *       bearerFormat="JWT",
+ *       description="Use `Bearer {token}` in Authorization header"
+ *     ),
+ *
+ *    @OA\Response(
+ *      response="BadRequest",
+ *      description="Bad request",
+ *      @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="Bad request"),
+ *        @OA\Property(property="code",    type="string", example="bad_request")
+ *        )
+ *    ),
+ *     @OA\Response(
+ *       response="Unauthenticated",
+ *       description="Authentication required",
+ *       @OA\JsonContent(
+ *         required={"message","code"},
+ *         @OA\Property(property="message", type="string", example="Authentication required"),
+ *         @OA\Property(property="code",    type="string", example="unauthenticated")
+ *       )
+ *     ),
+ *     @OA\Response(
+ *       response="Forbidden",
+ *       description="Forbidden",
+ *       @OA\JsonContent(
+ *         required={"message","code"},
+ *         @OA\Property(property="message", type="string", example="You do not have permission to perform this action"),
+ *         @OA\Property(property="code",    type="string", example="forbidden")
+ *       )
+ *     ),
+ *     @OA\Response(
+ *       response="NotFound",
+ *       description="Resource not found",
+ *       @OA\JsonContent(
+ *         required={"message","code"},
+ *         @OA\Property(property="message", type="string", example="Resource not found"),
+ *         @OA\Property(property="code",    type="string", example="not_found")
+ *       )
+ *     ),
+ *     @OA\Response(
+ *       response="MethodNotAllowed",
+ *       description="Method not allowed",
+ *       @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="Method not allowed"),
+ *        @OA\Property(property="code",    type="string", example="method_not_allowed")
+ *        )
+ *     ),
+ *     @OA\Response(
+ *       response="CSRFTokenMismatch",
+ *       description="CSRF token mismatch",
+ *       @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="CSRF token mismatch"),
+ *        @OA\Property(property="code",    type="string", example="csrf_token_mismatch")
+ *       )
+ *     ),
+ *     @OA\Response(
+ *       response="ValidationError",
+ *       description="Validation error",
+ *       @OA\JsonContent(
+ *         required={"message", "code", "errors"},
+ *         @OA\Property(property="message", type="string", example="The given data was invalid"),
+ *         @OA\Property(property="code",    type="string", example="validation_error"),
+ *         @OA\Property(
+ *           property="errors",
+ *           type="object",
+ *           @OA\AdditionalProperties(
+ *             type="array",
+ *             @OA\Items(type="string")
+ *           )
  *         )
+ *       )
  *     ),
- *     @OA\Server(
- *         url="http://localhost:8000",
- *         description="Local development environment"
+ *     @OA\Response(
+ *       response="TooManyRequests",
+ *       description="Too many requests",
+ *       @OA\JsonContent(
+ *        required={"message","code"},
+ *        @OA\Property(property="message", type="string", example="Too many requests"),
+ *        @OA\Property(property="code",    type="string", example="too_many_requests")
+ *       )
  *     ),
- *     @OA\Server(
- *         url="https://api-jo2024.mkcodecreations.dev",
- *         description="Production server"
+ *     @OA\Response(
+ *       response="InternalError",
+ *       description="Internal server error",
+ *       @OA\JsonContent(
+ *         required={"message","code"},
+ *         @OA\Property(property="message", type="string", example="Unexpected error"),
+ *         @OA\Property(property="code",    type="string", example="internal_error")
+ *       )
  *     ),
- *    @OA\Components(
- *      @OA\SecurityScheme(
- *          securityScheme="bearerAuth",
- *          type="http",
- *          scheme="bearer",
- *          bearerFormat="JWT",
- *          description="Enter your Bearer token in the Authorization header, starting with 'Bearer 'followed by a space and your token. For example: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`"
- *      )
+ *     @OA\Response(
+ *       response="ServiceUnavailable",
+ *       description="Service temporarily unavailable",
+ *       @OA\JsonContent(
+ *         required={"message","code"},
+ *         @OA\Property(property="message", type="string", example="Service temporarily unavailable"),
+ *         @OA\Property(property="code",    type="string", example="service_unavailable")
+ *       )
  *     ),
- *     @OA\Tag(
- *         name="Authentication",
- *         description="User authentication and registration"
- *     ),
- *     @OA\Tag(
- *         name="Users",
- *         description="User management"
- *     ),
- *     @OA\Tag(
- *         name="Tickets",
- *         description="Ticket creation, generation, validation, and tracking"
- *     ),
- *     @OA\Tag(
- *         name="Payments",
- *         description="Payment processing and secure transactions"
- *     ),
- *     @OA\Tag(
- *         name="Cart",
- *         description="Management of items added to the shopping cart"
- *     ),
- *     @OA\Tag(
- *         name="Products",
- *         description="Product management, including categories and details"
- *     ),
+ *     @OA\Response(
+ *       response="NoContent",
+ *       description="Operation successful, no content"
+ *     )
+ *   ),
+ *
+ *   @OA\Tag(name="Authentication", description="User authentication and registration"),
+ *   @OA\Tag(name="Users",          description="Operations related to user management"),
+ *   @OA\Tag(name="Tickets",        description="Ticket creation, generation, validation, and tracking"),
+ *   @OA\Tag(name="Payments",       description="Payment processing and secure transactions"),
+ *   @OA\Tag(name="Carts",          description="Operations about shopping cart"),
+ *   @OA\Tag(name="Products",       description="Product management, including categories and details")
  * )
  */
 class Info {}

@@ -122,5 +122,16 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
         'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
-    ]
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | This URL is used to generate links back to your front-end application,
+    | for instance when redirecting users after email verification.
+    |
+    */
+    'frontend_url' => env('FRONTEND_URL', env('APP_URL')),
 ];

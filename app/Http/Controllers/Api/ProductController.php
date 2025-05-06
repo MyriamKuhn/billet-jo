@@ -3,739 +3,298 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use App\Services\ProductFilterService;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Log;
+use App\Services\ProductListingService;
+use App\Services\ProductManagementService;
 use App\Models\Product;
 use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\IndexProductRequest;
+use App\Http\Requests\AdminProductRequest;
+use App\Http\Resources\ProductResource;
+use Illuminate\Http\JsonResponse;
 
 class ProductController extends Controller
 {
-    protected ProductFilterService $filterService;
+    protected ProductListingService $listingService;
+    protected ProductManagementService $productService;
 
-    public function __construct(ProductFilterService $filterService) {
-        $this->filterService = $filterService;
+    public function __construct(ProductListingService $listingService, ProductManagementService $productService) {
+        $this->listingService = $listingService;
+        $this->productService = $productService;
     }
 
     /**
      * Show the list of available products with optional filters and sorting.
      *
+     *
      * @OA\Get(
      *     path="/api/products",
-     *     summary="Get filtered list of products",
-     *     description="Returns a paginated and filtered list of available products according to query parameters. Cache is used to optimize performance.",
-     *     operationId="index",
+     *     operationId="getProductsList",
      *     tags={"Products"},
-     *     @OA\Parameter(
-     *         name="name",
-     *         in="query",
-     *         description="Filter products by name",
-     *         required=false,
-     *         @OA\Schema(type="string", maxLength=255)
-     *     ),
-     *     @OA\Parameter(
-     *         name="category",
-     *         in="query",
-     *         description="Filter products by category",
-     *         required=false,
-     *         @OA\Schema(type="string", maxLength=255)
-     *     ),
-     *     @OA\Parameter(
-     *         name="location",
-     *         in="query",
-     *         description="Filter products by location",
-     *         required=false,
-     *         @OA\Schema(type="string", maxLength=255)
-     *     ),
-     *     @OA\Parameter(
-     *         name="date",
-     *         in="query",
-     *         description="Filter products by event date (format: Y-m-d)",
-     *         required=false,
-     *         @OA\Schema(type="string", format="date")
-     *     ),
-     *     @OA\Parameter(
-     *         name="places",
-     *         in="query",
-     *         description="Filter products by minimum number of available places",
-     *         required=false,
-     *         @OA\Schema(type="integer", minimum=1)
-     *     ),
-     *     @OA\Parameter(
-     *         name="sort_by",
-     *         in="query",
-     *         description="Sort products by a specific field (name, price, product_details->date)",
-     *         required=false,
-     *         @OA\Schema(type="string", enum={"name", "price", "product_details->date"})
-     *     ),
-     *     @OA\Parameter(
-     *         name="order",
-     *         in="query",
-     *         description="Sort order (asc or desc)",
-     *         required=false,
-     *         @OA\Schema(type="string", enum={"asc", "desc"})
-     *     ),
-     *     @OA\Parameter(
-     *         name="per_page",
-     *         in="query",
-     *         description="Number of products per page (default 10)",
-     *         required=false,
-     *         @OA\Schema(type="integer", minimum=1, maximum=100)
-     *     ),
-     *     @OA\Parameter(
-     *         name="page",
-     *         in="query",
-     *         description="The page number for pagination (default 1)",
-     *         required=false,
-     *         @OA\Schema(type="integer", minimum=1)
-     *     ),
-     *   @OA\Response(
+     *     summary="Retrieve a paginated list of in-stock products",
+     *     description="
+Returns a paginated list of products that are currently in stock.
+
+**Optional query parameters**:
+- `name`       — filter by product name
+- `category`   — filter by category
+- `location`   — filter by location
+- `date`       — filter by date (YYYY-MM-DD)
+- `places`     — filter by minimum number of places
+- `sort_by`    — sort field (`name`, `price`, `product_details->date`)
+- `order`      — sort direction (`asc`, `desc`)
+- `per_page`   — items per page (default: 15)
+- `page`       — page number (default: 1)
+",
+     *
+     *     @OA\Parameter(name="name",     in="query", description="Filter by product name",     @OA\Schema(type="string")),
+     *     @OA\Parameter(name="category", in="query", description="Filter by category",        @OA\Schema(type="string")),
+     *     @OA\Parameter(name="location", in="query", description="Filter by location",        @OA\Schema(type="string")),
+     *     @OA\Parameter(name="date",     in="query", description="Filter by date (YYYY-MM-DD)", @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="places",   in="query", description="Filter by minimum places",  @OA\Schema(type="integer", minimum=1)),
+     *     @OA\Parameter(name="sort_by",  in="query", description="Sort field",              @OA\Schema(type="string", enum={"name","price","product_details->date"})),
+     *     @OA\Parameter(name="order",    in="query", description="Sort direction",          @OA\Schema(type="string", enum={"asc","desc"})),
+     *     @OA\Parameter(name="per_page", in="query", description="Items per page",          @OA\Schema(type="integer", default=15)),
+     *     @OA\Parameter(name="page",     in="query", description="Page number",             @OA\Schema(type="integer", default=1)),
+     *
+     *     @OA\Response(
      *         response=200,
      *         description="Products retrieved successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Products retrieved successfully."),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     type="object",
-     *                     @OA\Property(property="id", type="integer", example=1),
-     *                     @OA\Property(property="name", type="string", example="Cérémonie d’ouverture officielle des JO"),
-     *                     @OA\Property(property="price", type="string", example="100.00"),
-     *                     @OA\Property(property="sale", type="string", example="0.00"),
-     *                     @OA\Property(property="stock_quantity", type="integer", example=50),
-     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2025-04-30T19:54:25.000000Z"),
-     *                     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-04-30T19:54:25.000000Z"),
-     *                     @OA\Property(
-     *                         property="product_details",
-     *                         type="object",
-     *                         @OA\Property(property="places", type="integer", example=1),
-     *                         @OA\Property(property="description", type="array", items=@OA\Items(type="string"), example={
-     *                             "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024.",
-     *                             "Vivez une soirée exceptionnelle où le sport, la culture et l’émotion se rencontrent dans un spectacle grandiose au cœur de la Ville Lumière."
-     *                         }),
-     *                         @OA\Property(property="date", type="string", format="date", example="2024-07-26"),
-     *                         @OA\Property(property="time", type="string", example="19h30 (accès recommandé dès 18h00)"),
-     *                         @OA\Property(property="location", type="string", example="Stade de France, Saint-Denis"),
-     *                         @OA\Property(property="category", type="string", example="Cérémonies"),
-     *                         @OA\Property(property="image", type="string", example="https://picsum.photos/seed/1/600/400")
-     *                     )
-     *                 )
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(ref="#/components/schemas/MinimalProduct")
      *             ),
-     *             @OA\Property(
-     *                 property="pagination",
-     *                 type="object",
-     *                 @OA\Property(property="total", type="integer", example=100),
-     *                 @OA\Property(property="per_page", type="integer", example=10),
-     *                 @OA\Property(property="current_page", type="integer", example=1),
-     *                 @OA\Property(property="last_page", type="integer", example=10)
+     *             @OA\Property(property="pagination", type="object",
+     *                 @OA\Property(property="total", type="integer"),
+     *                 @OA\Property(property="per_page", type="integer"),
+     *                 @OA\Property(property="current_page", type="integer"),
+     *                 @OA\Property(property="last_page", type="integer")
      *             )
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Bad request (invalid or unexpected parameters)",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Unexpected parameter(s) detected: foo")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="No products found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="No products found.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Internal server error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An error occurred while fetching the products. Please try again later.")
-     *         )
-     *     )
+     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  IndexProductRequest  $request
+     * @return JsonResponse
      */
-    public function index(Request $request)
+    public function index(IndexProductRequest $request): JsonResponse
     {
-        try {
-            // Verify if the request contains any unexpected parameters
-            $allowedParams = ['name', 'category', 'location', 'date', 'places', 'sort_by', 'order', 'per_page', 'page'];
-            $extraParams = array_diff(array_keys($request->all()), $allowedParams);
+        $result = $this->listingService->handle($request->validated(), true);
 
-            if (!empty($extraParams)) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('product.error_unexpected_parameter', ['params' => implode(', ', $extraParams)]),
-                    'allowed_parameters' => $allowedParams
-                ], 400);
-            }
-
-            // Validate the request parameters
-            $validator = Validator::make($request->all(), [
-                'name' => 'nullable|string|max:255',
-                'category' => 'nullable|string|max:255',
-                'location' => 'nullable|string|max:255',
-                'date' => 'nullable|date_format:Y-m-d',
-                'places' => 'nullable|integer|min:1',
-                'sort_by' => 'nullable|in:name,price,product_details->date',
-                'order' => 'nullable|in:asc,desc',
-                'per_page' => 'nullable|integer|min:1|max:100',
-                'page'=> 'nullable|integer|min:1',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'errors' => $validator->errors()
-                ], 400);
-            }
-
-            $validated = $validator->validated();
-
-            // Generate a unique cache key based on the request parameters
-            $cacheKey = 'products_' . md5(serialize($validated));
-
-            // Check if the products are already cached and return them if available
-            $products = Cache::store('redis')->remember($cacheKey, 60, function () use ($validated) {
-                $query = $this->filterService->buildQuery($validated);
-                $perPage = $validated['per_page'] ?? 10;
-                return $query->paginate($perPage);
-            });
-
-            // Check if products are empty
-            if ($products->count() === 0) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('product.error_no_product_found')
-                ], 404);
-            }
-
-            return response()->json([
-                'status'=> 'success',
-                'message' => __('product.products_retrieved'),
-                'data' => $products->items(),
-                'pagination' => [
-                    'total' => $products->total(),
-                    'per_page' => $products->perPage(),
-                    'current_page' => $products->currentPage(),
-                    'last_page' => $products->lastPage(),
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            // Log the error for debugging
-            Log::error('Error fetching products for page: ' . $e->getMessage());
-
-            // Return a generic error message with HTTP status 500
-            return response()->json([
-                'status' => 'error',
-                'error' => __('product.error_fetch_product')
-            ], 500);  // Code HTTP 500 Internal Server Error
+        if ($result->isEmpty()) {
+            abort(404);
         }
+
+        return response()->json([
+            'data'       => ProductResource::collection($result)->resolve(),
+            'pagination' => [
+                'total'        => $result->total(),
+                'per_page'     => $result->perPage(),
+                'current_page' => $result->currentPage(),
+                'last_page'    => $result->lastPage(),
+            ],
+        ], 200);
     }
 
     /**
-     * Show the list of all products with optional filters and sorting. Only for admin.
+     * Show a detailed paginated list of all products (admin only).
      *
      * @OA\Get(
      *     path="/api/products/all",
-     *     summary="Get filtered list of all products (for admin only)",
-     *     description="Returns a paginated and filtered list of all products. Cache is used to optimize performance. Only for admin.",
+     *     summary="Retrieve all products (admin only)",
+ *     description="
+Returns a paginated list of all products (including out-of-stock), with optional filtering and sorting.
+
+- **Caching enabled** for better performance
+- **Authentication**: Bearer token (admin only)
+- **Same query parameters** as `/api/products`
+",
      *     operationId="getProducts",
      *     tags={"Products"},
      *     security={{"bearerAuth": {}}},
-     *     @OA\Parameter(
-     *         name="name",
-     *         in="query",
-     *         description="Filter products by name",
-     *         required=false,
-     *         @OA\Schema(type="string", maxLength=255)
-     *     ),
-     *     @OA\Parameter(
-     *         name="category",
-     *         in="query",
-     *         description="Filter products by category",
-     *         required=false,
-     *         @OA\Schema(type="string", maxLength=255)
-     *     ),
-     *     @OA\Parameter(
-     *         name="location",
-     *         in="query",
-     *         description="Filter products by location",
-     *         required=false,
-     *         @OA\Schema(type="string", maxLength=255)
-     *     ),
-     *     @OA\Parameter(
-     *         name="date",
-     *         in="query",
-     *         description="Filter products by event date (format: Y-m-d)",
-     *         required=false,
-     *         @OA\Schema(type="string", format="date")
-     *     ),
-     *     @OA\Parameter(
-     *         name="places",
-     *         in="query",
-     *         description="Filter products by minimum number of available places",
-     *         required=false,
-     *         @OA\Schema(type="integer", minimum=1)
-     *     ),
-     *     @OA\Parameter(
-     *         name="sort_by",
-     *         in="query",
-     *         description="Sort products by a specific field (name, price, product_details->date)",
-     *         required=false,
-     *         @OA\Schema(type="string", enum={"name", "price", "product_details->date"})
-     *     ),
-     *     @OA\Parameter(
-     *         name="order",
-     *         in="query",
-     *         description="Sort order (asc or desc)",
-     *         required=false,
-     *         @OA\Schema(type="string", enum={"asc", "desc"})
-     *     ),
-     *     @OA\Parameter(
-     *         name="per_page",
-     *         in="query",
-     *         description="Number of products per page (default 10)",
-     *         required=false,
-     *         @OA\Schema(type="integer", minimum=1, maximum=100)
-     *     ),
-     *     @OA\Parameter(
-     *         name="page",
-     *         in="query",
-     *         description="The page number for pagination (default 1)",
-     *         required=false,
-     *         @OA\Schema(type="integer", minimum=1)
-     *     ),
-     *   @OA\Response(
+     *
+     *     @OA\Parameter(name="name",     in="query", description="Filter by product name",     @OA\Schema(type="string")),
+     *     @OA\Parameter(name="category", in="query", description="Filter by category",        @OA\Schema(type="string")),
+     *     @OA\Parameter(name="location", in="query", description="Filter by location",        @OA\Schema(type="string")),
+     *     @OA\Parameter(name="date",     in="query", description="Filter by date (YYYY-MM-DD)", @OA\Schema(type="string", format="date")),
+     *     @OA\Parameter(name="places",   in="query", description="Filter by minimum places",  @OA\Schema(type="integer", minimum=1)),
+     *     @OA\Parameter(name="sort_by",  in="query", description="Sort field",              @OA\Schema(type="string", enum={"name","price","product_details->date"})),
+     *     @OA\Parameter(name="order",    in="query", description="Sort direction",          @OA\Schema(type="string", enum={"asc","desc"})),
+     *     @OA\Parameter(name="per_page", in="query", description="Items per page",          @OA\Schema(type="integer", default=15)),
+     *     @OA\Parameter(name="page",     in="query", description="Page number",             @OA\Schema(type="integer", default=1)),
+     *
+     *     @OA\Response(
      *         response=200,
      *         description="Products retrieved successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Products retrieved successfully."),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     type="object",
-     *                     @OA\Property(property="id", type="integer", example=1),
-     *                     @OA\Property(property="name", type="string", example="Cérémonie d’ouverture officielle des JO"),
-     *                     @OA\Property(property="price", type="string", example="100.00"),
-     *                     @OA\Property(property="sale", type="string", example="0.00"),
-     *                     @OA\Property(property="stock_quantity", type="integer", example=50),
-     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2025-04-30T19:54:25.000000Z"),
-     *                     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-04-30T19:54:25.000000Z"),
-     *                     @OA\Property(
-     *                         property="product_details",
-     *                         type="object",
-     *                         @OA\Property(property="places", type="integer", example=1),
-     *                         @OA\Property(property="description", type="array", items=@OA\Items(type="string"), example={
-     *                             "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024.",
-     *                             "Vivez une soirée exceptionnelle où le sport, la culture et l’émotion se rencontrent dans un spectacle grandiose au cœur de la Ville Lumière."
-     *                         }),
-     *                         @OA\Property(property="date", type="string", format="date", example="2024-07-26"),
-     *                         @OA\Property(property="time", type="string", example="19h30 (accès recommandé dès 18h00)"),
-     *                         @OA\Property(property="location", type="string", example="Stade de France, Saint-Denis"),
-     *                         @OA\Property(property="category", type="string", example="Cérémonies"),
-     *                         @OA\Property(property="image", type="string", example="https://picsum.photos/seed/1/600/400")
-     *                     )
-     *                 )
+     *             @OA\Property(property="data", type="array",
+     *                 @OA\Items(ref="#/components/schemas/MinimalProduct")
      *             ),
-     *             @OA\Property(
-     *                 property="pagination",
-     *                 type="object",
-     *                 @OA\Property(property="total", type="integer", example=100),
-     *                 @OA\Property(property="per_page", type="integer", example=10),
-     *                 @OA\Property(property="current_page", type="integer", example=1),
-     *                 @OA\Property(property="last_page", type="integer", example=10)
+     *             @OA\Property(property="pagination", type="object",
+     *                 @OA\Property(property="total", type="integer"),
+     *                 @OA\Property(property="per_page", type="integer"),
+     *                 @OA\Property(property="current_page", type="integer"),
+     *                 @OA\Property(property="last_page", type="integer")
      *             )
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Bad request (invalid or unexpected parameters)",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Unexpected parameter(s) detected: foo")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="No products found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="No products found.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Internal server error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An error occurred while fetching the products. Please try again later.")
-     *         )
-     *     )
-     * )
+     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
+     *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
+     *   )
+     *
+     * @param  AdminProductRequest  $request
+     * @return JsonResponse
      */
-    public function getProducts(Request $request)
+    public function getProducts(AdminProductRequest $request): JsonResponse
     {
-        try {
-            // Only for the admin
-            $user = auth()->user();
+        $result = $this->listingService->handle($request->validated(), false);
 
-            if (!$user || !$user->role->isAdmin()) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('product.error_not_authorized')
-                ], 403);
-            }
-
-            // Verify if the request contains any unexpected parameters
-            $allowedParams = ['name', 'category', 'location', 'date', 'places', 'sort_by', 'order', 'per_page', 'page'];
-            $extraParams = array_diff(array_keys($request->all()), $allowedParams);
-
-            if (!empty($extraParams)) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('product.error_unexpected_parameter', ['params' => implode(', ', $extraParams)]),
-                    'allowed_parameters' => $allowedParams
-                ], 400);
-            }
-
-            // Validate the request parameters
-            $validator = Validator::make($request->all(), [
-                'name' => 'nullable|string|max:255',
-                'category' => 'nullable|string|max:255',
-                'location' => 'nullable|string|max:255',
-                'date' => 'nullable|date_format:Y-m-d',
-                'places' => 'nullable|integer|min:1',
-                'sort_by' => 'nullable|in:name,price,product_details->date',
-                'order' => 'nullable|in:asc,desc',
-                'per_page' => 'nullable|integer|min:1|max:100',
-                'page'=> 'nullable|integer|min:1',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'errors' => $validator->errors()
-                ], 400);
-            }
-
-            $validated = $validator->validated();
-
-            // Generate a unique cache key based on the request parameters
-            $cacheKey = 'products_all_' . md5(serialize($validated));
-
-            // Check if the products are already cached and return them if available
-            $products = Cache::store('redis')->remember($cacheKey, 60, function () use ($validated) {
-                $query = $this->filterService->buildQuery($validated, false);
-                $perPage = $validated['per_page'] ?? 10;
-                return $query->paginate($perPage);
-            });
-
-            // Check if products are empty
-            if ($products->count() === 0) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('product.error_no_product_found')
-                ], 404);
-            }
-
-            return response()->json([
-                'status'=> 'success',
-                'message' => __('product.products_retrieved'),
-                'data' => $products->items(),
-                'pagination' => [
-                    'total' => $products->total(),
-                    'per_page' => $products->perPage(),
-                    'current_page' => $products->currentPage(),
-                    'last_page' => $products->lastPage(),
-                ]
-            ], 200);
-
-        } catch (\Exception $e) {
-            // Log the error for debugging
-            Log::error('Error fetching products for admin: ' . $e->getMessage());
-
-            // Return a generic error message with HTTP status 500
-            return response()->json([
-                'status' => 'error',
-                'error' => __('product.error_fetch_product')
-            ], 500);  // Code HTTP 500 Internal Server Error
+        if ($result->isEmpty()) {
+            abort(404);
         }
+
+        return response()->json([
+            'data'       => ProductResource::collection($result)->resolve(),
+            'pagination' => [
+                'total'        => $result->total(),
+                'per_page'     => $result->perPage(),
+                'current_page' => $result->currentPage(),
+                'last_page'    => $result->lastPage(),
+            ],
+        ], 200);
     }
 
     /**
-     * Show a specific product by ID.
+     * Retrieve a single product by its ID.
      *
      * @OA\Get(
      *     path="/api/products/{product}",
-     *     summary="Show a specific product by ID",
-     *     description="Returns the details of a specific product by its ID.",
      *     operationId="getProductById",
      *     tags={"Products"},
+     *     summary="Get product details",
+     *     description="Returns the full details of a single product identified by its ID.",
      *     @OA\Parameter(
      *         name="product",
      *         in="path",
-     *         description="ID du produit",
+     *         description="ID of product to retrieve",
      *         required=true,
-     *         @OA\Schema(type="integer")
+     *         @OA\Schema(type="integer", format="int64")
      *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Product retrieved successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="Billet concert"),
-     *                 @OA\Property(
-     *                     property="product_details",
-     *                     type="object",
-     *                     @OA\Property(property="places", type="integer", example=1),
-     *                     @OA\Property(property="description", type="string", example="Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle..."),
-     *                     @OA\Property(property="date", type="string", example="2024-07-26"),
-     *                     @OA\Property(property="time", type="string", example="19h30 (accès recommandé dès 18h00)"),
-     *                     @OA\Property(property="location", type="string", example="Stade de France, Saint-Denis"),
-     *                     @OA\Property(property="category", type="string", example="Cérémonies"),
-     *                     @OA\Property(property="image", type="string", example="https://picsum.photos/seed/1/600/400")
-     *                 ),
-     *                 @OA\Property(property="price", type="number", format="float", example=59.99),
-     *                 @OA\Property(property="sale", type="number", format="float", example=49.99),
-     *                 @OA\Property(property="stock_quantity", type="integer", example=100),
-     *                 @OA\Property(property="created_at", type="string", format="date-time", example="2023-01-01T00:00:00Z"),
-     *                 @OA\Property(property="updated_at", type="string", format="date-time", example="2023-04-01T12:00:00Z")
-     *             )
+     *             @OA\Property(property="data", ref="#/components/schemas/MinimalProduct")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Produit non trouvé",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="No query results for model [App\Models\Product] 123")
-     *         )
-     *     )
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  Product  $product
+     * @return JsonResponse
      */
-    public function show(Product $product)
+    public function show(Product $product): JsonResponse
     {
         return response()->json([
-            'status' => 'success',
-            'message'=> __('product.product_retrieved'),
-            'data' => $product,
-        ]);
+            'data' => new ProductResource($product),
+        ], 200);
     }
 
     /**
-     * Create a new product.
+     * Create a new product (admin only).
      *
      * @OA\Post(
      *     path="/api/products",
-     *     summary="Create a new product",
-     *     description="This endpoint creates a new product in the system.",
-     *     tags={"Products"},
      *     operationId="createProduct",
-     *     security={{"bearerAuth": {}}},
+     *     tags={"Products"},
+     *     summary="Create a new product",
+     *     description="
+Creates a new product record.
+
+**Requirements**:
+- Bearer authentication (admin only)
+- Valid payload per `StoreProduct` schema
+",
+     *     security={{"bearerAuth":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\MediaType(
-     *             mediaType="application/json",
-     *             @OA\Schema(
-     *                 type="object",
-     *                 required={"name", "price", "stock_quantity", "product_details"},
-     *                 @OA\Property(property="name", type="string", example="Ticket - Finale 100m"),
-     *                 @OA\Property(property="price", type="number", format="float", example=120.00),
-     *                 @OA\Property(property="sale", type="number", format="float", example=99.00),
-     *                 @OA\Property(property="stock_quantity", type="integer", example=150),
-     *                 @OA\Property(
-     *                     property="product_details",
-     *                     type="object",
-     *                     required={"places", "description", "date", "time", "location", "category", "image"},
-     *                     @OA\Property(property="places", type="integer", example=1),
-     *                     @OA\Property(property="description", type="string", example="Finale du 100m hommes aux JO 2024"),
-     *                     @OA\Property(property="date", type="string", format="date", example="2024-08-04"),
-     *                     @OA\Property(property="time", type="string", example="21:00"),
-     *                     @OA\Property(property="location", type="string", example="Stade de France"),
-     *                     @OA\Property(property="category", type="string", example="Athlétisme"),
-     *                     @OA\Property(property="image", type="string", format="uri", example="https://example.com/image.jpg")
-     *                 )
-     *             )
-     *         )
+     *         @OA\JsonContent(ref="#/components/schemas/StoreProduct")
      *     ),
-     *         @OA\Response(
-     *         response=201,
-     *         description="Product created successfully",
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Product created successfully."),
-     *             @OA\Property(property="product", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="Ticket - Finale 100m"),
-     *                 @OA\Property(property="price", type="number", format="float", example=120.00),
-     *                 @OA\Property(property="sale", type="number", format="float", example=99.00),
-     *                 @OA\Property(property="stock_quantity", type="integer", example=150),
-     *                 @OA\Property(property="product_details", type="object",
-     *                     @OA\Property(property="places", type="integer", example=1),
-     *                     @OA\Property(property="description", type="string", example="Finale du 100m hommes aux JO 2024"),
-     *                     @OA\Property(property="date", type="string", format="date", example="2024-08-04"),
-     *                     @OA\Property(property="time", type="string", example="21:00"),
-     *                     @OA\Property(property="location", type="string", example="Stade de France"),
-     *                     @OA\Property(property="category", type="string", example="Athlétisme"),
-     *                     @OA\Property(property="image", type="string", format="uri", example="https://example.com/image.jpg")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Unauthorized",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="You are not authorized to create a product.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation Error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Server Error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An error occurred while creating the products. Please try again later.")
-     *         )
-     *     )
+     *
+     *     @OA\Response(response=201, description="Product created successfully, no content"),
+     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  StoreProductRequest  $request
+     * @return JsonResponse
      */
-    public function store(StoreProductRequest $request)
+    public function store(StoreProductRequest $request): JsonResponse
     {
-        try {
-            $validated = $request->validated();
+        $product = $this->productService->create($request->validated());
 
-            $product = Product::create([
-                'name' => $validated['name'],
-                'price' => $validated['price'],
-                'sale' => $validated['sale'] ?? null,
-                'stock_quantity' => $validated['stock_quantity'],
-                'product_details' => $validated['product_details'],
-            ]);
-
-            return response()->json([
-                'status'=> 'success',
-                'message' => __('product.product_created'),
-                'product' => $product,
-            ], 201);
-
-    } catch (\Exception $e) {
-            Log::error('Error creating product: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => 'error',
-                'error' => __('product.error_create_product')
-            ], 500);
-        }
+        return response()->json(null, 201);
     }
 
     /**
-     * Update an existing product.
+     * Update an existing product (admin only).
      *
      * @OA\Put(
      *     path="/api/products/{product}",
-     *     summary="Modify an existing product (admin only)",
-     *     description="Modify the details of a product by its ID (admin only).",
      *     operationId="updateProduct",
      *     tags={"Products"},
-     *     security={{"bearerAuth": {}}},
+     *     summary="Update product details",
+     *     description="
+Updates the details of an existing product.
+
+**Requirements**:
+- Bearer authentication (admin only)
+- Valid payload per `StoreProduct` schema
+",
+     *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Parameter(
      *         name="product",
      *         in="path",
-     *         required=true,
      *         description="ID of the product to update",
-     *         @OA\Schema(type="integer")
+     *         required=true,
+     *         @OA\Schema(type="integer", format="int64")
      *     ),
+     *
      *     @OA\RequestBody(
      *         required=true,
-     *         description="Product object that needs to be updated",
-     *         @OA\JsonContent(
-     *             required={"name", "price", "stock_quantity", "product_details"},
-     *             @OA\Property(property="name", type="string", example="Sample Product"),
-     *             @OA\Property(property="price", type="number", format="float", example=99.99),
-     *             @OA\Property(property="sale", type="number", format="float", example=10.5),
-     *             @OA\Property(property="stock_quantity", type="integer", example=100),
-     *             @OA\Property(
-     *                 property="product_details",
-     *                 type="object",
-     *                 @OA\Property(property="places", type="integer", example=200),
-     *                 @OA\Property(property="description", type="string", example="A sample description"),
-     *                 @OA\Property(property="date", type="string", format="date", example="2025-06-01"),
-     *                 @OA\Property(property="time", type="string", example="12:00"),
-     *                 @OA\Property(property="location", type="string", example="Stadium A"),
-     *                 @OA\Property(property="category", type="string", example="Sports"),
-     *                 @OA\Property(property="image", type="string", format="uri", example="http://example.com/product-image.jpg")
-     *             )
-     *         )
+     *         @OA\JsonContent(ref="#/components/schemas/StoreProduct")
      *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Product updated successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Product updated successfully"),
-     *             @OA\Property(property="product", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="name", type="string", example="Ticket - Finale 100m"),
-     *                 @OA\Property(property="price", type="number", format="float", example=120.00),
-     *                 @OA\Property(property="sale", type="number", format="float", example=99.00),
-     *                 @OA\Property(property="stock_quantity", type="integer", example=150),
-     *                 @OA\Property(property="product_details", type="object",
-     *                     @OA\Property(property="places", type="integer", example=1),
-     *                     @OA\Property(property="description", type="string", example="Finale du 100m hommes aux JO 2024"),
-     *                     @OA\Property(property="date", type="string", format="date", example="2024-08-04"),
-     *                     @OA\Property(property="time", type="string", example="21:00"),
-     *                     @OA\Property(property="location", type="string", example="Stade de France"),
-     *                     @OA\Property(property="category", type="string", example="Athlétisme"),
-     *                     @OA\Property(property="image", type="string", format="uri", example="https://example.com/image.jpg")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Bad request, validation failed",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Validation failed for one or more fields.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Internal server error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="There was an error updating the product. Please try again.")
-     *         )
-     *     )
+     *
+     *     @OA\Response(response=204, description="Product updated successfully, no content"),
+     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  StoreProductRequest  $request
+     * @param  Product  $product
+     * @return JsonResponse
      */
-    public function update(StoreProductRequest $request, Product $product)
+    public function update(StoreProductRequest $request, Product $product):JsonResponse
     {
-        $product->update($request->validated());
+        $updated = $this->productService->update($product, $request->validated());
 
-        return response()->json([
-            'message' => 'Product updated successfully',
-            'product' => $product
-        ], 200);
+        return response()->json(null, 204);
     }
 }

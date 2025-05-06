@@ -3,31 +3,21 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password as PasswordRule;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Log;
-use Laravel\Sanctum\TransientToken;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use PragmaRX\Google2FA\Google2FA;
-use App\Notifications\ResetPasswordNotification;
-use Illuminate\Support\Facades\Password as PasswordFacade;
-use Illuminate\Support\Facades\Auth;
-use Throwable;
-use App\Services\CaptchaService;
-use Illuminate\Support\Facades\Validator;
-use App\Notifications\VerifyNewEmailNotification;
-use App\Notifications\EmailUpdatedNotification;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Notification;
-use App\Models\EmailUpdate;
-use App\Helpers\EmailHelper;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Services\Auth\RegistrationService;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Services\Auth\AuthService;
+use App\Services\Auth\TwoFactorService;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Requests\Auth\UpdatePasswordRequest;
+use App\Http\Requests\Auth\UpdateEmailRequest;
+use App\Http\Requests\Auth\DisableTwoFactorRequest;
 
 class AuthController extends Controller
 {
-    public function __construct(private CaptchaService $captchaService) {}
+    public function __construct(private RegistrationService $registrationService, private AuthService $authService, private TwoFactorService $twoFactorService) {}
 
     /**
      * Register a new user.
@@ -35,21 +25,21 @@ class AuthController extends Controller
      * @OA\Post(
      *     path="/api/auth/register",
      *     summary="Register a new user",
-     *     description="Allows a user to create an account. Requires a secure password (at least 15 characters, with uppercase letters, lowercase letters, numbers, and symbols), validation via Google reCAPTCHA to prevent abuse, and email confirmation after registration. Account creation attempts are protected by throttling to prevent spam. A verification email is sent to validate the user's email address. The API also protects against unauthorized access with a restrictive CORS configuration.",
+     *     description="
+This endpoint allows a visitor to create a new user account with built-in protections:
+- **Strong password enforcement**: minimum 15 characters, mixed case, numbers & symbols
+- **Google reCAPTCHA** verification to block bots and automated abuse
+- **Throttling** (e.g. 5 requests/minute) to limit spam & brute-force attempts
+- **Email confirmation**: a verification link is sent after registration
+",
      *     operationId="registerUser",
      *     tags={"Authentication"},
-     *     @OA\RequestBody(
+     *
+     *       @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(
-     *             required={"firstname", "lastname", "email", "password", "password_confirmation", "captcha_token"},
-     *             @OA\Property(property="firstname", type="string", maxLength=100, example="John"),
-     *             @OA\Property(property="lastname", type="string", maxLength=100, example="Doe"),
-     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="MegaGreatPassword@2025"),
-     *             @OA\Property(property="password_confirmation", type="string", format="password", example="MegaGreatPassword@2025"),
-     *             @OA\Property(property="captcha_token", type="string", example="03AGdBq27...")
-     *         )
+     *         @OA\JsonContent(ref="#/components/schemas/RegisterUser")
      *     ),
+     *
      *     @OA\Response(
      *         response=201,
      *         description="User created successfull. Verification Email sended.",
@@ -58,103 +48,24 @@ class AuthController extends Controller
      *             @OA\Property(property="message", type="string", example="Registration successful. Please check your emails.")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error or captcha verification failed.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Captcha verification failed."),
-     *             @OA\Property(
-     *                 property="errors",
-     *                 type="object",
-     *                 additionalProperties=@OA\Property(type="array", @OA\Items(type="string"))
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Internal or database error.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again."),
-     *         )
-     *     )
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param RegisterRequest $request
+     * @return JsonResponse
      */
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
-        try {
-            // Validation of the datas from the request
-            $validator = Validator::make($request->all(), [
-                'firstname' => 'required|string|max:100',
-                'lastname' => 'required|string|max:100',
-                'email' => 'required|email|max:100|unique:users,email',
-                'password' => [
-                    'required',
-                    'confirmed', // Must match password_confirmation
-                    PasswordRule::min(15)
-                        ->mixedCase()
-                        ->letters()
-                        ->numbers()
-                        ->symbols(),
-                ],
-                'captcha_token' => 'required|string',
-            ]);
+        $data = $request->validated();
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'errors' => $validator->errors()], 422);
-            }
+        $this->registrationService->register($data);
 
-            $validated = $validator->validated();
-
-            // Verification of the captcha only on the production environment
-            // In local, we don't need to verify the captcha
-            if (app()->environment('production')) {
-
-                $captchaResult = $this->captchaService->verify($validated['captcha_token']);
-
-                if (!$captchaResult) {
-                    Log::warning('Captcha verification failed', [
-                        'captcha_token' => $validated['captcha_token'],
-                        'ip_address' => $request->ip(),
-                    ]);
-                    return response()->json([
-                        'status' => 'error',
-                        'error' => __('validation.error_captcha_failed')
-                    ], 422);
-                }
-            }
-
-            // Creation of the user
-            $user = User::create([
-                'firstname' => $validated['firstname'],
-                'lastname' => $validated['lastname'],
-                'email' => $validated['email'],
-                'password_hash' => Hash::make($validated['password']),
-                'role' => 'user', // All users are created with the role 'user'
-            ]);
-
-            // Send the verification email
-            event(new Registered($user));
-
-            return response()->json([
-                'status'=> 'success',
-                'message' => __('validation.account_created')
-            ], 201);
-
-        } catch (\Exception $e) {
-            Log::error('Error occured during register user', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json([
+            'status' => 'success',
+            'message' => __('Registration successful. Please check your emails.'),
+        ], 201);
     }
 
     /**
@@ -162,355 +73,186 @@ class AuthController extends Controller
      *
      * @OA\Post(
      *     path="/api/auth/login",
-     *     summary="Login user",
-     *     description="Allows a user to log in with their email and password, and receive an authentication token. Admins can disable accounts, and users can choose to remember their login or activate two-factor authentication (2FA).",
-     *     operationId="login",
-     *     tags={"Authentication"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         description="Login credentials (email and password are mandatory)",
-     *         @OA\JsonContent(
-     *             required={"email", "password", "remember"},
-     *             @OA\Property(property="email", type="string", format="email", example="user@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="MyGreatPassword@123"),
-     *             @OA\Property(property="remember", type="boolean", example=true, description="Optional: Whether the user wants to stay logged in"),
-     *             @OA\Property(property="twofa_code", type="string", example="123456", description="Optional: Two-factor authentication code")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Connection successful. Returns the authentication token and user information.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Login successful."),
-     *             @OA\Property(property="token", type="string", example="token_example"),
-     *             @OA\Property(property="user", type="object",
-     *                 @OA\Property(property="id", type="integer", example=1),
-     *                 @OA\Property(property="firstname", type="string", example="John"),
-     *                 @OA\Property(property="lastname", type="string", example="Doe"),
-     *                 @OA\Property(property="email", type="string", example="user@example.com"),
-     *                 @OA\Property(property="role", type="string", example="user"),
-     *                 @OA\Property(property="twofa_enabled", type="boolean", example=true)
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=400,
-     *         description="Validation error (email not verified or 2FA code not valid)",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data."),
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Invalid credentials.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Invalid credentials. Please check your email address and password.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Account disabled or access denied.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Your account has been disabled. Please contact support.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=429,
-     *         description="Too many attempts",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Too many attempts. Please try again later.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Internal server error or database error.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An internal error occurred. Please try again later.")
-     *         )
-     *     )
-     * )
-     */
-    public function login(Request $request): JsonResponse
+     *     summary="Authenticate user",
+     *     description="
+This endpoint allows a user to log in and receive an authentication token:
+
+- **Email & password** credentials are required
+- **Remember me** option for extended session duration (1 week)
+- **Two-factor authentication (2FA)** code if enabled
+- **Throttling** to limit brute-force attempts
+    ",
+    *     operationId="authLogin",
+    *     tags={"Authentication"},
+    *
+    *     @OA\RequestBody(
+    *         required=true,
+    *         description="User login credentials",
+    *         @OA\JsonContent(
+    *             required={"email","password"},
+    *             @OA\Property(property="email",       type="string", format="email",    example="user@example.com"),
+    *             @OA\Property(property="password",    type="string", format="password", example="MyGreatPassword@123"),
+    *             @OA\Property(property="remember",    type="boolean",               example=true, description="Stay logged in for one week"),
+    *             @OA\Property(property="twofa_code",  type="string",                example="123456",      description="2FA code if enabled")
+    *         )
+    *     ),
+    *
+    *     @OA\Response(
+    *         response=200,
+    *         description="Authentication successful. Returns a token and user information.",
+    *         @OA\JsonContent(
+    *             @OA\Property(property="message", type="string", example="Logged in successfully"),
+    *             @OA\Property(property="token",   type="string", example="eyJ0eXAiOiJKV1QiLCJhbGciOiJI…"),
+    *             @OA\Property(property="user",    type="object",
+    *                 @OA\Property(property="id",            type="integer", example=1),
+    *                 @OA\Property(property="firstname",     type="string",  example="John"),
+    *                 @OA\Property(property="lastname",      type="string",  example="Doe"),
+    *                 @OA\Property(property="email",         type="string",  example="user@example.com"),
+    *                 @OA\Property(property="role",          type="string",  example="user"),
+    *                 @OA\Property(property="twofa_enabled", type="boolean", example=true)
+    *             )
+    *         )
+    *     ),
+    *
+    *     @OA\Response(
+    *         response=400,
+    *         description="Bad request (e.g. email not verified or missing/invalid 2FA code)",
+    *         @OA\JsonContent(
+    *             @OA\Property(property="message", type="string", example="Two-factor authentication code is required"),
+    *             @OA\Property(property="code",    type="string", example="twofa_required")
+    *         )
+    *     ),
+    *
+    *     @OA\Response(
+    *         response=401,
+    *         description="Unauthorized (invalid credentials)",
+    *         @OA\JsonContent(
+    *             @OA\Property(property="message", type="string", example="Invalid credentials"),
+    *             @OA\Property(property="code",    type="string", example="invalid_credentials")
+    *         )
+    *     ),
+    *
+    *     @OA\Response(
+    *         response=403,
+    *         description="Forbidden (account disabled)",
+    *         @OA\JsonContent(
+    *             @OA\Property(property="message", type="string", example="Account disabled"),
+    *             @OA\Property(property="code",    type="string", example="account_disabled")
+    *         )
+    *     ),
+    *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
+    *     @OA\Response(response=500, ref="#/components/responses/InternalError")
+    * )
+    */
+    public function login(LoginRequest $request): JsonResponse
     {
-        try {
-            // Validate the request data
-            $validator = Validator::make($request->all(), [
-                'email' => 'required|email',
-                'password' => 'required|string',
-                'remember' => 'boolean',
-                'twofa_code' => 'nullable|string',
-            ]);
+        $result = $this->authService->login($request->validated());
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $credentials = $validator->validated();
-
-            // Check if the user exists and the password is correct
-            $user = User::where('email', $credentials['email'])->first();
-            if (!$user || !Hash::check($credentials['password'], $user->password_hash)) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_invalid_credentials'),
-                ], 401);
-            }
-
-            // Check if the user is active
-            if (!$user->is_active) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_account_disabled'),
-                ], 403);
-            }
-
-            // Check if the user has validated their email
-            if (!$user->hasVerifiedEmail()) {
-                $user->sendEmailVerificationNotification();
-
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_email_not_verified'),
-                ], 400);
-            }
-
-            // If the user has 2FA enabled, check if a 2FA code is provided
-            if ($user->twofa_enabled && !$credentials['twofa_code']) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_twofa_required'),
-                ], 400);
-            }
-
-            // If the 2FA code is provided, verify it
-            if ($user->twofa_enabled && $credentials['twofa_code']) {
-                $google2fa = app('pragmarx.google2fa');
-
-                // Verify the 2FA code
-                if (!$google2fa->verifyKey($user->twofa_secret, $credentials['twofa_code'])) {
-                    return response()->json([
-                        'status' => 'error',
-                        'error' => __('validation.error_twofa_invalid'),
-                    ], 400);
-                }
-            }
-
-            // If the user has Remember Me checked, create a token that lasts for 1 week
-            $token = $credentials['remember']
-                ? $user->createToken('auth_token', ['*'], now()->addWeeks(1))->plainTextToken
-                : $user->createToken('auth_token')->plainTextToken;
-
-            // Return the token and user information
-            return response()->json([
-                'status' => 'success',
-                'message' => __('validation.login_success'),
-                'token' => $token,
-                'user' => [
-                    'id' => $user->id,
-                    'firstname' => $user->firstname,
-                    'lastname' => $user->lastname,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                    'twofa_enabled' => $user->twofa_enabled,
-                ],
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error during login', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json($result, 200);
     }
 
     /**
      * Enable two-factor authentication for the user.
      *
      * @OA\Post(
-     *     path="/api/auth/enable2FA",
-     *     summary="Enable two-factor authentication for the user",
-     *     description="Generates a new secret key for two-factor authentication and returns the QR code URL.",
-     *     operationId="enableTwoFactor",
+     *     path="/api/auth/2fa/enable",
+     *     summary="Enable two-factor authentication",
+     *     description="
+Generates a new secret key for two-factor authentication and returns an OTP-Auth URL.
+Requires the user to be authenticated via Bearer token.
+",
+     *     operationId="authEnableTwoFactor",
      *     tags={"Authentication"},
      *     security={{"bearerAuth": {}}},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Two-factor authentication enabled successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
      *             @OA\Property(property="secret", type="string", description="Generated secret key for 2FA", example="JBSWY3DPEHPK3PXP"),
      *             @OA\Property(property="qrCodeUrl", type="string", description="URL to generate QR code for 2FA", example="otpauth://totp/Example%3Auser%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example")
      *         )
      *     ),
+     *
      *     @OA\Response(
-     *         response=401,
-     *         description="Authentication error: User must be logged in",
+     *         response=400,
+     *         description="Two-factor authentication already enabled",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="You must be logged in to perform this action.")
+     *             @OA\Property(property="message", type="string", example="Two-factor authentication is already enabled"),
+     *             @OA\Property(property="code",    type="string", example="twofa_already_enabled")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Internal server error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
-     *         )
-     *     )
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
+     *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
+     *
+     * @return JsonResponse
      */
-    public function enableTwoFactor(Request $request): JsonResponse
+    public function enableTwoFactor(): JsonResponse
     {
-        try {
-            $user = auth()->user();
+        $result = $this->twoFactorService->enable(auth()->user());
 
-            if (!$user) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_unauthorized'),
-                ], 401);
-            }
-
-            $google2fa = app(Google2FA::class);
-
-            // Generate a new secret key
-            $secret = $google2fa->generateSecretKey();
-
-            // Store the secret key in the database
-            $user = $request->user();
-            $user->twofa_secret = $secret;
-            $user->twofa_enabled = true;  // Activer la 2FA
-            $user->save();
-
-            // Generate the QR code URL
-            $qrCodeUrl = $google2fa->getQRCodeUrl(
-                config('app.name'),
-                $user->email,
-                $secret
-            );
-
-            return response()->json([
-                'status'=> 'success',
-                'secret' => $secret,
-                'qrCodeUrl' => $qrCodeUrl,
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error enabling 2FA', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status' => 'error',
-                'message' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json($result, 200);
     }
 
     /**
-     * Logout a user.
+     * Logout the current user.
      *
      * @OA\Post(
      *     path="/api/auth/logout",
-     *     summary="Logout a user and invalidate their current access token",
-     *     description="Logs out the user by deleting their current active token.",
-     *     operationId="logoutUser",
+     *     summary="Revoke the current authentication token",
+     *     description="Revokes the token used for authentication. Requires a valid Bearer token.",
+     *     operationId="authLogout",
      *     tags={"Authentication"},
-     *     security={{
-     *         "bearerAuth": {}
-     *     }},
+     *     security={{"bearerAuth":{}}},
+     *
      *     @OA\Response(
      *         response=200,
-     *         description="Successfully logged out.",
+     *         description="Logout successful",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Successfully logged out.")
+     *             @OA\Property(property="message", type="string", example="Logged out successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
-     *         description="No active token found.",
+     *         description="Bad request (no active token)",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="You are not authenticated.")
+     *             @OA\Property(property="message", type="string", example="No active token found"),
+     *             @OA\Property(property="code",    type="string", example="no_active_token")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Unknown error or Database error occurred while logging out.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Unknown error occurred.")
-     *         )
-     *     ),
+     *
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
+     *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
+     *
+     * @return JsonResponse
      */
-    public function logout(Request $request): JsonResponse
+    public function logout(): JsonResponse
     {
-        try {
-            $user = auth()->user();
+        $result = $this->authService->logout(auth()->user());
 
-            if (!$user) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_unauthorized'),
-                ], 401);
-            }
-
-            $token = $user->currentAccessToken();
-
-            // Check if the user is authenticated
-            if (!$token || get_class($token) === TransientToken::class) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_no_active_token'),
-                ], 400);
-            }
-
-            // Delete the current access token
-            $token->delete();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => __('validation.logout_success'),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Logout error', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return response()->json([
-                'status' => 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json($result, 200);
     }
 
     /**
-     * Send a password reset link to the user's email address.
+     * Send a password reset link.
      *
      * @OA\Post(
-     *     path="/api/auth/forgot-password",
+     *     path="/api/auth/password/forgot",
      *     summary="Send password reset link",
-     *     description="This endpoint sends a password reset link to the user's email address.",
-     *     operationId="forgotPassword",
+     *     description="
+Sends an email containing a password reset link to the user.
+
+- Requires a valid email of an existing user.
+- Response does not reveal if the email is registered, to prevent enumeration.
+    ",
+     *     operationId="authForgotPassword",
      *     tags={"Authentication"},
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -518,105 +260,54 @@ class AuthController extends Controller
      *             @OA\Property(property="email", type="string", format="email", example="user@example.com")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
-     *         description="Password reset link sent successfully",
+     *         description="Reset link sent successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="A password reset link has been sent to your email address.")
+     *             @OA\Property(property="message", type="string", example="Password reset link sent")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="User not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="User not found."),
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data."),
-     *             @OA\Property(property="errors", type="object", additionalProperties={"type":"string"})
-     *         )
-     *     ),
-     *      @OA\Response(
-     *         response=429,
-     *         description="Too many attempts. Please try again later.",
-     *         @OA\Header(
-     *             header="Retry-After",
-     *             description="Time to wait before retrying (in seconds)",
-     *             @OA\Schema(type="integer", example=60)
-     *         ),
-     *         @OA\JsonContent(
-     *             @OA\Property(property="error", type="string", example="Too many attempts. Please try again later.")
-     *         )
-     *     ),
+     *
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
+     *
      *     @OA\Response(
      *         response=500,
-     *         description="Internal Server Error",
+     *         description="Internal server error or email send failure",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
+     *             @OA\Property(property="message", type="string", example="Unable to send reset link"),
+     *             @OA\Property(property="code",    type="string", example="reset_link_failed")
      *         )
      *     )
      * )
+     *
+     * @param ForgotPasswordRequest $request
+     * @return JsonResponse
      */
-    public function forgotPassword(Request $request): JsonResponse
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        // Validate the request data
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email|exists:users,email',
-        ]);
+        $result = $this->authService->sendResetLink($request->validated()['email']);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $data = $validator->validated();
-
-        try {
-            $user = User::where('email', $data['email'])->first();
-
-            // Generate a password reset token
-            $token = PasswordFacade::createToken($user);
-
-            // Send the password reset link
-            $user->notify(new ResetPasswordNotification($token));
-
-            return response()->json([
-                'status' => 'success',
-                'message' => __('validation.reset_link_sent'),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error while request email for password', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json($result, 200);
     }
 
     /**
      * Reset the user's password using the token sent to their email.
      *
      * @OA\Post(
-     *     path="/api/auth/reset-password",
-     *     summary="Reset user password",
-     *     description="Allows a user to reset their password using a valid token sent by email.",
-     *     operationId="resetPassword",
+     *     path="/api/auth/password/reset",
+     *     summary="Reset password with token",
+     *     description="
+Allows a user to reset their password using a valid reset token:
+
+- `token`: the password reset token
+- `email`: user’s email (must exist)
+- `password` + `password_confirmation`: new secure password (min 15 chars, mixed case, numbers, symbols)
+",
+     *     operationId="authResetPassword",
      *     tags={"Authentication"},
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -627,148 +318,70 @@ class AuthController extends Controller
      *             @OA\Property(property="password_confirmation", type="string", format="password", example="StrongP@ssword2025!")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Password successfully reset",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
      *             @OA\Property(property="message", type="string", example="Your password has been reset successfully.")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
-     *         description="Invalid token",
+     *         description="Invalid or expired token",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="The password reset token is invalid or has expired.")
+     *             @OA\Property(property="message", type="string", example="Invalid password reset token"),
+     *             @OA\Property(property="code",    type="string", example="invalid_token")
      *         )
      *     ),
      *     @OA\Response(
      *         response=404,
-     *         description="User not found",
+     *         description="Email not found",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="No user could be found with this email address.")
+     *             @OA\Property(property="message", type="string", example="No user found with this email"),
+     *             @OA\Property(property="code",    type="string", example="user_not_found")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data."),
-     *             @OA\Property(
-     *                 property="errors",
-     *                 type="object",
-     *                 @OA\Property(
-     *                     property="email",
-     *                     type="array",
-     *                     @OA\Items(type="string", example="The email field is required.")
-     *                 ),
-     *                 @OA\Property(
-     *                     property="password",
-     *                     type="array",
-     *                     @OA\Items(type="string", example="The password must be at least 15 characters.")
-     *                 )
-     *             )
-     *         )
-     *     ),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
      *     @OA\Response(
      *         response=500,
-     *         description="Server error",
+     *         description="Internal server error",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
+     *             @OA\Property(property="message", type="string", example="Unexpected error during password reset"),
+     *             @OA\Property(property="code",    type="string", example="internal_error")
      *         )
      *     )
      * )
+     *
+     * @param ResetPasswordRequest $request
+     * @return JsonResponse
      */
-    public function resetPassword(Request $request): JsonResponse
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => [
-                    'required',
-                    'confirmed',
-                    PasswordRule::min(15)
-                        ->mixedCase()
-                        ->letters()
-                        ->numbers()
-                        ->symbols(),
-            ],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $data = $validator->validated();
-
-        try {
-            $response = PasswordFacade::reset(
-                $request->only('email', 'password', 'password_confirmation', 'token'),
-                function ($user, $password) {
-                    $user->password_hash = Hash::make($password);
-                    $user->save();
-                }
-            );
-
-            switch ($response) {
-                case PasswordFacade::PASSWORD_RESET:
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => __('validation.password_reset_success'),
-                    ], 200);
-
-                case PasswordFacade::INVALID_TOKEN:
-                    return response()->json([
-                        'status' => 'error',
-                        'error' => __('validation.error_password_invalid_token'),
-                    ], 400);
-
-                case PasswordFacade::INVALID_USER:
-                    return response()->json([
-                        'status' => 'error',
-                        'error' => __('validation.error_password_no_user'),
-                    ], 404);
-
-                default:
-                    logger()->error('Unexpected password reset response.', [
-                        'response' => $response,
-                    ]);
-                    return response()->json([
-                        'status' => 'error',
-                        'error' => __('validation.error_unknown'),
-                    ], 500);
-            }
-
-        } catch (Throwable $e) {
-            logger()->error('Exception during password reset.', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'status' => 'error',
-                'error' => __('validation.error_unknown'),
-            ], 500);
-        }
+        $result = $this->authService->resetPassword($request->validated());
+        return response()->json($result, 200);
     }
 
     /**
      * Update the user's password.
      *
      * @OA\Patch(
-     *     path="/api/auth/update-password",
-     *     summary="Change the user's password",
-     *     description="This endpoint allows the user to change their password. It requires the current password and the new one.",
+     *     path="/api/auth/password",
+     *     summary="Change password",
+     *     description="
+Allows an authenticated user to change their password:
+
+- Provide `current_password` to verify identity
+- Set a new secure password (min. 15 chars, mixed case, numbers & symbols)
+",
      *     tags={"Authentication"},
+     *     operationId="authUpdatePassword",
      *     security={{
      *         "bearerAuth": {}
      *     }},
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -794,130 +407,73 @@ class AuthController extends Controller
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
-     *         description="Password updated successfully",
+     *         description="Password changed successfully",
      *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Your password has been successfully changed.")
+     *             @OA\Property(property="message", type="string", example="Password changed successfully")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Invalid current password",
      *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="The current password is incorrect.")
+     *             @OA\Property(property="message", type="string", example="Current password is incorrect"),
+     *             @OA\Property(property="code",    type="string", example="invalid_current_password")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error, invalid input data",
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="Validation error. Please check your data.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Internal server error",
-     *         @OA\JsonContent(
-     *             type="object",
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An unknown error occurred. Please try again.")
-     *         )
-     *     )
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
+     *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
+     *
+     * @param UpdatePasswordRequest $request
+     * @return JsonResponse
      */
-    public function updatePassword(Request $request)
+    public function updatePassword(UpdatePasswordRequest $request): JsonResponse
     {
-        try {
-            $validator = Validator::make($request->all(), [
-                'current_password' => 'required|string',
-                'password' => [
-                    'required',
-                    'confirmed',
-                    PasswordRule::min(15)
-                        ->mixedCase()
-                        ->letters()
-                        ->numbers()
-                        ->symbols(),
-                ],
-            ]);
+        $result = $this->authService->updatePassword(
+            auth()->user(),
+            $request->validated()
+        );
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $validated = $validator->validated();
-
-            $user = Auth::user();
-
-            if (!$user) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_unauthorized'),
-                ], 401);
-            }
-
-            if (!Hash::check($validated['current_password'], $user->password_hash)) {
-                return response()->json([
-                    'status' => 'error',
-                    'error' => __('validation.error_current_password_invalid'),
-                ], 400);
-            }
-
-            $user->password_hash = Hash::make($validated['password']);
-            $user->save();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => __('validation.password_changed_success'),
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Unknown error', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json($result, 200);
     }
 
     /**
-     * Update the user's email address.
+     * Request email change for the current user.
      *
      * @OA\Patch(
-     *     path="/api/auth/update-email",
-     *     summary="Change the user's email",
-     *     description="This endpoint allows an authenticated user to update their email address.",
+     *     path="/api/auth/email",
+     *     operationId="authUpdateEmail",
+     *     summary="Request email update",
+ *     description="
+Sends a verification link to the new email address and notifies the old address.
+Requires authentication via Bearer token.
+",
      *     tags={"Authentication"},
      *     security={{"bearerAuth": {}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
-     *         description="The email address to update",
+     *         description="New unique email address",
      *         @OA\JsonContent(
      *             required={"email"},
      *             @OA\Property(property="email", type="string", format="email", example="new.email@example.com")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
-     *         description="An email has been sent for verification.",
+     *         description="Verification email sent to the new address",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="A verification email has been sent to your new address. Please check your inbox.")
+     *             @OA\Property(property="message", type="string", example="Verification email sent to the new address")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=400,
      *         description="Error when the provided email is the current email.",
@@ -926,88 +482,73 @@ class AuthController extends Controller
      *             @OA\Property(property="error", type="string", example="This email address is already your current address.")
      *         )
      *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthorized user.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="You must be logged in to perform this action.")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="The provided email is already in use.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="This email is already associated with an existing account.")
-     *         )
-     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(
      *         response=500,
-     *         description="Unknown error.",
+     *         description="Email update failure",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="An internal error occurred. Please try again later.")
+     *             @OA\Property(property="message", type="string", example="Unable to process email update"),
+     *             @OA\Property(property="code",    type="string", example="email_update_failed")
      *         )
      *     )
      * )
+     *
+     * @param UpdateEmailRequest $request
+     * @return JsonResponse
      */
-    public function updateEmail(Request $request)
+    public function updateEmail(UpdateEmailRequest $request): JsonResponse
     {
-        try {
-            $user = auth()->user();
+        $result = $this->authService->updateEmail(
+            auth()->user(),
+            $request->input('email')
+        );
 
-            if (!$user) {
-                return response()->json([
-                    'status'=> 'error',
-                    'error' => __('validation.error_unauthorized')
-                ],401);
-            }
+        return response()->json($result, 200);
+    }
 
-            // Validation du nouvel email
-            $validator = Validator::make($request->all(), [
-                'email' => 'required|email|unique:users,email',
-            ]);
+    /**
+     * Disable two-factor authentication for the user.
+     *
+     * @OA\Post(
+     *     path="/api/auth/2fa/disable",
+     *     summary="Disable two-factor authentication",
+     *     description="Disables 2FA for the authenticated user after verifying the provided 2FA code.",
+     *     operationId="disableTwoFactor",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"twofa_code"},
+     *             @OA\Property(property="twofa_code", type="string", example="123456", description="Current 2FA code from the authenticator app")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=204,
+     *         description="Two-factor authentication disabled successfully, no content"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid or missing 2FA code",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Invalid two-factor authentication code"),
+     *             @OA\Property(property="code",    type="string", example="twofa_invalid_code")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
+     * )
+     */
+    public function disableTwoFactor(DisableTwoFactorRequest $request): JsonResponse
+    {
+        $this->authService->disableTwoFactor(
+            auth()->user(),
+            $request->input('twofa_code')
+        );
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => 'error',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
-
-            $newEmail = $request->email;
-            $oldEmail = $user->email;
-            $rawToken = Str::random(60);
-            $hashedToken = EmailHelper::hashToken($rawToken);
-
-            EmailUpdate::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'old_email' => $oldEmail,
-                    'new_email' => $newEmail,
-                    'token' => $hashedToken,
-                ]
-            );
-
-            // Envoi de l'email de vérification
-            Notification::route('mail', $newEmail)->notify(new VerifyNewEmailNotification($rawToken));
-
-            // Envoi d'un email d'information à l'ancienne adresse
-            $user->notify(new  EmailUpdatedNotification($newEmail, $oldEmail, $rawToken));
-
-            return response()->json(['message' => __('validation.email_sent_new_email')], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Error during email update', [
-                'error' => $e->getMessage(),
-                'input' => $request->all(),
-            ]);
-
-            return response()->json([
-                'status'=> 'error',
-                'message' => __('validation.error_unknown'),
-            ], 500);
-        }
+        return response()->json(null, 204);
     }
 }
