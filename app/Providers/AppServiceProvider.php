@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Http\Client\Factory as HttpClient;
 use App\Services\Auth\CaptchaService;
+use Stripe\StripeClient;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,6 +14,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // CaptchaService
         $this->app->singleton(CaptchaService::class, function ($app) {
             $recaptcha = config('services.recaptcha', []);
 
@@ -22,6 +24,11 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(HttpClient::class)
             );
         });
+
+        // StripeClient
+        $this->app->singleton(StripeClient::class, fn() =>
+            new StripeClient(config('services.stripe.secret'))
+        );
     }
 
     /**

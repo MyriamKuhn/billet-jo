@@ -151,6 +151,7 @@ Access is secured by a restrictive CORS policy and token-based authentication (L
  *   @OA\Tag(name="Users",          description="Operations related to user management"),
  *   @OA\Tag(name="Tickets",        description="Ticket creation, generation, validation, and tracking"),
  *   @OA\Tag(name="Payments",       description="Payment processing and secure transactions"),
+ *   @OA\Tag(name="Invoices",       description="Invoice generation and download"),
  *   @OA\Tag(name="Carts",          description="Operations about shopping cart"),
  *   @OA\Tag(name="Products",       description="Product management, including categories and details")
  * )

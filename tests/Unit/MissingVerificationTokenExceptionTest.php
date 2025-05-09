@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Exceptions\Auth;
+namespace Tests\Unit;
 
 use Tests\TestCase;
 use App\Exceptions\Auth\MissingVerificationTokenException;
