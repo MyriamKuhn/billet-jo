@@ -1,9 +1,8 @@
 # 🎟️ Ticketing System for Olympic Games Paris 2024 API
 
-Welcome to the backend of the Olympic Games Ticketing Platform.  
-This project provides a RESTful API to manage users, cart operations, ticket purchases, two-factor authentication (2FA), and more.
+Welcome to the backend of the Olympic Games Ticketing Platform.This project provides a RESTful API to manage users, cart operations, ticket purchases, payments, invoicing, two-factor authentication (2FA), and more.
 
-![Tests](https://img.shields.io/badge/tests-208_passed-4caf50.svg) ![Assertions](https://img.shields.io/badge/assertions-755_success-2196f3.svg) ![Test Coverage](https://img.shields.io/badge/coverage-100%25-darkgreen) ![Swagger Docs](https://img.shields.io/badge/Swagger%20Docs-Available-brightgreen)
+![Tests](https://img.shields.io/badge/tests-251_passed-4caf50.svg) ![Assertions](https://img.shields.io/badge/assertions-733_success-2196f3.svg) ![Test Coverage](https://img.shields.io/badge/coverage-100%25-darkgreen) ![Swagger Docs](https://img.shields.io/badge/Swagger%20Docs-Available-brightgreen)
 ![PHP version](https://img.shields.io/badge/php-8.3-blue) ![Laravel](https://img.shields.io/badge/laravel-12-red)
 
 ---
@@ -13,6 +12,10 @@ This project provides a RESTful API to manage users, cart operations, ticket pur
 - User registration with email verification
 - Secure login with optional Two-Factor Authentication (2FA)
 - Shopping cart and payment system
+- Full cart-to-payment flow via Stripe (initiation, webhook, status, refunds)
+- Partial and full refunds with dynamic invoice regeneration
+- PDF invoice generation (DomPDF) and download endpoints (user & admin)
+- Event-driven invoice creation (`InvoiceRequested` + `GenerateInvoicePdf` listener)
 - Ticket generation with QR codes
 - Admin and employee user roles
 - Full API with documentation (Swagger)
@@ -30,10 +33,16 @@ This project provides a RESTful API to manage users, cart operations, ticket pur
   - [Running the Application](#running-the-application)
   - [🧪 Testing](#-testing)
   - [API Documentation](#api-documentation)
+  - [Payment \& Invoicing](#payment--invoicing)
+    - [Initiate a payment](#initiate-a-payment)
+    - [Webhook endpoint](#webhook-endpoint)
+    - [Check payment status](#check-payment-status)
+    - [Refund a payment](#refund-a-payment)
+    - [Invoice management](#invoice-management)
   - [🛠️ Tech Stack](#️-tech-stack)
   - [📜 License](#-license)
 
----
+--- 
 
 ## Requirements
 
@@ -112,13 +121,14 @@ http://localhost:8000
 ## 🧪 Testing
 
 The application has a **full feature test coverage**, including:
+
 - Database schema and relationships
 - Authentication and authorization
 - Two-Factor Authentication
 - Cart and payment logic
 - Performance (N+1 queries detection)
 
-✅ **208 tests passed** with **755 assertions**.  
+✅ **251 tests passed** with **733 assertions**.  
 📊 **Coverage: 100%**
 (Last tested on: `php artisan test`)
 
@@ -142,6 +152,58 @@ The API is documented with Swagger and is always up-to-date.
 
 ---
 
+## Payment & Invoicing
+
+### Initiate a payment
+
+**POST** `/api/payments`  
+Request body:  
+```json
+{ "cart_id": 42, "payment_method": "stripe" }
+```
+Response: 201 +  
+```json
+{ "data": { "uuid": "...", "status": "pending", "client_secret": "..." } }
+```
+
+### Webhook endpoint
+
+**POST** `/api/payments/webhook`  
+Handles `payment_intent.succeeded` / `payment_intent.payment_failed`, updates status and dispatches invoice generation.
+
+### Check payment status
+
+**GET** `/api/payments/{uuid}`  
+Response:  
+```json
+{ "status": "paid", "paid_at": "2025-05-10T14:30:00+02:00" }
+```
+
+### Refund a payment
+
+**POST** `/api/payments/{uuid}/refund`  _(admin only)_  
+Request body:  
+```json
+{ "amount": 25.00 }
+```  
+Response: 200 +  
+```json
+{ "uuid": "...", "refunded_amount": 25.00, "status": "refunded", "refunded_at": "..." }
+```
+
+### Invoice management
+
+**GET** `/api/invoices`  
+Lists authenticated user’s invoices with download URLs.  
+
+**GET** `/api/invoices/{filename}`  
+Downloads the PDF invoice (user).  
+
+**GET** `/api/invoices/admin/{filename}`  _(admin only)_  
+Downloads any invoice PDF. 
+
+---
+
 ## 🛠️ Tech Stack
 
 - PHP 8.3.6 (cli)
@@ -152,8 +214,10 @@ The API is documented with Swagger and is always up-to-date.
 - Google2FA for Two-Factor Authentication
 - PHPUnit for automated testing
 - AlwaysData (database hosting)
+- Barryvdh/DomPDF for PDF generation
 - VPS server hosting (Plesk)
 - L5-Swagger for API documentation
+- Stripe (test mode)
 
 ---
 

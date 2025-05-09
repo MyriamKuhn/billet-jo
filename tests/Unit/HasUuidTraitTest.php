@@ -26,6 +26,13 @@ class HasUuidTraitTest extends TestCase
             'transaction_id' => 'abc123xyz',
             'paid_at' => now(),
             'user_id' => $user->id,
+            'cart_snapshot'=> json_encode([
+                'items' => [
+                    ['id' => 1, 'name' => 'Product 1', 'price' => 50.00],
+                    ['id' => 2, 'name' => 'Product 2', 'price' => 50.00],
+                ],
+                'total' => 100.00,
+            ]),
         ]);
 
         // Vérifier que l'UUID est généré
