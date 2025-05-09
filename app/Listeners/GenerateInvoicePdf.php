@@ -3,11 +3,10 @@
 namespace App\Listeners;
 
 use App\Events\InvoiceRequested;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 
-class GenerateInvoicePdf implements ShouldQueue
+class GenerateInvoicePdf
 {
     /**
      * Create the event listener.
