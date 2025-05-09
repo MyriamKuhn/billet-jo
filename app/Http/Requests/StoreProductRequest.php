@@ -37,6 +37,10 @@ class StoreProductRequest extends FormRequest
      */
     public function rules(): array
     {
+        $imageRules = $this->isMethod('post')
+        ? ['required','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048']
+        : ['nullable','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048'];
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'min:0'],
@@ -49,7 +53,7 @@ class StoreProductRequest extends FormRequest
             'product_details.time' => ['required', 'string'],
             'product_details.location' => ['required', 'string'],
             'product_details.category' => ['required', 'string'],
-            'product_details.image' => ['required', 'string'],
+            'product_details.image' => $imageRules,
         ];
     }
 }

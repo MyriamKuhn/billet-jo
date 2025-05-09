@@ -11,6 +11,8 @@ use App\Http\Requests\IndexProductRequest;
 use App\Http\Requests\AdminProductRequest;
 use App\Http\Resources\ProductResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Arr;
 
 class ProductController extends Controller
 {
@@ -227,7 +229,34 @@ Creates a new product record.
      *
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(ref="#/components/schemas/StoreProduct")
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={
+     *                     "name",
+     *                     "price",
+     *                     "stock_quantity",
+     *                     "product_details[places]",
+     *                     "product_details[description]",
+     *                     "product_details[date]",
+     *                     "product_details[time]",
+     *                     "product_details[location]",
+     *                     "product_details[category]",
+     *                     "product_details[image]"
+     *                 },
+     *                 @OA\Property(property="name",           type="string",  example="Sample Product"),
+     *                 @OA\Property(property="price",          type="number",  format="float", example=49.99),
+     *                 @OA\Property(property="sale",           type="number",  format="float", example=39.99),
+     *                 @OA\Property(property="stock_quantity", type="integer", example=100),
+     *                 @OA\Property(property="product_details[places]",      type="integer", example=50),
+     *                 @OA\Property(property="product_details[description]", type="string",  example="A detailed description"),
+     *                 @OA\Property(property="product_details[date]",        type="string",  format="date", example="2025-05-15"),
+     *                 @OA\Property(property="product_details[time]",        type="string",  example="14:00"),
+     *                 @OA\Property(property="product_details[location]",    type="string",  example="Paris"),
+     *                 @OA\Property(property="product_details[category]",    type="string",  example="Conference"),
+     *                 @OA\Property(property="product_details[image]",       type="file",    format="binary")
+     *             )
+     *         )
      *     ),
      *
      *     @OA\Response(response=201, description="Product created successfully, no content"),
@@ -243,8 +272,18 @@ Creates a new product record.
      */
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = $this->productService->create($request->validated());
+        // Retrieve the validated data
+        $data = $request->validated();
 
+        // Handle the image file
+        $file = $request->file('product_details.image');
+        $stored = $file->store('', 'images');
+        $data['product_details']['image'] = basename($stored);
+
+        // Product creation
+        $product = $this->productService->create($data);
+
+        // return the message to frontend
         return response()->json(null, 201);
     }
 
@@ -262,6 +301,9 @@ Updates the details of an existing product.
 **Requirements**:
 - Bearer authentication (admin only)
 - Valid payload per `StoreProduct` schema
+- The image file is optional and will be stored in the `images` disk.
+- The old image will be deleted if a new one is provided.
+- The product ID must exist in the database.
 ",
      *     security={{"bearerAuth":{}}},
      *
@@ -275,7 +317,32 @@ Updates the details of an existing product.
      *
      *     @OA\RequestBody(
      *         required=true,
-     *         @OA\JsonContent(ref="#/components/schemas/StoreProduct")
+     *     @OA\MediaType(mediaType="multipart/form-data",
+     *         @OA\Schema(
+     *                 required={
+     *                     "name",
+     *                     "price",
+     *                     "stock_quantity",
+     *                     "product_details[places]",
+     *                     "product_details[description]",
+     *                     "product_details[date]",
+     *                     "product_details[time]",
+     *                     "product_details[location]",
+     *                     "product_details[category]"
+     *                 },
+     *                @OA\Property(property="name",           type="string",  example="Sample Product"),
+     *                 @OA\Property(property="price",          type="number",  format="float", example=49.99),
+     *                 @OA\Property(property="sale",           type="number",  format="float", example=39.99),
+     *                 @OA\Property(property="stock_quantity", type="integer", example=100),
+     *                 @OA\Property(property="product_details[places]",      type="integer", example=50),
+     *                 @OA\Property(property="product_details[description]", type="string",  example="A detailed description"),
+     *                 @OA\Property(property="product_details[date]",        type="string",  format="date", example="2025-05-15"),
+     *                 @OA\Property(property="product_details[time]",        type="string",  example="14:00"),
+     *                 @OA\Property(property="product_details[location]",    type="string",  example="Paris"),
+     *                 @OA\Property(property="product_details[category]",    type="string",  example="Conference"),
+     *                 @OA\Property(property="product_details[image]",       type="file",    format="binary")
+     *              )
+     *          )
      *     ),
      *
      *     @OA\Response(response=204, description="Product updated successfully, no content"),
@@ -291,9 +358,29 @@ Updates the details of an existing product.
      * @param  Product  $product
      * @return JsonResponse
      */
-    public function update(StoreProductRequest $request, Product $product):JsonResponse
+    public function update(StoreProductRequest $request, Product $product): JsonResponse
     {
-        $updated = $this->productService->update($product, $request->validated());
+        $data = $request->validated();
+        $details = $product->product_details;
+
+        // If a new image is provided, replace the old one
+        if ($file = $request->file('product_details.image')) {
+            // Delete the old image
+            if (!empty($details['image'])) {
+            Storage::disk('images')->delete($details['image']);
+        }
+            // Store the new image and name it
+            $stored = $file->store('', 'images');
+            $details['image'] = basename($stored);
+        }
+
+        // Merge the details with the main data
+        $data['product_details'] = array_merge(
+            $details,
+            Arr::except($data['product_details'] ?? [], ['image'])
+        );
+
+        $updated = $this->productService->update($product, $data);
 
         return response()->json(null, 204);
     }
