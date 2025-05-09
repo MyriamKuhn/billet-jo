@@ -30,6 +30,13 @@ return [
 
     'disks' => [
 
+        'images' => [
+            'driver' => 'local',
+            'root'   => storage_path('app/images'),
+            'url'    => env('APP_URL').'/products/images',
+            'visibility' => 'public',
+        ],
+
         'invoices' => [
         'driver' => 'local',
         'root'   => storage_path('app/invoices'),
@@ -80,7 +87,8 @@ return [
     */
 
     'links' => [
-        public_path('storage') => storage_path('app/public'),
+        // public_path('storage') => storage_path('app/public'),
+        public_path('products/images') => storage_path('app/images'),
     ],
 
 ];

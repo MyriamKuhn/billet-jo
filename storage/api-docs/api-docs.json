@@ -1066,9 +1066,70 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/StoreProduct"
+                                "required": [
+                                    "name",
+                                    "price",
+                                    "stock_quantity",
+                                    "product_details[places]",
+                                    "product_details[description]",
+                                    "product_details[date]",
+                                    "product_details[time]",
+                                    "product_details[location]",
+                                    "product_details[category]",
+                                    "product_details[image]"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Sample Product"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 49.99
+                                    },
+                                    "sale": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 39.99
+                                    },
+                                    "stock_quantity": {
+                                        "type": "integer",
+                                        "example": 100
+                                    },
+                                    "product_details[places]": {
+                                        "type": "integer",
+                                        "example": 50
+                                    },
+                                    "product_details[description]": {
+                                        "type": "string",
+                                        "example": "A detailed description"
+                                    },
+                                    "product_details[date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-05-15"
+                                    },
+                                    "product_details[time]": {
+                                        "type": "string",
+                                        "example": "14:00"
+                                    },
+                                    "product_details[location]": {
+                                        "type": "string",
+                                        "example": "Paris"
+                                    },
+                                    "product_details[category]": {
+                                        "type": "string",
+                                        "example": "Conference"
+                                    },
+                                    "product_details[image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
                             }
                         }
                     }
@@ -1309,7 +1370,7 @@
                     "Products"
                 ],
                 "summary": "Update product details",
-                "description": "\nUpdates the details of an existing product.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n",
+                "description": "\nUpdates the details of an existing product.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n- The image file is optional and will be stored in the `images` disk.\n- The old image will be deleted if a new one is provided.\n- The product ID must exist in the database.\n",
                 "operationId": "updateProduct",
                 "parameters": [
                     {
@@ -1326,9 +1387,69 @@
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/StoreProduct"
+                                "required": [
+                                    "name",
+                                    "price",
+                                    "stock_quantity",
+                                    "product_details[places]",
+                                    "product_details[description]",
+                                    "product_details[date]",
+                                    "product_details[time]",
+                                    "product_details[location]",
+                                    "product_details[category]"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Sample Product"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 49.99
+                                    },
+                                    "sale": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 39.99
+                                    },
+                                    "stock_quantity": {
+                                        "type": "integer",
+                                        "example": 100
+                                    },
+                                    "product_details[places]": {
+                                        "type": "integer",
+                                        "example": 50
+                                    },
+                                    "product_details[description]": {
+                                        "type": "string",
+                                        "example": "A detailed description"
+                                    },
+                                    "product_details[date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-05-15"
+                                    },
+                                    "product_details[time]": {
+                                        "type": "string",
+                                        "example": "14:00"
+                                    },
+                                    "product_details[location]": {
+                                        "type": "string",
+                                        "example": "Paris"
+                                    },
+                                    "product_details[category]": {
+                                        "type": "string",
+                                        "example": "Conference"
+                                    },
+                                    "product_details[image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
                             }
                         }
                     }
