@@ -17,10 +17,6 @@ Route::prefix('payments')->group(function () {
         ->name('payments.store')
         ->middleware('auth:sanctum');
 
-    // This route is used for the webhook from stripe.
-    Route::post('/webhook', [PaymentController::class, 'webhook'])
-        ->name('payments.webhook');
-
     // This route is used to get the payment status.
     Route::get('/{uuid}', [PaymentController::class, 'showStatus'])
         ->name('payments.showStatus')
@@ -32,6 +28,11 @@ Route::prefix('payments')->group(function () {
         ->middleware('auth:sanctum');
 
 })->middleware(CheckOriginMiddleware::class);
+
+
+// This route is used for the webhook from stripe.
+Route::post('/payments/webhook', [PaymentController::class, 'webhook'])
+    ->name('payments.webhook');
 
 
 Route::prefix('invoices')->group(function () {
