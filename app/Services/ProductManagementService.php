@@ -24,15 +24,16 @@ class ProductManagementService
     }
 
     /**
-     * Update a product with the given data.
+     * Update an existing product with its details.
      *
-     * @param  Product  $product
-     * @param  array    $data
-     * @return Product
+     * @param Product $product
+     * @param array $data Validated input from StoreProductRequest.
+     * @return \App\Models\Product
      */
     public function update(Product $product, array $data): Product
     {
         $product->update($data);
+
         return $product->refresh();
     }
 }
