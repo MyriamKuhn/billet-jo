@@ -41,4 +41,10 @@ return [
         // 'threshold'     => 0.5, // seulement pour reCAPTCHA v3
     ],
 
+    'stripe' => [
+        'key'            => env('STRIPE_KEY'),
+        'secret'         => env('STRIPE_SECRET'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
 ];

@@ -12,15 +12,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * @OA\Schema(
  *     schema="Payment",
  *     type="object",
- *     required={"id", "invoice_link", "amount", "payment_method", "status", "user_id"},
+ *     required={"id","uuid","invoice_link","cart_snapshot","amount","payment_method","status","user_id"},
  *     @OA\Property(property="id", type="integer", example=1),
  *     @OA\Property(property="uuid", type="string", example="550e8400-e29b-41d4-a716-446655440000"),
  *     @OA\Property(property="invoice_link", type="string", example="http://example.com/invoice/12345"),
+ *     @OA\Property(property="cart_snapshot", type="array", @OA\Items(type="object")),
  *     @OA\Property(property="amount", type="number", format="float", example=100.00),
- *     @OA\Property(property="payment_method", type="string", enum={"credit_card", "paypal", "bank_transfer"}, example="credit_card"),
- *     @OA\Property(property="status", type="string", enum={"pending", "completed", "failed"}, example="completed"),
- *     @OA\Property(property="transaction_id", type="string", example="abc123xyz"),
+ *     @OA\Property(property="payment_method", type="string", enum={"paypal","stripe"}, example="paypal"),
+ *     @OA\Property(property="status", type="string", enum={"pending","paid","failed","refunded"}, example="paid"),
+ *     @OA\Property(property="transaction_id", type="string", example="pi_abc123"),
+ *     @OA\Property(property="client_secret", type="string", example="cs_test_456"),
  *     @OA\Property(property="paid_at", type="string", format="date-time", example="2023-04-01T12:00:00Z"),
+ *     @OA\Property(property="refunded_at", type="string", format="date-time", example="2023-04-02T15:00:00Z"),
+ *     @OA\Property(property="refunded_amount", type="number", format="float", example=50.00),
  *     @OA\Property(property="user_id", type="integer", example=1),
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2023-01-01T00:00:00Z"),
  *     @OA\Property(property="updated_at", type="string", format="date-time", example="2023-04-01T12:00:00Z"),
@@ -39,11 +43,15 @@ class Payment extends Model
      */
     protected $fillable = [
         'invoice_link',
+        'cart_snapshot',
         'amount',
         'payment_method',
         'status',
         'transaction_id',
+        'client_secret',
         'paid_at',
+        'refunded_at',
+        'refunded_amount',
         'user_id',
     ];
 
@@ -62,10 +70,13 @@ class Payment extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'amount' => 'decimal:2',
+        'cart_snapshot'  => 'array',
+        'amount'         => 'decimal:2',
         'payment_method' => PaymentMethod::class,
-        'status'=> PaymentStatus::class,
-        'paid_at' => 'datetime',
+        'status'         => PaymentStatus::class,
+        'paid_at'        => 'datetime',
+        'refunded_at'    => 'datetime',
+        'refunded_amount'=> 'decimal:2',
     ];
 
     /**

@@ -18,6 +18,8 @@ use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Database\QueryException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Stripe\Exception\ApiErrorException;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -167,6 +169,22 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (HttpResponseException $e, Request $request) {
             if ($request->is('api/*')) {
                 return $e->getResponse();
+            }
+        });
+        $exceptions->render(function (HttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'code'    => 'http_error',
+                ], $e->getStatusCode());
+            }
+        });
+        $exceptions->render(function (ApiErrorException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'code'    => 'payment_gateway_error',
+                ], 502);
             }
         });
         $exceptions->render(function (\Throwable $e, Request $request) {

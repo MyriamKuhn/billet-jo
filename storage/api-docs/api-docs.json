@@ -162,6 +162,758 @@
                 ]
             }
         },
+        "/api/invoices": {
+            "get": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "List user invoices",
+                "description": "Returns a list of invoices for the logged-in user, including download URLs.",
+                "operationId": "listInvoices",
+                "responses": {
+                    "200": {
+                        "description": "List of invoices",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "uuid": {
+                                                        "type": "string",
+                                                        "format": "uuid",
+                                                        "example": "..."
+                                                    },
+                                                    "amount": {
+                                                        "type": "number",
+                                                        "format": "float",
+                                                        "example": 100
+                                                    },
+                                                    "status": {
+                                                        "type": "string",
+                                                        "example": "paid"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time",
+                                                        "example": "2025-05-10T14:30:00+02:00"
+                                                    },
+                                                    "invoice_link": {
+                                                        "type": "string",
+                                                        "example": "invoice_5566.pdf"
+                                                    },
+                                                    "download_url": {
+                                                        "type": "string",
+                                                        "example": "https://api.example.com/api/invoices/invoice_5566.pdf"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/invoices/{filename}": {
+            "get": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Download user invoice",
+                "description": "Streams the invoice PDF for the logged-in user.",
+                "operationId": "downloadInvoice",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the invoice PDF",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "invoice_5566.pdf"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF file download",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Invoice not found"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/invoices/admin/{filename}": {
+            "get": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Download invoice (admin)",
+                "description": "Allows an administrator to download any invoice PDF by filename.",
+                "operationId": "adminDownloadInvoice",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the invoice PDF",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "invoice_5566.pdf"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF file download",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "description": "Invoice not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/payments": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "List payments (only for admins)",
+                "description": "Returns a paginated list of payments for administrators.",
+                "operationId": "getPayments",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Global search on uuid, invoice_link, transaction_id, user email or user ID",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by payment status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "paid",
+                                "failed",
+                                "refunded"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "payment_method",
+                        "in": "query",
+                        "description": "Filter by payment method",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "paypal",
+                                "stripe"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filter by user ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Filter payments created on or after this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Filter payments created on or before this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "amount_min",
+                        "in": "query",
+                        "description": "Filter by minimum payment amount",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        }
+                    },
+                    {
+                        "name": "amount_max",
+                        "in": "query",
+                        "description": "Filter by maximum payment amount",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sort by column (uuid, amount, paid_at, refunded_at, created_at)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "created_at",
+                            "enum": [
+                                "uuid",
+                                "amount",
+                                "paid_at",
+                                "refunded_at",
+                                "created_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Sort direction (asc, desc)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of payments",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PaymentResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Initiate payment",
+                "description": "Creates a new pending payment and returns a Stripe client secret for checkout.",
+                "operationId": "storePayment",
+                "requestBody": {
+                    "description": "Cart identifier and desired payment method",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "cart_id",
+                                    "payment_method"
+                                ],
+                                "properties": {
+                                    "cart_id": {
+                                        "description": "ID of the cart to pay",
+                                        "type": "integer",
+                                        "example": 42
+                                    },
+                                    "payment_method": {
+                                        "description": "Payment provider to use",
+                                        "type": "string",
+                                        "enum": [
+                                            "stripe",
+                                            "paypal"
+                                        ],
+                                        "example": "stripe"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment initiated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "uuid": {
+                                                    "description": "Unique payment identifier",
+                                                    "type": "string",
+                                                    "format": "uuid",
+                                                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                                                },
+                                                "status": {
+                                                    "description": "Initial payment status",
+                                                    "type": "string",
+                                                    "example": "pending"
+                                                },
+                                                "transaction_id": {
+                                                    "description": "Stripe transaction ID (if available)",
+                                                    "type": "string",
+                                                    "example": null,
+                                                    "nullable": true
+                                                },
+                                                "client_secret": {
+                                                    "description": "Stripe client secret for frontend checkout",
+                                                    "type": "string",
+                                                    "example": "pi_1F8Zk2LZ..."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "502": {
+                        "description": "Payment gateway error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Payment gateway error, please try again later."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "payment_gateway_error"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/payments/webhook": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Stripe webhook endpoint",
+                "description": "Receives and verifies Stripe webhook events, updates payment status, and dispatches downstream events.",
+                "operationId": "handleStripeWebhook",
+                "parameters": [
+                    {
+                        "name": "Stripe-Signature",
+                        "in": "header",
+                        "description": "Stripe signature header for verifying payload authenticity",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Raw JSON payload sent by Stripe",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Webhook processed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid signature or payload",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Invalid signature"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/payments/{uuid}": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Get payment status",
+                "description": "Returns the current status and paid timestamp of a payment for the authenticated user.",
+                "operationId": "showPaymentStatus",
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "Unique identifier of the payment",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment status retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "description": "Current payment status",
+                                            "type": "string",
+                                            "example": "paid"
+                                        },
+                                        "paid_at": {
+                                            "description": "Timestamp when payment was marked as paid",
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "example": "2025-05-10T14:30:00+02:00",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "description": "Payment not found or does not belong to user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Resource not found"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "not_found"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/payments/{uuid}/refund": {
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "Refund a payment",
+                "description": "Allows an administrator to refund a specified amount and regenerates the invoice PDF under the same filename.",
+                "operationId": "refundPayment",
+                "parameters": [
+                    {
+                        "name": "uuid",
+                        "in": "path",
+                        "description": "UUID of the payment to refund",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Amount to refund (must be ≤ original payment amount)",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "description": "Amount to refund in the payment’s currency",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 25
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment refunded successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "uuid": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                                        },
+                                        "refunded_amount": {
+                                            "description": "Total amount refunded so far",
+                                            "type": "number",
+                                            "format": "float",
+                                            "example": 25
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "pending",
+                                                "paid",
+                                                "failed",
+                                                "refunded"
+                                            ],
+                                            "example": "refunded"
+                                        },
+                                        "refunded_at": {
+                                            "description": "Timestamp when refund was processed",
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "example": "2025-05-10T15:45:00+02:00"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "description": "Payment not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Resource not found"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "not_found"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "502": {
+                        "description": "Payment gateway error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Payment gateway error, please try again later."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "payment_gateway_error"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/products": {
             "get": {
                 "tags": [
@@ -2642,6 +3394,169 @@
                 },
                 "type": "object"
             },
+            "PaymentInitiationPaid": {
+                "properties": {
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "refunded"
+                        ],
+                        "example": "paid"
+                    },
+                    "transaction_id": {
+                        "type": "string",
+                        "example": "pi_abc123"
+                    },
+                    "client_secret": {
+                        "type": "string",
+                        "example": "cs_test_456"
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentInitiationPending": {
+                "properties": {
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "refunded"
+                        ],
+                        "example": "pending"
+                    },
+                    "transaction_id": {
+                        "type": "string",
+                        "example": "pi_abc123"
+                    },
+                    "client_secret": {
+                        "type": "string",
+                        "example": "cs_test_456"
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentResource": {
+                "title": "PaymentResource",
+                "properties": {
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "invoice_link": {
+                        "type": "string",
+                        "example": "https://example.com/invoice/12345"
+                    },
+                    "cart_snapshot": {
+                        "description": "Instantané du panier",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "ticket_type": {
+                                    "type": "string",
+                                    "example": "adult"
+                                },
+                                "quantity": {
+                                    "type": "integer",
+                                    "example": 2
+                                },
+                                "unit_price": {
+                                    "type": "number",
+                                    "format": "float",
+                                    "example": 50
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 130
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "enum": [
+                            "paypal",
+                            "stripe"
+                        ],
+                        "example": "paypal"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "refunded"
+                        ],
+                        "example": "paid"
+                    },
+                    "transaction_id": {
+                        "type": "string",
+                        "example": "pi_abc123",
+                        "nullable": true
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-01T12:00:00Z",
+                        "nullable": true
+                    },
+                    "refunded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-02T15:00:00Z",
+                        "nullable": true
+                    },
+                    "refunded_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 50,
+                        "nullable": true
+                    },
+                    "user": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "email": {
+                                "type": "string",
+                                "format": "email",
+                                "example": "user@example.com"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-01-01T00:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-01T12:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
             "ProductDetails": {
                 "title": "ProductDetails",
                 "required": [
@@ -2843,7 +3758,9 @@
             "Payment": {
                 "required": [
                     "id",
+                    "uuid",
                     "invoice_link",
+                    "cart_snapshot",
                     "amount",
                     "payment_method",
                     "status",
@@ -2862,6 +3779,12 @@
                         "type": "string",
                         "example": "http://example.com/invoice/12345"
                     },
+                    "cart_snapshot": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
                     "amount": {
                         "type": "number",
                         "format": "float",
@@ -2870,29 +3793,43 @@
                     "payment_method": {
                         "type": "string",
                         "enum": [
-                            "credit_card",
                             "paypal",
-                            "bank_transfer"
+                            "stripe"
                         ],
-                        "example": "credit_card"
+                        "example": "paypal"
                     },
                     "status": {
                         "type": "string",
                         "enum": [
                             "pending",
-                            "completed",
-                            "failed"
+                            "paid",
+                            "failed",
+                            "refunded"
                         ],
-                        "example": "completed"
+                        "example": "paid"
                     },
                     "transaction_id": {
                         "type": "string",
-                        "example": "abc123xyz"
+                        "example": "pi_abc123"
+                    },
+                    "client_secret": {
+                        "type": "string",
+                        "example": "cs_test_456"
                     },
                     "paid_at": {
                         "type": "string",
                         "format": "date-time",
                         "example": "2023-04-01T12:00:00Z"
+                    },
+                    "refunded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2023-04-02T15:00:00Z"
+                    },
+                    "refunded_amount": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 50
                     },
                     "user_id": {
                         "type": "integer",
@@ -3405,6 +4342,14 @@
         {
             "name": "Users",
             "description": "Operations related to user management"
+        },
+        {
+            "name": "Payments",
+            "description": "Payment processing and secure transactions"
+        },
+        {
+            "name": "Invoices",
+            "description": "Invoice generation and download"
         },
         {
             "name": "Carts",
