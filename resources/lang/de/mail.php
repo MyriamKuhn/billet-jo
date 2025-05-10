@@ -36,4 +36,11 @@ return [
     'footer_email_update_request' => 'Wenn Sie Probleme mit diesem Link haben, können Sie ihn in Ihren Browser kopieren und einfügen:',
     'subject_email_update_request_cancel' => '[:app_name] Anfrage zur Aktualisierung der E-Mail-Adresse abbrechen',
     'title_email_update_request_cancel' => 'Anfrage zur Aktualisierung der E-Mail-Adresse abbrechen',
+    'tickets_generated_subject' => '[:app_name] Ihre Tickets sind bereit!',
+    'tickets_line1' => 'Vielen Dank für Ihren Kauf! Ihre Tickets sind im Anhang.',
+    'event' => 'Veranstaltung',
+    'ticket_code' => 'Ticket-Code',
+    'view_tickets' => 'Ihre Tickets anzeigen',
+    'tickets_note' => 'Bitte legen Sie Ihren Ticket-Code oder das angehängte PDF am Eingang vor.',
+    'footer_ticket' => 'Wenn Sie diese Tickets nicht angefordert haben, wenden Sie sich bitte an den Support.',
 ];

@@ -30,6 +30,18 @@ return [
 
     'disks' => [
 
+        'tickets' => [
+            'driver' => 'local',
+            'root'   => storage_path('app/tickets'),
+            'visibility' => 'private',
+        ],
+
+        'qrcodes' => [
+            'driver' => 'local',
+            'root'   => storage_path('app/qrcodes'),
+            'visibility' => 'private',
+        ],
+
         'images' => [
             'driver' => 'local',
             'root'   => storage_path('app/images'),

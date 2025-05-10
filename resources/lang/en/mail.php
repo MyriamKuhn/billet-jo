@@ -34,4 +34,11 @@ return [
     'footer_email_update_request' => 'If you have trouble with this link, you can copy and paste it into your browser:',
     'subject_email_update_request_cancel' => '[:app_name] Cancel Email Update Request',
     'title_email_update_request_cancel' => 'Cancel Email Update Request',
+    'tickets_generated_subject' => '[:app_name] Your Tickets Are Ready!',
+    'tickets_line1' => 'Thank you for your purchase! Your tickets are attached below.',
+    'event' => 'Event',
+    'ticket_code' => 'Ticket Code',
+    'view_tickets' => 'View Your Tickets',
+    'tickets_note' => 'Please present your ticket code or the attached PDF at the entrance.',
+    'footer_ticket' => 'If you did not request these tickets, please contact support.',
 ];

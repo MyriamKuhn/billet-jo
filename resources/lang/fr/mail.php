@@ -34,4 +34,11 @@ return [
     'footer_email_update_request' => 'Si vous avez des problèmes avec ce lien, vous pouvez le copier et le coller dans votre navigateur :',
     'subject_email_update_request_cancel' => '[:app_name] Annulation de la demande de mise à jour de l\'adresse e-mail',
     'title_email_update_request_cancel' => 'Annulation de la demande de mise à jour de l\'adresse e-mail',
+    'tickets_generated_subject' => '[:app_name] Vos billets sont prêts !',
+    'tickets_line1' => 'Merci pour votre achat ! Vos billets sont en pièce jointe.',
+    'event' => 'Événement',
+    'ticket_code' => 'Code du billet',
+    'view_tickets' => 'Voir mes billets',
+    'tickets_note' => 'Veuillez présenter votre code de billet ou le PDF ci-joint à l\'entrée.',
+    'footer_ticket' => 'Si vous n\'avez pas demandé ces billets, veuillez contacter le support.',
 ];

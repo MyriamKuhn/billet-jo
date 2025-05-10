@@ -11,4 +11,9 @@ Route::prefix('tickets')->group(function () {
         ->middleware('auth:sanctum')
         ->name('tickets.index');
 
+    // This route is used to get the list of all the tickets for the user
+    Route::get('/user', [TicketController::class, 'userTickets'])
+        ->middleware('auth:sanctum')
+        ->name('tickets.user');
+
 })->middleware(CheckOriginMiddleware::class);
