@@ -53,11 +53,6 @@ Route::prefix('auth')->group(function () {
         ->middleware('auth:sanctum')
         ->name('auth.email');
 
-    // This route is used to verify the email address of the user
-    Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])
-        ->middleware('signed')
-        ->name('auth.email.verify');
-
     // This route is used to resend the verification email to the user
     Route::post('/email/resend', [VerificationController::class, 'resend'])
         ->middleware('auth:sanctum')
@@ -72,6 +67,11 @@ Route::prefix('auth')->group(function () {
     Route::get('/email/change/cancel/{token}/{old_email}', [VerificationController::class, 'cancelChange'])
         ->middleware('signed')
         ->name('auth.email.change.cancel');
+
+    // This route is used to verify the email address of the user
+    Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('auth.email.verify');
 
 })->middleware(CheckOriginMiddleware::class);
 
@@ -89,29 +89,29 @@ Route::prefix('users')->group(function () {
         ->middleware('auth:sanctum')
         ->name('users.me');
 
-    // This route is used to get the information of a user by the admin or employee
-    Route::get('/{user}', [UserController::class, 'show'])
-        ->middleware('auth:sanctum')
-        ->name('users.show');
-
     // This route is used to update the users lastname and firstname
     Route::patch('/me', [UserController::class, 'updateSelf'])
         ->middleware('auth:sanctum')
         ->name('users.update.self');
 
-    // This route is used for an admin to change the information of a user
-    Route::patch('/{user}', [UserController::class, 'update'])
+    // This route is used to create a new employee by the admin
+    Route::post('/employees', [UserController::class, 'storeEmployee'])
         ->middleware('auth:sanctum')
-        ->name('users.update.admin');
+        ->name('users.employees');
 
     // This route is used to see if the user has changed his email address only for admins
     Route::get('/email/{user}', [UserController::class, 'checkEmailUpdate'])
         ->middleware('auth:sanctum')
         ->name('users.email.update');
 
-    // This route is used to create a new employee by the admin
-    Route::post('/employees', [UserController::class, 'storeEmployee'])
+    // This route is used to get the information of a user by the admin or employee
+    Route::get('/{user}', [UserController::class, 'show'])
         ->middleware('auth:sanctum')
-        ->name('users.employees');
+        ->name('users.show');
+
+    // This route is used for an admin to change the information of a user
+    Route::patch('/{user}', [UserController::class, 'update'])
+        ->middleware('auth:sanctum')
+        ->name('users.update.admin');
 
 })->middleware(CheckOriginMiddleware::class);

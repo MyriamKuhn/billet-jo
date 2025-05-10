@@ -11,25 +11,20 @@ Route::prefix('tickets')->group(function () {
         ->middleware('auth:sanctum')
         ->name('tickets.index');
 
+    // This route is used to create a ticket only for the admin
+    Route::post('/', [TicketController::class, 'createForUser'])
+        ->middleware('auth:sanctum')
+        ->name('tickets.createForUser');
+
     // This route is used to get the list of all the tickets for the user
     Route::get('/user', [TicketController::class, 'userTickets'])
         ->middleware('auth:sanctum')
         ->name('tickets.user');
 
-    // This route is used to get a ticket for the specific user
-    Route::get('/{filename}', [TicketController::class, 'downloadTicket'])
-        ->middleware('auth:sanctum')
-        ->name('tickets.user.show');
-
     // This route is used to get a ticket for the admin
     Route::get('/admin/{filename}', [TicketController::class, 'downloadAdminTicket'])
         ->middleware('auth:sanctum')
         ->name('tickets.admin.show');
-
-    // This route is used to download QR code for the user
-    Route::get('/qr/{filename}', [TicketController::class, 'downloadQr'])
-        ->middleware('auth:sanctum')
-        ->name('tickets.user.qr');
 
     // This route is used to download any QR code for admin
     Route::get('/admin/qr/{filename}', [TicketController::class, 'downloadAdminQr'])
@@ -41,14 +36,20 @@ Route::prefix('tickets')->group(function () {
         ->middleware('auth:sanctum')
         ->name('tickets.admin.updateStatus');
 
-    // This route is used to create a ticket only for the admin
-    Route::post('/', [TicketController::class, 'store'])
+    // This route is used to download QR code for the user
+    Route::get('/qr/{filename}', [TicketController::class, 'downloadQr'])
         ->middleware('auth:sanctum')
-        ->name('tickets.store');
+        ->name('tickets.user.qr');
 
     // This route is used for the employee to scan the QR code and mark the ticket as used
-    Route::put('/scan/{token}', [TicketController::class, 'scanTicket'])
+    Route::post('/scan/{token}', [TicketController::class, 'scanTicket'])
         ->middleware('auth:sanctum')
         ->name('tickets.scan');
+
+    // This route is used to get a ticket for the specific user
+    Route::get('/{filename}', [TicketController::class, 'downloadTicket'])
+        ->where('filename', '^[A-Za-z0-9_\-]+\.pdf$')
+        ->middleware('auth:sanctum')
+        ->name('tickets.user.show');
 
 })->middleware(CheckOriginMiddleware::class);
