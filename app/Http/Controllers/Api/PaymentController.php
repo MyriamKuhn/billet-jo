@@ -50,7 +50,7 @@ class PaymentController extends Controller
      *         in="query",
      *         description="Filter by payment method",
      *         required=false,
-     *         @OA\Schema(type="string", enum={"paypal","stripe"})
+     *         @OA\Schema(type="string", enum={"paypal","stripe","free"})
      *     ),
      *     @OA\Parameter(
      *         name="user_id",
@@ -167,7 +167,7 @@ class PaymentController extends Controller
      *         @OA\JsonContent(
      *             required={"cart_id","payment_method"},
      *             @OA\Property(property="cart_id", type="integer", example=42, description="ID of the cart to pay"),
-     *             @OA\Property(property="payment_method", type="string", enum={"stripe","paypal"}, example="stripe", description="Payment provider to use")
+     *             @OA\Property(property="payment_method", type="string", enum={"stripe","paypal","free"}, example="stripe", description="Payment provider to use")
      *         )
      *     ),
      *

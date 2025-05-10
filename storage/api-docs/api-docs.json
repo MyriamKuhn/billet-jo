@@ -263,10 +263,13 @@
                         "$ref": "#/components/responses/Unauthenticated"
                     },
                     "404": {
-                        "description": "Invoice not found"
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -310,7 +313,10 @@
                         "$ref": "#/components/responses/Forbidden"
                     },
                     "404": {
-                        "description": "Invoice not found"
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -362,7 +368,8 @@
                             "type": "string",
                             "enum": [
                                 "paypal",
-                                "stripe"
+                                "stripe",
+                                "free"
                             ]
                         }
                     },
@@ -526,7 +533,8 @@
                                         "type": "string",
                                         "enum": [
                                             "stripe",
-                                            "paypal"
+                                            "paypal",
+                                            "free"
                                         ],
                                         "example": "stripe"
                                     }
@@ -1702,12 +1710,72 @@
                         "bearerAuth": []
                     }
                 ]
+            },
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Generate free tickets for a user (admin only)",
+                "operationId": "54135c0b359c44ffe35906bff8729010",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "user_id",
+                                    "product_id",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "user_id": {
+                                        "description": "ID of the existing user",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "product_id": {
+                                        "description": "ID of the product/event",
+                                        "type": "integer",
+                                        "example": 42
+                                    },
+                                    "quantity": {
+                                        "description": "Number of tickets to generate",
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "$ref": "#/components/responses/NoContent"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/api/tickets/user": {
             "get": {
                 "tags": [
-                    "User",
                     "Tickets"
                 ],
                 "summary": "List the authenticated user's tickets, paginated",
@@ -1781,6 +1849,428 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download user ticket",
+                "description": "Streams the ticket PDF for the logged-in user.",
+                "operationId": "downloadTicket",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the ticket PDF",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ticket_5566.pdf"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF file download",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/admin/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download ticket (admin)",
+                "description": "Allows an administrator to download any ticket PDF by filename.",
+                "operationId": "adminDownloadTicket",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the ticket PDF",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ticket_5566.pdf"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF file download",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/qr/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download user qr code",
+                "description": "Streams the qr code for the logged-in user.",
+                "operationId": "downloadQr",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the Qr code PNG",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "qr_5566.png"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PNG file download",
+                        "content": {
+                            "image/png": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/admin/qr/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download qr code (admin)",
+                "description": "Allows an administrator to download any QR code by filename.",
+                "operationId": "adminDownloadQr",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the Qr code PNG",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "qr_5566.png"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PNG file download",
+                        "content": {
+                            "image/png": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/admin/{id}/status": {
+            "put": {
+                "tags": [
+                    "Tickets",
+                    "Admin"
+                ],
+                "summary": "Update ticket status (admin only)",
+                "operationId": "b60014e632a538e72c630ce20ac7f722",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the ticket to update",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "issued",
+                                            "used",
+                                            "refunded",
+                                            "cancelled"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "$ref": "#/components/responses/NoContent"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/scan/{token}": {
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Scan ticket QR and validate entry",
+                "description": "Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
+                "operationId": "7d8f91b0e57cac9fb282726f29838c2a",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "description": "Unique ticket UUID token from QR code",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket validated: returns attendee & event info",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "properties": {
+                                                "firstname": {
+                                                    "type": "string",
+                                                    "example": "John"
+                                                },
+                                                "lastname": {
+                                                    "type": "string",
+                                                    "example": "Doe"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "john.doe@example.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "event": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Concert Live"
+                                                },
+                                                "date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2024-07-26"
+                                                },
+                                                "time": {
+                                                    "type": "string",
+                                                    "format": "time",
+                                                    "example": "20:00"
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "example": "Stade de France"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Ticket already processed: returns status, timestamp, attendee & event info",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "used"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "example": "2025-05-10T15:00:00+02:00"
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "firstname": {
+                                                    "type": "string",
+                                                    "example": "John"
+                                                },
+                                                "lastname": {
+                                                    "type": "string",
+                                                    "example": "Doe"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "john.doe@example.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "event": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Concert Live"
+                                                },
+                                                "date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2024-07-26"
+                                                },
+                                                "time": {
+                                                    "type": "string",
+                                                    "format": "time",
+                                                    "example": "20:00"
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "example": "Stade de France"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "ticket_already_processed"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "This ticket was already used on 2025-05-10T15:00:00+02:00"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -3923,7 +4413,8 @@
                         "type": "string",
                         "enum": [
                             "paypal",
-                            "stripe"
+                            "stripe",
+                            "free"
                         ],
                         "example": "paypal"
                     },
@@ -4139,11 +4630,11 @@
                     },
                     "qr_filename": {
                         "type": "string",
-                        "example": "https://cdn.example.com/qrcodes/uuid.png"
+                        "example": "uuid.png"
                     },
                     "pdf_filename": {
                         "type": "string",
-                        "example": "https://cdn.example.com/tickets/uuid.pdf"
+                        "example": "uuid.pdf"
                     },
                     "user": {
                         "$ref": "#/components/schemas/UserResource"
@@ -4376,7 +4867,8 @@
                         "type": "string",
                         "enum": [
                             "paypal",
-                            "stripe"
+                            "stripe",
+                            "free"
                         ],
                         "example": "paypal"
                     },
@@ -4987,8 +5479,8 @@
             "description": "Product management, including categories and details"
         },
         {
-            "name": "User",
-            "description": "User"
+            "name": "Admin",
+            "description": "Admin"
         }
     ],
     "externalDocs": {

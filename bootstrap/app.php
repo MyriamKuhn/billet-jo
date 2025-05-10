@@ -20,6 +20,8 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Database\QueryException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Stripe\Exception\ApiErrorException;
+use App\Exceptions\TicketAlreadyProcessedException;
+use App\Enums\TicketStatus;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -185,6 +187,35 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => $e->getMessage(),
                     'code'    => 'payment_gateway_error',
                 ], 502);
+            }
+        });
+        $exceptions->render(function (TicketAlreadyProcessedException $e, Request $request) {
+            if ($request->is('api/*')) {
+                $ticket = $e->ticket;
+
+                $timestamp = match($ticket->status) {
+                    TicketStatus::Used->value      => $ticket->used_at,
+                    TicketStatus::Refunded->value  => $ticket->refunded_at,
+                    TicketStatus::Cancelled->value => $ticket->cancelled_at,
+                };
+
+                return response()->json([
+                    'status'    => $ticket->status,
+                    'timestamp' => $timestamp?->toIso8601String(),
+                    'user'      => [
+                        'firstname' => $ticket->user->firstname,
+                        'lastname'  => $ticket->user->lastname,
+                        'email'     => $ticket->user->email,
+                    ],
+                    'event'     => [
+                        'name'     => $ticket->product->name,
+                        'date'     => $ticket->product->product_details['date'] ?? null,
+                        'time'     => $ticket->product->product_details['time'] ?? null,
+                        'location' => $ticket->product->product_details['location'] ?? null,
+                    ],
+                    'code'      => 'ticket_already_processed',
+                    'message'   => "This ticket was already {$ticket->status} on {$timestamp->toIso8601String()}",
+                ], 409);
             }
         });
         $exceptions->render(function (\Throwable $e, Request $request) {

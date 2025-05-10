@@ -6,4 +6,5 @@ enum PaymentMethod: string
 {
     case Paypal = 'paypal';
     case Stripe = 'stripe';
+    case Free = 'free';
 }

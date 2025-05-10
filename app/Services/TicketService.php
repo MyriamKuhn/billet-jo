@@ -15,6 +15,11 @@ use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\Writer\PngWriter;
 use App\Mail\TicketsGenerated;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Carbon;
+use App\Models\User;
+use App\Enums\PaymentStatus;
+use App\Events\InvoiceRequested;
+use App\Events\PaymentSucceeded;
 
 class TicketService
 {
@@ -148,5 +153,72 @@ class TicketService
         // Mail sending
         Mail::to($user->email)
             ->send(new TicketsGenerated($user, $createdTickets));
+    }
+
+    /**
+     * Change the status of a ticket.
+     *
+     * @param  int    $ticketId
+     * @param  string $status
+     * @return Ticket
+     */
+    public function changeStatus(int $ticketId, string $status): Ticket
+    {
+        $ticket = Ticket::findOrFail($ticketId);
+
+        // Update the status and timestamps based on the new status
+        $now = Carbon::now();
+        $timestamps = [
+            TicketStatus::Used->value      => ['status' => $status, 'used_at'      => $now],
+            TicketStatus::Refunded->value  => ['status' => $status, 'refunded_at'  => $now],
+            TicketStatus::Cancelled->value => ['status' => $status, 'cancelled_at' => $now],
+            TicketStatus::Issued->value    => ['status' => $status], // No timestamp update
+        ];
+
+        $data = $timestamps[$status] ?? ['status' => $status];
+        $ticket->update($data);
+
+        return $ticket;
+    }
+
+    /**
+     * Create free tickets for a user and product.
+     *
+     * @param  int $userId
+     * @param  int $productId
+     * @param  int $quantity
+     */
+    public function createFreeTickets(int $userId, int $productId, int $quantity): void
+    {
+        $user    = User::findOrFail($userId);
+        $product = Product::findOrFail($productId);
+
+        $itemData = [
+            'product_id'       => $product->id,
+            'product_name'     => $product->name,
+            'ticket_type'      => $product->product_details['category'],
+            'quantity'         => $quantity,
+            'unit_price'       => $product->price,
+            'discount_rate'    => 1.0,
+            'discounted_price' => 0.0,
+        ];
+
+        // 1) Create the payment free with the invoice link
+        $invoiceFilename = 'invoice_'.Str::uuid().'.pdf';
+
+        $payment = Payment::create([
+            'user_id'       => $user->id,
+            'status'        => PaymentStatus::Paid->value,
+            'payment_method'=> 'free',
+            'amount'        => 0.0,
+            'cart_snapshot' => [$itemData],
+            'invoice_link'  => $invoiceFilename,
+        ]);
+
+        // 2) Generate the invoice PDF
+        event(new InvoiceRequested($payment));
+
+        // 3) Generate the tickets
+        event(new PaymentSucceeded($payment));
     }
 }

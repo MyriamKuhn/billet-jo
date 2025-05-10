@@ -37,7 +37,7 @@ class PaymentFactory extends Factory
             'invoice_link'   => $this->faker->unique()->url,
             'cart_snapshot'  => $items,
             'amount'         => $amount,
-            'payment_method' => $this->faker->randomElement(['paypal', 'stripe']),
+            'payment_method' => $this->faker->randomElement(['paypal', 'stripe', 'free']),
             'status'         => $status,
             'transaction_id' => $status === 'paid' ? $this->faker->uuid : null,
             'client_secret'  => $status === 'pending' ? $this->faker->sha1 : null,

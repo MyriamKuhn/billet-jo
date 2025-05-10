@@ -29,18 +29,23 @@ class TicketsGenerated extends Mailable
         $this->tickets = collect($tickets);
     }
 
+    /**
+     * Build the message.
+     *
+     * @return $this
+     */
     public function build()
     {
         $mail = $this
             ->subject(__('mail.tickets_generated_subject', ['app_name'=> env('APP_NAME')]))
-            ->view('emails.tickets.generated')      // on passe en view()
+            ->view('emails.tickets.generated')
             ->with([
                 'user'    => $this->user,
                 'tickets' => $this->tickets,
                 'clientUrl' => rtrim(config('app.frontend_url'), '/') . '/client/tickets',
             ]);
 
-        // Attacher chaque PDF
+        // Attach each ticket PDF
         foreach ($this->tickets as $ticket) {
             $path = Storage::disk('tickets')->path($ticket->pdf_filename);
             $mail->attach($path, [
