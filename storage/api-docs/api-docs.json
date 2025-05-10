@@ -4045,10 +4045,11 @@
             "Ticket": {
                 "required": [
                     "id",
-                    "qr_code_link",
-                    "pdf_link",
-                    "is_used",
-                    "is_refunded",
+                    "product_snapshot",
+                    "token",
+                    "qr_filename",
+                    "pdf_filename",
+                    "status",
                     "user_id",
                     "payment_id",
                     "product_id"
@@ -4058,43 +4059,83 @@
                         "type": "integer",
                         "example": 1
                     },
-                    "qr_code_link": {
+                    "product_snapshot": {
+                        "properties": {
+                            "product_name": {
+                                "type": "string",
+                                "example": "Concert X"
+                            },
+                            "ticket_type": {
+                                "type": "string",
+                                "example": "VIP"
+                            },
+                            "unit_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 49.99
+                            },
+                            "discount_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.1
+                            },
+                            "discounted_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 44.99
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "token": {
                         "type": "string",
-                        "example": "https://example.com/qr-code/12345"
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
                     },
-                    "pdf_link": {
+                    "qr_filename": {
                         "type": "string",
-                        "example": "https://example.com/ticket-pdf/12345"
+                        "example": "qr_123e4567-e89b-12d3-a456-426614174000.png"
                     },
-                    "is_used": {
-                        "type": "boolean",
-                        "example": false
+                    "pdf_filename": {
+                        "type": "string",
+                        "example": "ticket_123e4567-e89b-12d3-a456-426614174000.pdf"
                     },
-                    "is_refunded": {
-                        "type": "boolean",
-                        "example": false
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "issued",
+                            "used",
+                            "refunded",
+                            "cancelled"
+                        ],
+                        "example": "issued"
                     },
-                    "user_id": {
-                        "type": "integer",
-                        "example": 1
+                    "used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T14:00:00Z",
+                        "nullable": true
                     },
-                    "payment_id": {
-                        "type": "integer",
-                        "example": 1
+                    "refunded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": null,
+                        "nullable": true
                     },
-                    "product_id": {
-                        "type": "integer",
-                        "example": 1
+                    "cancelled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": null,
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
-                        "example": "2023-01-01T00:00:00Z"
+                        "example": "2025-05-10T12:00:00Z"
                     },
                     "updated_at": {
                         "type": "string",
                         "format": "date-time",
-                        "example": "2023-04-01T12:00:00Z"
+                        "example": "2025-05-10T12:30:00Z"
                     }
                 },
                 "type": "object"

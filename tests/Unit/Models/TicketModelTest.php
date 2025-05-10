@@ -2,133 +2,137 @@
 
 namespace Tests\Unit\Models;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Models\Product;
 use App\Models\Payment;
+use App\Models\Product;
+use App\Enums\TicketStatus;
 
 class TicketModelTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function testTicketsTableHasExpectedColumns(): void
+    public function testItHasTheCorrectFillableAttributes()
     {
-        $columns = ['id', 'qr_code_link', 'pdf_link', 'is_used', 'is_refunded', 'created_at', 'updated_at', 'user_id', 'payment_id', 'product_id'];
+        $expected = [
+            'product_snapshot',
+            'token',
+            'qr_filename',
+            'pdf_filename',
+            'status',
+            'used_at',
+            'refunded_at',
+            'cancelled_at',
+            'user_id',
+            'payment_id',
+            'product_id',
+        ];
 
-        foreach ($columns as $column) {
-            $this->assertTrue(
-                Schema::hasColumn('tickets', $column),
-                "Colonne `{$column}` manquante dans `tickets`."
-            );
-        }
+        $this->assertEquals(
+            $expected,
+            (new Ticket())->getFillable()
+        );
     }
 
-    public function testTicketBelongsToUserPaymentAndProduct(): void
+    public function testItGeneratesAUuidTokenOnCreation()
     {
-        $user = User::factory()->create();
-        $payment = Payment::factory()->create();
-        $product = Product::factory()->create();
-        $ticket = Ticket::factory()->create(['user_id' => $user->id, 'payment_id' => $payment->id, 'product_id' => $product->id]);
-
-        $this->assertEquals($user->id, $ticket->user->id);
+        $ticket = Ticket::factory()->create();
+        $this->assertTrue(Str::isUuid($ticket->token));
     }
 
-    public function testTicketBelongsToUser()
+    public function testProductSnapshotIsCastToArray()
     {
-        // Création d'un utilisateur et d'un ticket
-        $user = User::factory()->create();
-        $ticket = Ticket::factory()->create(['user_id' => $user->id]);
+        $snapshot = [
+            'product_name' => 'Test',
+            'unit_price' => 10.0,
+        ];
+        $ticket = Ticket::factory()->create([ 'product_snapshot' => $snapshot ]);
 
-        // Vérification que la relation fonctionne
-        $this->assertInstanceOf(User::class, $ticket->user);
-        $this->assertEquals($user->id, $ticket->user->id);
+        $this->assertIsArray($ticket->product_snapshot);
+        $this->assertEquals($snapshot, $ticket->product_snapshot);
     }
 
-    public function testTicketBelongsToPayment()
+    public function testStatusIsCastToTicketStatusEnum()
     {
-        // Création d'un paiement et d'un ticket
-        $payment = Payment::factory()->create();
-        $ticket = Ticket::factory()->create(['payment_id' => $payment->id]);
+        $ticket = Ticket::factory()->create();
 
-        // Vérification que la relation fonctionne
-        $this->assertInstanceOf(Payment::class, $ticket->payment);
-        $this->assertEquals($payment->id, $ticket->payment->id);
+        $this->assertInstanceOf(TicketStatus::class, $ticket->status);
+        $this->assertEquals(TicketStatus::Issued, $ticket->status);
     }
 
-    public function testTicketBelongsToProduct()
+    public function testDateAttributesAreCastToCarbonInstances()
     {
-        // Création d'un produit et d'un ticket
-        $product = Product::factory()->create();
-        $ticket = Ticket::factory()->create(['product_id' => $product->id]);
-
-        // Vérification que la relation fonctionne
-        $this->assertInstanceOf(Product::class, $ticket->product);
-        $this->assertEquals($product->id, $ticket->product->id);
-    }
-
-    public function testTicketCreationWithValidRelations()
-    {
-        // Création d'un utilisateur, d'un paiement et d'un produit
-        $user = User::factory()->create();
-        $payment = Payment::factory()->create();
-        $product = Product::factory()->create();
-
-        // Création d'un ticket lié à l'utilisateur, au paiement et au produit
-        $ticket = Ticket::create([
-            'qr_code_link' => 'some-link',
-            'pdf_link' => 'some-pdf-link',
-            'is_used' => false,
-            'is_refunded' => false,
-            'user_id' => $user->id,
-            'payment_id' => $payment->id,
-            'product_id' => $product->id,
-        ]);
-
-        // Vérification que le ticket a bien les bonnes relations
-        $this->assertEquals($user->id, $ticket->user_id);
-        $this->assertEquals($payment->id, $ticket->payment_id);
-        $this->assertEquals($product->id, $ticket->product_id);
-    }
-
-    public function testTicketFillableFields()
-    {
-        // Création d'un utilisateur, d'un paiement et d'un produit
-        $user = User::factory()->create();
-        $payment = Payment::factory()->create();
-        $product = Product::factory()->create();
-
-        // Création d'un ticket avec des données valides
-        $ticket = Ticket::create([
-            'qr_code_link' => 'valid-qr-code',
-            'pdf_link' => 'valid-pdf-link',
-            'is_used' => false,
-            'is_refunded' => false,
-            'user_id' => $user->id,
-            'payment_id' => $payment->id,
-            'product_id' => $product->id,
-        ]);
-
-        // Vérification des valeurs
-        $this->assertEquals('valid-qr-code', $ticket->qr_code_link);
-        $this->assertEquals('valid-pdf-link', $ticket->pdf_link);
-        $this->assertFalse($ticket->is_used);
-        $this->assertFalse($ticket->is_refunded);
-    }
-
-    public function testTicketBooleanCasting()
-    {
-        // Création d'un ticket
         $ticket = Ticket::factory()->create([
-            'is_used' => '1', // Passé comme chaîne
-            'is_refunded' => '0', // Passé comme chaîne
+            'used_at' => now(),
+            'refunded_at' => now(),
+            'cancelled_at' => now()
         ]);
 
-        // Vérification des valeurs castées
-        $this->assertTrue($ticket->is_used);
-        $this->assertFalse($ticket->is_refunded);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $ticket->used_at);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $ticket->refunded_at);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $ticket->cancelled_at);
+    }
+
+    public function testItUsesTokenForRouteBinding()
+    {
+        $this->assertEquals(
+            'token',
+            (new Ticket())->getRouteKeyName()
+        );
+    }
+
+    public function testQrCodeUrlAccessorReturnsCorrectUrl()
+    {
+        Storage::shouldReceive('url')
+            ->once()
+            ->with('qrcodes/test.png')
+            ->andReturn('http://cdn/qrcodes/test.png');
+
+        $ticket = Ticket::factory()->create([ 'qr_filename' => 'test.png' ]);
+
+        $this->assertEquals(
+            'http://cdn/qrcodes/test.png',
+            $ticket->qr_code_url
+        );
+    }
+
+    public function testPdfUrlAccessorReturnsCorrectUrl()
+    {
+        Storage::shouldReceive('url')
+            ->once()
+            ->with('tickets/test.pdf')
+            ->andReturn('http://cdn/tickets/test.pdf');
+
+        $ticket = Ticket::factory()->create([ 'pdf_filename' => 'test.pdf' ]);
+
+        $this->assertEquals(
+            'http://cdn/tickets/test.pdf',
+            $ticket->pdf_url
+        );
+    }
+
+    public function testItBelongsToUserPaymentAndProduct()
+    {
+        $user = User::factory()->create();
+        $payment = Payment::factory()->create([ 'user_id' => $user->id ]);
+        $product = Product::factory()->create();
+        $ticket = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'payment_id' => $payment->id,
+            'product_id' => $product->id,
+        ]);
+
+        $this->assertInstanceOf(BelongsTo::class, $ticket->user());
+        $this->assertInstanceOf(BelongsTo::class, $ticket->payment());
+        $this->assertInstanceOf(BelongsTo::class, $ticket->product());
+
+        $this->assertTrue($ticket->user->is($user));
+        $this->assertTrue($ticket->payment->is($payment));
+        $this->assertTrue($ticket->product->is($product));
     }
 }
-

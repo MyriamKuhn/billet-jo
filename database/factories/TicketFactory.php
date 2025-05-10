@@ -3,30 +3,57 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Ticket;
 use App\Models\User;
 use App\Models\Payment;
 use App\Models\Product;
+use Illuminate\Support\Str;
+use App\Enums\TicketStatus;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Ticket>
- */
 class TicketFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = Ticket::class;
+
     /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
      */
-    public function definition(): array
+    public function definition()
     {
+        // Crée automatiquement un utilisateur, un paiement et un produit associés
+        $user = User::factory()->create();
+        $payment = Payment::factory()->create([
+            'user_id' => $user->id,
+        ]);
+        $product = Product::factory()->create();
+
+        // Snapshot des données produit au moment de l'achat
+        $snapshot = [
+            'product_name'    => $product->name,
+            'ticket_type'     => data_get($product->product_details, 'category', $this->faker->word()),
+            'unit_price'      => (float) $product->price,
+            'discount_rate'   => (float) $product->sale,
+            'discounted_price'=> round($product->price * (1 - $product->sale), 2),
+        ];
+
         return [
-            'qr_code_link' => $this->faker->url,
-            'pdf_link' => $this->faker->url,
-            'is_used' => false,
-            'is_refunded' => false,
-            'user_id' => User::factory(),
-            'payment_id' => Payment::factory(),
-            'product_id' => Product::factory(),
+            'product_snapshot' => $snapshot,
+            'token'            => (string) Str::uuid(),
+            'qr_filename'      => 'qr_' . $this->faker->uuid() . '.png',
+            'pdf_filename'     => 'ticket_' . $this->faker->uuid() . '.pdf',
+            'status'           => TicketStatus::Issued->value,
+            'used_at'          => null,
+            'refunded_at'      => null,
+            'cancelled_at'     => null,
+            'user_id'          => $user->id,
+            'payment_id'       => $payment->id,
+            'product_id'       => $product->id,
         ];
     }
 }
