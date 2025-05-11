@@ -14,7 +14,7 @@ use Stripe\Exception\SignatureVerificationException;
 use App\Events\InvoiceRequested;
 use App\Http\Requests\RefundRequest;
 use Illuminate\Support\Facades\Storage;
-use Stripe\Exception\UnexpectedValueException as StripeUnexpectedValueException;
+use App\Events\PaymentSucceeded;
 
 class PaymentController extends Controller
 {
@@ -50,7 +50,7 @@ class PaymentController extends Controller
      *         in="query",
      *         description="Filter by payment method",
      *         required=false,
-     *         @OA\Schema(type="string", enum={"paypal","stripe"})
+     *         @OA\Schema(type="string", enum={"paypal","stripe","free"})
      *     ),
      *     @OA\Parameter(
      *         name="user_id",
@@ -167,7 +167,7 @@ class PaymentController extends Controller
      *         @OA\JsonContent(
      *             required={"cart_id","payment_method"},
      *             @OA\Property(property="cart_id", type="integer", example=42, description="ID of the cart to pay"),
-     *             @OA\Property(property="payment_method", type="string", enum={"stripe","paypal"}, example="stripe", description="Payment provider to use")
+     *             @OA\Property(property="payment_method", type="string", enum={"stripe","paypal","free"}, example="stripe", description="Payment provider to use")
      *         )
      *     ),
      *
@@ -282,11 +282,12 @@ class PaymentController extends Controller
                 $uuid = $object->metadata['payment_uuid'] ?? null;
 
                 if (is_string($uuid)) {
-                    // 1) Marque le paiement comme paid ET retourne l’instance
+                    // 1) Mark the payment as paid and return the Payment UUID
                     $payment = $this->payments->markAsPaidByUuid($uuid);
 
-                    // 2) Dispatch l’événement avec l’objet Payment
+                    // 2) Generate the invoice PDF and store it and the ticket
                     event(new InvoiceRequested($payment));
+                    event(new PaymentSucceeded($payment));
                 } else {
                     \Log::warning("Webhook received without payment_uuid on event {$event->type}", [
                         'object_id' => $object->id,

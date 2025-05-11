@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Http\Client\Factory as HttpClient;
 use App\Services\Auth\CaptchaService;
 use Stripe\StripeClient;
+use Illuminate\Support\Facades\Storage;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +37,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Storage::disk('invoices')->makeDirectory('');
+        Storage::disk('qrcodes')->makeDirectory('');
+        Storage::disk('tickets')->makeDirectory('');
+        Storage::disk('images')->makeDirectory('');
     }
 }

@@ -92,9 +92,14 @@ class InvoiceController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
-     *     @OA\Response(response=404, description="Invoice not found"),
-     *     @OA\Response(response=403, ref="#/components/responses/Forbidden")
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
+     *
+     * @param Request $request
+     * @param string $filename
+     * @return StreamedResponse
      */
     public function download(Request $request, string $filename): Response
     {
@@ -102,8 +107,15 @@ class InvoiceController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
-        return Storage::disk('invoices')
-            ->download("private/invoices/{$filename}");
+        if (!Storage::disk('invoices')->exists($filename)) {
+            abort(404, 'Invoice not found');
+        }
+
+        return Storage::disk('invoices')->download(
+        $filename,
+        $filename,
+        ['Content-Type' => 'application/pdf']
+        );
     }
 
     /**
@@ -132,8 +144,13 @@ class InvoiceController extends Controller
      *     ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
-     *     @OA\Response(response=404, description="Invoice not found")
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
+     *
+     * @param Request $request
+     * @param string $filename
+     * @return StreamedResponse
      */
     public function adminDownload(Request $request, string $filename): StreamedResponse
     {
@@ -142,16 +159,14 @@ class InvoiceController extends Controller
             abort(403, 'Forbidden');
         }
 
-        $path = "private/invoices/{$filename}";
-
-        if (!Storage::disk('invoices')->exists($path)) {
+        if (!Storage::disk('invoices')->exists($filename)) {
             abort(404, 'Invoice not found');
         }
 
         return Storage::disk('invoices')->download(
-            $path,
-            $filename,
-            ['Content-Type' => 'application/pdf']
+        $filename,
+        $filename,
+        ['Content-Type' => 'application/pdf']
         );
     }
 }

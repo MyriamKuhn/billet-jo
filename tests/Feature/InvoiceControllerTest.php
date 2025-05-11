@@ -61,7 +61,7 @@ class InvoiceControllerTest extends TestCase
             'invoice_link' => $filename,
         ]);
         Storage::fake('invoices');
-        Storage::disk('invoices')->put("private/invoices/{$filename}", 'PDF-CONTENT');
+        Storage::disk('invoices')->put($filename, 'PDF-CONTENT');
 
         $response = $this->actingAs($user, 'sanctum')
                         ->get("/api/invoices/{$filename}");
@@ -105,7 +105,7 @@ class InvoiceControllerTest extends TestCase
         $filename = 'inv_admin.pdf';
 
         Storage::fake('invoices');
-        Storage::disk('invoices')->put("private/invoices/{$filename}", 'PDF-ADMIN');
+        Storage::disk('invoices')->put($filename, 'PDF-ADMIN');
 
         $response = $this->actingAs($admin, 'sanctum')
                         ->get("/api/invoices/admin/{$filename}");
@@ -145,5 +145,30 @@ class InvoiceControllerTest extends TestCase
         $this->actingAs($admin, 'sanctum')
             ->get("/api/invoices/admin/{$filename}")
             ->assertStatus(404);
+    }
+
+    public function testDownloadReturns404IfInvoiceFileMissing()
+    {
+        // 1) Prépare un user et un paiement en base
+        $user = User::factory()->create();
+        $filename = 'missing_invoice.pdf';
+
+        Payment::factory()->create([
+            'user_id'      => $user->id,
+            'invoice_link' => $filename,
+        ]);
+
+        // 2) On pointe Storage sur un disque fake, sans rien y stocker
+        Storage::fake('invoices');
+
+        // 3) On appelle la route protégée
+        $response = $this->actingAs($user, 'sanctum')
+                ->get("/api/invoices/{$filename}");
+
+        // 4) On s’attend à un 404 et au message d’abort
+        $response->assertStatus(404);
+        $response->assertJson([
+            'message' => 'Resource not found',
+        ]);
     }
 }

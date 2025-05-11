@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('invoice_link')->unique();
             $table->json('cart_snapshot');
             $table->decimal('amount', 15, 2);
-            $table->enum('payment_method', ['paypal', 'stripe']);
+            $table->enum('payment_method', ['paypal', 'stripe', 'free']);
             $table->enum('status', ['pending', 'paid', 'failed', 'refunded'])->default('pending');
             $table->string('transaction_id')->nullable()->index();
             $table->string('client_secret')->nullable();

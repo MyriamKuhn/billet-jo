@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\PaymentSucceeded;
+use App\Listeners\GenerateTicketsForPayment;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use App\Events\InvoiceRequested;
 use App\Listeners\GenerateInvoicePdf;
@@ -16,6 +18,9 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         InvoiceRequested::class => [
             GenerateInvoicePdf::class,
+        ],
+        PaymentSucceeded::class => [
+            GenerateTicketsForPayment::class,
         ],
     ];
 
