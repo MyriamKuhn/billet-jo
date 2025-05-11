@@ -263,10 +263,13 @@
                         "$ref": "#/components/responses/Unauthenticated"
                     },
                     "404": {
-                        "description": "Invoice not found"
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -310,7 +313,10 @@
                         "$ref": "#/components/responses/Forbidden"
                     },
                     "404": {
-                        "description": "Invoice not found"
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -362,7 +368,8 @@
                             "type": "string",
                             "enum": [
                                 "paypal",
-                                "stripe"
+                                "stripe",
+                                "free"
                             ]
                         }
                     },
@@ -526,7 +533,8 @@
                                         "type": "string",
                                         "enum": [
                                             "stripe",
-                                            "paypal"
+                                            "paypal",
+                                            "free"
                                         ],
                                         "example": "stripe"
                                     }
@@ -1472,6 +1480,798 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Retrieve a filtered, paginated list of all tickets (admin only)",
+                "description": "This endpoint retrieves a list of all tickets with optional filters and pagination. It is intended for admin users only.",
+                "operationId": "ddc3a5e66a83482e874c84e71ebc4505",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by ticket status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "issued",
+                                "used",
+                                "refunded",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filter by user ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "user_email",
+                        "in": "query",
+                        "description": "Filter by user email",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "email"
+                        }
+                    },
+                    {
+                        "name": "created_from",
+                        "in": "query",
+                        "description": "Created on or after (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "created_to",
+                        "in": "query",
+                        "description": "Created on or before (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "updated_from",
+                        "in": "query",
+                        "description": "Updated on or after (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "updated_to",
+                        "in": "query",
+                        "description": "Updated on or before (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "used_from",
+                        "in": "query",
+                        "description": "Used on or after (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "used_to",
+                        "in": "query",
+                        "description": "Used on or before (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "refunded_from",
+                        "in": "query",
+                        "description": "Refunded on or after (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "refunded_to",
+                        "in": "query",
+                        "description": "Refunded on or before (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "cancelled_from",
+                        "in": "query",
+                        "description": "Cancelled on or after (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "cancelled_to",
+                        "in": "query",
+                        "description": "Cancelled on or before (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page (1–100)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TicketResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 10
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 25
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 250
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Generate free tickets for a user (admin only)",
+                "description": "Generates free tickets for a user and product. Only admin can use this endpoint.",
+                "operationId": "createFreeTickets",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "user_id",
+                                    "product_id",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "user_id": {
+                                        "description": "ID of the existing user",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "product_id": {
+                                        "description": "ID of the product/event",
+                                        "type": "integer",
+                                        "example": 42
+                                    },
+                                    "quantity": {
+                                        "description": "Number of tickets to generate",
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "$ref": "#/components/responses/NoContent"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/user": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "List the authenticated user's tickets, paginated",
+                "description": "This endpoint retrieves a paginated list of tickets for the authenticated user. It supports optional filtering by product name.",
+                "operationId": "2e85d5643b621da67b3fa4533813a2c3",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search by product name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page (1–100)",
+                        "schema": {
+                            "type": "integer",
+                            "default": 25,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TicketResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download user ticket",
+                "description": "Streams the ticket PDF for the logged-in user.",
+                "operationId": "downloadTicket",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the ticket PDF",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ticket_5566.pdf"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF file download",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/admin/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download ticket (admin)",
+                "description": "Allows an administrator to download any ticket PDF by filename.",
+                "operationId": "adminDownloadTicket",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the ticket PDF",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ticket_5566.pdf"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF file download",
+                        "content": {
+                            "application/pdf": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/qr/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download user qr code",
+                "description": "Streams the qr code for the logged-in user.",
+                "operationId": "downloadQr",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the Qr code PNG",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "qr_5566.png"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PNG file download",
+                        "content": {
+                            "image/png": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/admin/qr/{filename}": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Download qr code (admin)",
+                "description": "Allows an administrator to download any QR code by filename.",
+                "operationId": "adminDownloadQr",
+                "parameters": [
+                    {
+                        "name": "filename",
+                        "in": "path",
+                        "description": "Filename of the Qr code PNG",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "qr_5566.png"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PNG file download",
+                        "content": {
+                            "image/png": {}
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/admin/{id}/status": {
+            "put": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Update ticket status (admin only)",
+                "description": "Updates the status of a ticket. Only admin can use this endpoint.",
+                "operationId": "updateTicketStatus",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the ticket to update",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "issued",
+                                            "used",
+                                            "refunded",
+                                            "cancelled"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "$ref": "#/components/responses/NoContent"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/tickets/scan/{token}": {
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Scan ticket QR and validate entry",
+                "description": "Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
+                "operationId": "scanTicket",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "description": "Unique ticket UUID token from QR code",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket validated: returns attendee & event info",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "properties": {
+                                                "firstname": {
+                                                    "type": "string",
+                                                    "example": "John"
+                                                },
+                                                "lastname": {
+                                                    "type": "string",
+                                                    "example": "Doe"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "john.doe@example.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "event": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Concert Live"
+                                                },
+                                                "date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2024-07-26"
+                                                },
+                                                "time": {
+                                                    "type": "string",
+                                                    "format": "time",
+                                                    "example": "20:00"
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "example": "Stade de France"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Ticket already processed: returns status, timestamp, attendee & event info",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "used"
+                                        },
+                                        "timestamp": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "example": "2025-05-10T15:00:00+02:00"
+                                        },
+                                        "user": {
+                                            "properties": {
+                                                "firstname": {
+                                                    "type": "string",
+                                                    "example": "John"
+                                                },
+                                                "lastname": {
+                                                    "type": "string",
+                                                    "example": "Doe"
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "example": "john.doe@example.com"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "event": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "example": "Concert Live"
+                                                },
+                                                "date": {
+                                                    "type": "string",
+                                                    "format": "date",
+                                                    "example": "2024-07-26"
+                                                },
+                                                "time": {
+                                                    "type": "string",
+                                                    "format": "time",
+                                                    "example": "20:00"
+                                                },
+                                                "location": {
+                                                    "type": "string",
+                                                    "example": "Stade de France"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "ticket_already_processed"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "This ticket was already used on 2025-05-10T15:00:00+02:00"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -3614,7 +4414,8 @@
                         "type": "string",
                         "enum": [
                             "paypal",
-                            "stripe"
+                            "stripe",
+                            "free"
                         ],
                         "example": "paypal"
                     },
@@ -3757,6 +4558,158 @@
                     },
                     "product_details": {
                         "$ref": "#/components/schemas/ProductDetails"
+                    }
+                },
+                "type": "object"
+            },
+            "TicketResource": {
+                "title": "TicketResource",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "token": {
+                        "type": "string",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "product_snapshot": {
+                        "properties": {
+                            "product_name": {
+                                "type": "string",
+                                "example": "Concert X"
+                            },
+                            "ticket_type": {
+                                "type": "string",
+                                "example": "VIP"
+                            },
+                            "unit_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 49.99
+                            },
+                            "discount_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.1
+                            },
+                            "discounted_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 44.99
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "issued",
+                            "used",
+                            "refunded",
+                            "cancelled"
+                        ],
+                        "example": "issued"
+                    },
+                    "used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T14:00:00Z",
+                        "nullable": true
+                    },
+                    "refunded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "cancelled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": null,
+                        "nullable": true
+                    },
+                    "qr_filename": {
+                        "type": "string",
+                        "example": "uuid.png"
+                    },
+                    "pdf_filename": {
+                        "type": "string",
+                        "example": "uuid.pdf"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/UserResource"
+                    },
+                    "payment": {
+                        "$ref": "#/components/schemas/PaymentResource"
+                    },
+                    "product": {
+                        "$ref": "#/components/schemas/MinimalProduct"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T12:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T12:30:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "UserResource": {
+                "title": "UserResource",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "firstname": {
+                        "type": "string",
+                        "example": "John"
+                    },
+                    "lastname": {
+                        "type": "string",
+                        "example": "Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "john.doe@example.com"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "admin",
+                            "employee",
+                            "user"
+                        ],
+                        "example": "admin"
+                    },
+                    "twofa_enabled": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T12:00:00Z",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T12:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T12:00:00Z"
                     }
                 },
                 "type": "object"
@@ -3915,7 +4868,8 @@
                         "type": "string",
                         "enum": [
                             "paypal",
-                            "stripe"
+                            "stripe",
+                            "free"
                         ],
                         "example": "paypal"
                     },
@@ -4045,10 +4999,11 @@
             "Ticket": {
                 "required": [
                     "id",
-                    "qr_code_link",
-                    "pdf_link",
-                    "is_used",
-                    "is_refunded",
+                    "product_snapshot",
+                    "token",
+                    "qr_filename",
+                    "pdf_filename",
+                    "status",
                     "user_id",
                     "payment_id",
                     "product_id"
@@ -4058,43 +5013,83 @@
                         "type": "integer",
                         "example": 1
                     },
-                    "qr_code_link": {
+                    "product_snapshot": {
+                        "properties": {
+                            "product_name": {
+                                "type": "string",
+                                "example": "Concert X"
+                            },
+                            "ticket_type": {
+                                "type": "string",
+                                "example": "VIP"
+                            },
+                            "unit_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 49.99
+                            },
+                            "discount_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.1
+                            },
+                            "discounted_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 44.99
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "token": {
                         "type": "string",
-                        "example": "https://example.com/qr-code/12345"
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
                     },
-                    "pdf_link": {
+                    "qr_filename": {
                         "type": "string",
-                        "example": "https://example.com/ticket-pdf/12345"
+                        "example": "qr_123e4567-e89b-12d3-a456-426614174000.png"
                     },
-                    "is_used": {
-                        "type": "boolean",
-                        "example": false
+                    "pdf_filename": {
+                        "type": "string",
+                        "example": "ticket_123e4567-e89b-12d3-a456-426614174000.pdf"
                     },
-                    "is_refunded": {
-                        "type": "boolean",
-                        "example": false
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "issued",
+                            "used",
+                            "refunded",
+                            "cancelled"
+                        ],
+                        "example": "issued"
                     },
-                    "user_id": {
-                        "type": "integer",
-                        "example": 1
+                    "used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T14:00:00Z",
+                        "nullable": true
                     },
-                    "payment_id": {
-                        "type": "integer",
-                        "example": 1
+                    "refunded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": null,
+                        "nullable": true
                     },
-                    "product_id": {
-                        "type": "integer",
-                        "example": 1
+                    "cancelled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": null,
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
-                        "example": "2023-01-01T00:00:00Z"
+                        "example": "2025-05-10T12:00:00Z"
                     },
                     "updated_at": {
                         "type": "string",
                         "format": "date-time",
-                        "example": "2023-04-01T12:00:00Z"
+                        "example": "2025-05-10T12:30:00Z"
                     }
                 },
                 "type": "object"
@@ -4463,6 +5458,10 @@
         {
             "name": "Users",
             "description": "Operations related to user management"
+        },
+        {
+            "name": "Tickets",
+            "description": "Ticket creation, generation, validation, and tracking"
         },
         {
             "name": "Payments",

@@ -24,7 +24,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *         )
  *     ),
  *     @OA\Property(property="amount",          type="number", format="float", example=130.00),
- *     @OA\Property(property="payment_method",  type="string", enum={"paypal","stripe"}, example="paypal"),
+ *     @OA\Property(property="payment_method",  type="string", enum={"paypal","stripe","free"}, example="paypal"),
  *     @OA\Property(property="status",          type="string", enum={"pending","paid","failed","refunded"}, example="paid"),
  *     @OA\Property(property="transaction_id",  type="string", nullable=true, example="pi_abc123"),
  *     @OA\Property(property="paid_at",         type="string", format="date-time", nullable=true, example="2023-04-01T12:00:00Z"),

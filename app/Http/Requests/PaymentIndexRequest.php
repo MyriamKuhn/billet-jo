@@ -24,7 +24,7 @@ class PaymentIndexRequest extends FormRequest
         return [
             'q'              => 'sometimes|string',
             'status'         => 'sometimes|in:pending,paid,failed,refunded',
-            'payment_method' => 'sometimes|in:paypal,stripe',
+            'payment_method' => 'sometimes|in:paypal,stripe,free',
             'user_id'        => 'sometimes|integer|exists:users,id',
             'date_from'      => 'sometimes|date',
             'date_to'        => 'sometimes|date|after_or_equal:date_from',

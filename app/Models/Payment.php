@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  *     @OA\Property(property="invoice_link", type="string", example="http://example.com/invoice/12345"),
  *     @OA\Property(property="cart_snapshot", type="array", @OA\Items(type="object")),
  *     @OA\Property(property="amount", type="number", format="float", example=100.00),
- *     @OA\Property(property="payment_method", type="string", enum={"paypal","stripe"}, example="paypal"),
+ *     @OA\Property(property="payment_method", type="string", enum={"paypal","stripe","free"}, example="paypal"),
  *     @OA\Property(property="status", type="string", enum={"pending","paid","failed","refunded"}, example="paid"),
  *     @OA\Property(property="transaction_id", type="string", example="pi_abc123"),
  *     @OA\Property(property="client_secret", type="string", example="cs_test_456"),
@@ -42,6 +42,7 @@ class Payment extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'uuid',
         'invoice_link',
         'cart_snapshot',
         'amount',
@@ -53,15 +54,6 @@ class Payment extends Model
         'refunded_at',
         'refunded_amount',
         'user_id',
-    ];
-
-    /**
-     * The attributes that should be prevented from mass assignment.
-     *
-     * @var array
-     */
-    protected $guarded = [
-        'uuid',
     ];
 
     /**
