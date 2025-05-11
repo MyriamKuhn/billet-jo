@@ -70,17 +70,13 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Get the attributes that should be cast.
      *
-     * @return array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'role'=> UserRole::class,
-            'twofa_enabled' => 'boolean',
-            'is_active' => 'boolean',
-            'email_verified_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'role'=> UserRole::class,
+        'twofa_enabled' => 'boolean',
+        'is_active' => 'boolean',
+        'email_verified_at' => 'datetime',
+    ];
 
     /**
      * Associate the user with a ticket.

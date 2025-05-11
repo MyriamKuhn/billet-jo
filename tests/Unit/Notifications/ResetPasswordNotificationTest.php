@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Notifications;
 
 use Tests\TestCase;
 use Illuminate\Support\Facades\Config;

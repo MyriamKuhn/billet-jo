@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class PaymentInitiationRequest extends FormRequest
+class TicketUserRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,22 +22,20 @@ class PaymentInitiationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cart_id'        => 'required|integer|exists:carts,id',
-            'payment_method' => 'required|in:paypal,stripe,free',
+            'q'         => ['sometimes','string'],    // recherche sur product_name
+            'per_page'  => ['sometimes','integer','min:1','max:100'],
         ];
     }
 
     /**
-     * Get the validated data for the payment initiation.
+     * Return the validated filters as an array.
      *
-     * @return array<string, mixed>
+     * @return array
      */
-    public function validatedData(): array
+    public function validatedFilters(): array
     {
-        return [
-            'cart_id'        => $this->input('cart_id'),
-            'payment_method' => $this->input('payment_method'),
-            'user_id'        => $this->user()->id,
-        ];
+        return collect($this->validated())
+            ->only(['q','per_page'])
+            ->toArray();
     }
 }

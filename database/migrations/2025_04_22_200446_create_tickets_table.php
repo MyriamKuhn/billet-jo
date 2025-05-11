@@ -13,10 +13,14 @@ return new class extends Migration
     {
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
-            $table->string('qr_code_link');
-            $table->string('pdf_link');
-            $table->boolean('is_used')->default(false);
-            $table->boolean('is_refunded')->default(false);
+            $table->json('product_snapshot');
+            $table->uuid('token')->unique();
+            $table->string('qr_filename');
+            $table->string('pdf_filename');
+            $table->enum('status', ['issued','used','refunded','cancelled'])->default('issued')->index();
+            $table->timestamp('used_at')->nullable();
+            $table->timestamp('refunded_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
             $table->timestamps();
 
             $table->foreignId('user_id')->constrained('users');
