@@ -147,7 +147,7 @@ CREATE TABLE `payments` (
   `invoice_link` varchar(255) NOT NULL,
   `cart_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`cart_snapshot`)),
   `amount` decimal(15,2) NOT NULL,
-  `payment_method` enum('paypal','stripe') NOT NULL,
+  `payment_method` enum('paypal','stripe','free') NOT NULL,
   `status` enum('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
   `transaction_id` varchar(255) DEFAULT NULL,
   `client_secret` varchar(255) DEFAULT NULL,

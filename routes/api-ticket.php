@@ -48,7 +48,6 @@ Route::prefix('tickets')->group(function () {
 
     // This route is used to get a ticket for the specific user
     Route::get('/{filename}', [TicketController::class, 'downloadTicket'])
-        ->where('filename', '^[A-Za-z0-9_\-]+\.pdf$')
         ->middleware('auth:sanctum')
         ->name('tickets.user.show');
 

@@ -23,7 +23,6 @@ use Stripe\Exception\ApiErrorException;
 use App\Exceptions\TicketAlreadyProcessedException;
 use App\Enums\TicketStatus;
 
-
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -42,6 +41,38 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $base = config('app.frontend_url') . '/verification-result';
+        $exceptions->render(function (TicketAlreadyProcessedException $e, Request $request) {
+            if ($request->is('api/*')) {
+                $ticket = $e->ticket;
+
+                $timestamp = match($ticket->status) {
+                    TicketStatus::Used->value      => $ticket->used_at,
+                    TicketStatus::Refunded->value  => $ticket->refunded_at,
+                    TicketStatus::Cancelled->value => $ticket->cancelled_at,
+                    default                        => null,
+                };
+
+                $timestampString = $timestamp?->toIso8601String() ?? 'unknown time';
+
+                return response()->json([
+                    'status'    => $ticket->status,
+                    'timestamp' => $timestampString,
+                    'user'      => [
+                        'firstname' => $ticket->user->firstname,
+                        'lastname'  => $ticket->user->lastname,
+                        'email'     => $ticket->user->email,
+                    ],
+                    'event'     => [
+                        'name'     => $ticket->product->name,
+                        'date'     => $ticket->product->product_details['date'] ?? null,
+                        'time'     => $ticket->product->product_details['time'] ?? null,
+                        'location' => $ticket->product->product_details['location'] ?? null,
+                    ],
+                    'code'      => 'ticket_already_processed',
+                    'message'   => "This ticket was already {$ticket->status->value} on {$timestampString}",
+                ], 409);
+            }
+        });
         $exceptions->render(function (\App\Exceptions\Auth\UserNotFoundException $e, Request $request) use ($base) {
             if ($request->is('api/*')) {
                 return response()->json([
@@ -187,35 +218,6 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => $e->getMessage(),
                     'code'    => 'payment_gateway_error',
                 ], 502);
-            }
-        });
-        $exceptions->render(function (TicketAlreadyProcessedException $e, Request $request) {
-            if ($request->is('api/*')) {
-                $ticket = $e->ticket;
-
-                $timestamp = match($ticket->status) {
-                    TicketStatus::Used->value      => $ticket->used_at,
-                    TicketStatus::Refunded->value  => $ticket->refunded_at,
-                    TicketStatus::Cancelled->value => $ticket->cancelled_at,
-                };
-
-                return response()->json([
-                    'status'    => $ticket->status,
-                    'timestamp' => $timestamp?->toIso8601String(),
-                    'user'      => [
-                        'firstname' => $ticket->user->firstname,
-                        'lastname'  => $ticket->user->lastname,
-                        'email'     => $ticket->user->email,
-                    ],
-                    'event'     => [
-                        'name'     => $ticket->product->name,
-                        'date'     => $ticket->product->product_details['date'] ?? null,
-                        'time'     => $ticket->product->product_details['time'] ?? null,
-                        'location' => $ticket->product->product_details['location'] ?? null,
-                    ],
-                    'code'      => 'ticket_already_processed',
-                    'message'   => "This ticket was already {$ticket->status} on {$timestamp->toIso8601String()}",
-                ], 409);
             }
         });
         $exceptions->render(function (\Throwable $e, Request $request) {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Unit\Exceptions;
 
 use Tests\TestCase;
 use App\Exceptions\Auth\UserNotFoundException;

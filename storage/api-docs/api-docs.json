@@ -1716,7 +1716,8 @@
                     "Tickets"
                 ],
                 "summary": "Generate free tickets for a user (admin only)",
-                "operationId": "54135c0b359c44ffe35906bff8729010",
+                "description": "Generates free tickets for a user and product. Only admin can use this endpoint.",
+                "operationId": "createFreeTickets",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2052,11 +2053,11 @@
         "/api/tickets/admin/{id}/status": {
             "put": {
                 "tags": [
-                    "Tickets",
-                    "Admin"
+                    "Tickets"
                 ],
                 "summary": "Update ticket status (admin only)",
-                "operationId": "b60014e632a538e72c630ce20ac7f722",
+                "description": "Updates the status of a ticket. Only admin can use this endpoint.",
+                "operationId": "updateTicketStatus",
                 "parameters": [
                     {
                         "name": "id",
@@ -2127,7 +2128,7 @@
                 ],
                 "summary": "Scan ticket QR and validate entry",
                 "description": "Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
-                "operationId": "7d8f91b0e57cac9fb282726f29838c2a",
+                "operationId": "scanTicket",
                 "parameters": [
                     {
                         "name": "token",
@@ -5477,10 +5478,6 @@
         {
             "name": "Products",
             "description": "Product management, including categories and details"
-        },
-        {
-            "name": "Admin",
-            "description": "Admin"
         }
     ],
     "externalDocs": {

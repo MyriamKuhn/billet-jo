@@ -11,7 +11,7 @@ class TicketCreateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return auth()->user()->role->isAdmin();
+        return auth()->check() && auth()->user()->role->isAdmin();
     }
 
     /**

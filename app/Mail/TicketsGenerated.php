@@ -36,13 +36,15 @@ class TicketsGenerated extends Mailable
      */
     public function build()
     {
+        $clientUrl = rtrim(config('app.frontend_url'), '/') . '/client/tickets';
+
         $mail = $this
             ->subject(__('mail.tickets_generated_subject', ['app_name'=> env('APP_NAME')]))
             ->view('emails.tickets.generated')
             ->with([
                 'user'    => $this->user,
                 'tickets' => $this->tickets,
-                'clientUrl' => rtrim(config('app.frontend_url'), '/') . '/client/tickets',
+                'clientUrl'     => $clientUrl,
             ]);
 
         // Attach each ticket PDF

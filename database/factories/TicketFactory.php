@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use Illuminate\Support\Str;
 use App\Enums\TicketStatus;
+use Illuminate\Support\Carbon;
 
 class TicketFactory extends Factory
 {
@@ -55,5 +56,15 @@ class TicketFactory extends Factory
             'payment_id'       => $payment->id,
             'product_id'       => $product->id,
         ];
+    }
+
+    public function used(): static
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'status'  => TicketStatus::Used->value,
+                'used_at' => Carbon::now(),
+            ];
+        });
     }
 }

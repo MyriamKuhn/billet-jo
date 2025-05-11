@@ -2,7 +2,7 @@
 
 Welcome to the backend of the Olympic Games Ticketing Platform.This project provides a RESTful API to manage users, cart operations, ticket purchases, payments, invoicing, two-factor authentication (2FA), and more.
 
-![Tests](https://img.shields.io/badge/tests-251_passed-4caf50.svg) ![Assertions](https://img.shields.io/badge/assertions-733_success-2196f3.svg) ![Test Coverage](https://img.shields.io/badge/coverage-100%25-darkgreen) ![Swagger Docs](https://img.shields.io/badge/Swagger%20Docs-Available-brightgreen)
+![Tests](https://img.shields.io/badge/tests-290_passed-4caf50.svg) ![Assertions](https://img.shields.io/badge/assertions-895_success-2196f3.svg) ![Test Coverage](https://img.shields.io/badge/coverage-100%25-darkgreen) ![Swagger Docs](https://img.shields.io/badge/Swagger%20Docs-Available-brightgreen)
 ![PHP version](https://img.shields.io/badge/php-8.3-blue) ![Laravel](https://img.shields.io/badge/laravel-12-red)
 
 ---
@@ -16,7 +16,8 @@ Welcome to the backend of the Olympic Games Ticketing Platform.This project prov
 - Partial and full refunds with dynamic invoice regeneration
 - PDF invoice generation (DomPDF) and download endpoints (user & admin)
 - Event-driven invoice creation (`InvoiceRequested` + `GenerateInvoicePdf` listener)
-- Ticket generation with QR codes
+- Ticket generation with QR codes and on-the-fly PNG downloads (user & admin)
+- PDF ticket generation and download endpoints (user & admin)
 - Admin and employee user roles
 - Full API with documentation (Swagger)
 
@@ -39,6 +40,8 @@ Welcome to the backend of the Olympic Games Ticketing Platform.This project prov
     - [Check payment status](#check-payment-status)
     - [Refund a payment](#refund-a-payment)
     - [Invoice management](#invoice-management)
+    - [QR Code Download](#qr-code-download)
+    - [Ticket PDF Download](#ticket-pdf-download)
   - [🛠️ Tech Stack](#️-tech-stack)
   - [📜 License](#-license)
 
@@ -128,7 +131,7 @@ The application has a **full feature test coverage**, including:
 - Cart and payment logic
 - Performance (N+1 queries detection)
 
-✅ **251 tests passed** with **733 assertions**.  
+✅ **290 tests passed** with **895 assertions**.  
 📊 **Coverage: 100%**
 (Last tested on: `php artisan test`)
 
@@ -202,6 +205,29 @@ Downloads the PDF invoice (user).
 **GET** `/api/invoices/admin/{filename}`  _(admin only)_  
 Downloads any invoice PDF. 
 
+### QR Code Download
+
+**GET** `/api/tickets/qr/{filename}`  
+  Download your ticket’s QR code image (PNG).  
+  - Authenticated user only (200 + `image/png`, 404 if not found).
+
+**GET** `/api/tickets/admin/qr/{filename}` _(admin only)_  
+  Download any ticket’s QR code (PNG).  
+  - Admin guard (403 if non-admin, 404 if missing).
+
+### Ticket PDF Download
+
+**GET** `/api/tickets/{filename}`  
+  Download your ticket as a PDF.  
+  - Authenticated user only  
+  - Response: `200 OK` + `Content-Type: application/pdf`  
+  - `404 Not Found` si le fichier n’existe pas.
+
+**GET** `/api/tickets/admin/{filename}` _(admin only)_  
+  Download any ticket PDF by filename.  
+  - Admin guard (`403 Forbidden` si non-admin)  
+  - Response: `200 OK` + `Content-Type: application/pdf`  
+  - `404 Not Found` si le fichier n’existe pas.
 ---
 
 ## 🛠️ Tech Stack
@@ -215,6 +241,7 @@ Downloads any invoice PDF.
 - PHPUnit for automated testing
 - AlwaysData (database hosting)
 - Barryvdh/DomPDF for PDF generation
+- endroid/qr-code for QR code generation  
 - VPS server hosting (Plesk)
 - L5-Swagger for API documentation
 - Stripe (test mode)

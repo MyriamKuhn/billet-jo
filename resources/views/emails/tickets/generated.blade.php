@@ -119,7 +119,7 @@
 
         <div class="footer">
             {{ __('mail.footer_ticket') }}<br>
-            <a href="{{ $clientUrl }}">{{ $url }}</a>
+            <a href="{{ $clientUrl }}">{{ $clientUrl }}</a>
         </div>
     </div>
 </body>

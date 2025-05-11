@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\TicketScanRequest;
 use App\Http\Requests\TicketUserRequest;
 use App\Http\Resources\TicketResource;
 use App\Http\Requests\TicketIndexRequest;
 use App\Services\TicketService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Ticket;
@@ -15,6 +15,8 @@ use App\Http\Requests\TicketStatusRequest;
 use App\Http\Requests\TicketCreateRequest;
 use App\Exceptions\TicketAlreadyProcessedException;
 use App\Enums\TicketStatus;
+use Illuminate\Http\Request;
+
 
 class TicketController extends Controller
 {
@@ -521,13 +523,13 @@ class TicketController extends Controller
      * @param string  $token
      * @return \Illuminate\Http\JsonResponse
      */
-    public function scanTicket(Request $request, string $token)
+    public function scanTicket(TicketScanRequest $request, string $token)
     {
         $ticket = Ticket::with('user','product')
                         ->where('token', $token)
                         ->firstOrFail();
 
-        if ($ticket->status !== TicketStatus::Issued->value) {
+        if ($ticket->status !== TicketStatus::Issued) {
             throw new TicketAlreadyProcessedException($ticket);
         }
 

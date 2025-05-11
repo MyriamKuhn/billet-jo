@@ -42,6 +42,7 @@ class Payment extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'uuid',
         'invoice_link',
         'cart_snapshot',
         'amount',
@@ -53,15 +54,6 @@ class Payment extends Model
         'refunded_at',
         'refunded_amount',
         'user_id',
-    ];
-
-    /**
-     * The attributes that should be prevented from mass assignment.
-     *
-     * @var array
-     */
-    protected $guarded = [
-        'uuid',
     ];
 
     /**

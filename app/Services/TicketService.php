@@ -207,6 +207,7 @@ class TicketService
         $invoiceFilename = 'invoice_'.Str::uuid().'.pdf';
 
         $payment = Payment::create([
+            'uuid'          => Str::uuid()->toString(),
             'user_id'       => $user->id,
             'status'        => PaymentStatus::Paid->value,
             'payment_method'=> 'free',
