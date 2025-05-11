@@ -50,6 +50,7 @@ class AuthService
             throw new HttpResponseException(response()->json([
                 'message' => 'Email address not verified',
                 'code'    => 'email_not_verified',
+                'resend_verification_url'    => url('/api/auth/email/resend'),
             ], 400));
         }
 
@@ -134,7 +135,7 @@ class AuthService
      */
     public function sendResetLink(string $email): array
     {
-        $user = User::where('email', $email)->first(); // exists() garanti par la requête
+        $user = User::where('email', $email)->first();
 
         $status = $this->passwordBroker->sendResetLink(['email' => $email]);
 
@@ -213,7 +214,6 @@ class AuthService
      * @param  User    $user
      * @param  string  $newEmail
      * @return array{message:string}
-     * @throws HttpResponseException
      */
     public function updateEmail(User $user, string $newEmail): array
     {

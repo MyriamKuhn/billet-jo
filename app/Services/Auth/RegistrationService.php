@@ -43,7 +43,7 @@ class RegistrationService
         ]);
 
         // Start the email verification sending process
-        event(new Registered($user));
+        $user->notify(new \App\Notifications\VerifyEmailNotification());
 
         return $user;
     }

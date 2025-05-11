@@ -1,5 +1,4 @@
 <?php
-// app/Http/Requests/User/UpdateUserNameRequest.php
 
 namespace App\Http\Requests;
 

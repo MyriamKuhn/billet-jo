@@ -146,19 +146,97 @@ The API supports multiple languages (English, French, German) injected in the he
  *     @OA\Response(
  *       response="NoContent",
  *       description="Operation successful, no content"
- *     )
- *   ),
+ *     ),
+ *  @OA\Response(
+ *      response="DatabaseError",
+ *      description="Database error",
+ *      @OA\JsonContent(
+ *          required={"message","code"},
+ *          @OA\Property(property="message", type="string", example="Database error"),
+ *          @OA\Property(property="code",    type="string", example="database_error")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="TicketAlreadyProcessed",
+ *      description="This ticket was already processed",
+ *          @OA\JsonContent(
+ *              required={"status","timestamp","user","event","code","message"},
+ *              @OA\Property(property="status",    type="string", example="used"),
+ *              @OA\Property(property="timestamp", type="string", format="date-time", example="2024-07-26T19:30:00Z"),
  *
- *   @OA\Tag(name="Authentication", description="User authentication and registration"),
- *   @OA\Tag(name="Users",          description="Operations related to user management"),
- *   @OA\Tag(name="Tickets",        description="Ticket creation, generation, validation, and tracking"),
- *   @OA\Tag(name="Payments",       description="Payment processing and secure transactions"),
- *   @OA\Tag(name="Invoices",       description="Invoice generation and download"),
- *   @OA\Tag(name="Carts",          description="Operations about shopping cart"),
- *   @OA\Tag(name="Products",       description="Product management, including categories and details")
- * ),
+ *              @OA\Property(
+ *                  property="user",
+ *                  type="object",
+ *                  @OA\Property(property="firstname", type="string", example="Jean"),
+ *                  @OA\Property(property="lastname",  type="string", example="Dupont"),
+ *                  @OA\Property(property="email",     type="string", format="email", example="jean.dupont@example.com")
+ *              ),
  *
- *   @OA\Parameter(
+ *              @OA\Property(
+ *                  property="event",
+ *                  type="object",
+ *                  @OA\Property(property="name",     type="string", example="Opening Ceremony"),
+ *                  @OA\Property(property="date",     type="string", format="date", example="2024-07-26"),
+ *                  @OA\Property(property="time",     type="string", example="19h30 (accès recommandé dès 18h00)"),
+ *                  @OA\Property(property="location", type="string", example="Stade de France, Saint-Denis")
+ *              ),
+ *
+ *              @OA\Property(property="code",    type="string", example="ticket_already_processed"),
+ *              @OA\Property(property="message", type="string", example="This ticket was already used on 2024-07-26T19:30:00Z")
+ *          )
+ *  ),
+ *  @OA\Response(
+ *      response="UserNotFound",
+ *      description="User not found",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="User not found"),
+ *          @OA\Property(property="code",         type="string", example="user_not_found"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="InvalidVerificationLink",
+ *      description="Invalid verification link",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Invalid verification link"),
+ *          @OA\Property(property="code",         type="string", example="invalid_verification_link"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="AlreadyVerified",
+ *      description="Email is already verified",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Email is already verified"),
+ *          @OA\Property(property="code",         type="string", example="already_verified"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/already-verified")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="VerificationTokenMissing",
+ *      description="Invalid or expired verification token",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Invalid or expired verification token"),
+ *          @OA\Property(property="code",         type="string", example="verification_token_missing"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="EmailUpdateNotFound",
+ *      description="Email request not found",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Email request not found"),
+ *          @OA\Property(property="code",         type="string", example="email_not_found"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *
+ * @OA\Parameter(
  *     parameter="AcceptLanguageHeader",
  *     name="Accept-Language",
  *     in="header",
@@ -170,6 +248,15 @@ The API supports multiple languages (English, French, German) injected in the he
  *       default="en"
  *     )
  *   )
+ * ),
+ *
+ *   @OA\Tag(name="Authentication", description="User authentication and registration"),
+ *   @OA\Tag(name="Users",          description="Operations related to user management"),
+ *   @OA\Tag(name="Tickets",        description="Ticket creation, generation, validation, and tracking"),
+ *   @OA\Tag(name="Payments",       description="Payment processing and secure transactions"),
+ *   @OA\Tag(name="Invoices",       description="Invoice generation and download"),
+ *   @OA\Tag(name="Carts",          description="Operations about shopping cart"),
+ *   @OA\Tag(name="Products",       description="Product management, including categories and details")
  * )
  */
 class Info {}

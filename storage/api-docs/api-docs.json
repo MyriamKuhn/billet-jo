@@ -2293,8 +2293,65 @@
                     "Users"
                 ],
                 "summary": "Retrieve all users (admin only)",
-                "description": "Returns a list of all users. Requires administrator privileges.",
+                "description": "Returns a paginated list of users, filterable by firstname, lastname, email and role.",
                 "operationId": "566aed8efb436ca506e0ef51a032ecd9",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "firstname",
+                        "in": "query",
+                        "description": "Recherche par prénom (like)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "lastname",
+                        "in": "query",
+                        "description": "Recherche par nom (like)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "description": "Recherche par email (exact)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "description": "Filtrer par rôle",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "admin",
+                                "employee",
+                                "user"
+                            ]
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Users retrieved successfully",
@@ -2359,6 +2416,48 @@
                                                         },
                                                         "type": "object"
                                                     }
+                                                },
+                                                "meta": {
+                                                    "properties": {
+                                                        "current_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "last_page": {
+                                                            "type": "integer",
+                                                            "example": 10
+                                                        },
+                                                        "per_page": {
+                                                            "type": "integer",
+                                                            "example": 15
+                                                        },
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "example": 150
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "links": {
+                                                    "properties": {
+                                                        "first": {
+                                                            "type": "string",
+                                                            "example": "…?page=1&per_page=15"
+                                                        },
+                                                        "last": {
+                                                            "type": "string",
+                                                            "example": "…?page=10&per_page=15"
+                                                        },
+                                                        "prev": {
+                                                            "type": "string|null",
+                                                            "example": "…?page=1&per_page=15"
+                                                        },
+                                                        "next": {
+                                                            "type": "string|null",
+                                                            "example": "…?page=2&per_page=15"
+                                                        }
+                                                    },
+                                                    "type": "object"
                                                 }
                                             },
                                             "type": "object"
@@ -2434,6 +2533,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -2517,6 +2619,9 @@
                     "204": {
                         "description": "User updated successfully, no content"
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -2549,10 +2654,6 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "user": {
                                             "properties": {
                                                 "firstname": {
@@ -2710,13 +2811,16 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Pending email update retrieved"
+                                            "example": "Checked pending email update"
                                         }
                                     },
                                     "type": "object"
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -2786,6 +2890,9 @@
                     "201": {
                         "description": "Employee created successfully, no content"
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -2811,6 +2918,11 @@
                 "summary": "Register a new user",
                 "description": "\nThis endpoint allows a visitor to create a new user account with built-in protections:\n- **Strong password enforcement**: minimum 15 characters, mixed case, numbers & symbols\n- **Google reCAPTCHA** verification to block bots and automated abuse\n- **Throttling** (e.g. 5 requests/minute) to limit spam & brute-force attempts\n- **Email confirmation**: a verification link is sent after registration\n",
                 "operationId": "registerUser",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2823,7 +2935,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "User created successfull. Verification Email sended.",
+                        "description": "User created successfully. Verification Email sent.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2950,21 +3062,69 @@
                         }
                     },
                     "400": {
-                        "description": "Bad request (e.g. email not verified or missing/invalid 2FA code)",
+                        "description": "Bad request: email not verified or 2FA missing/invalid",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Two-factor authentication code is required"
+                                    "oneOf": [
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Email address not verified"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "email_not_verified"
+                                                },
+                                                "resend_verification_url": {
+                                                    "description": "URL to call to resend the verification email",
+                                                    "type": "string",
+                                                    "format": "url",
+                                                    "example": "https://api.example.com/api/auth/email/resend"
+                                                }
+                                            },
+                                            "type": "object"
                                         },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "twofa_required"
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Two-factor authentication code is required"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_required"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Invalid two-factor authentication code"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_invalid"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -3008,6 +3168,9 @@
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     },
                     "429": {
                         "$ref": "#/components/responses/TooManyRequests"
@@ -3156,6 +3319,11 @@
                 "summary": "Send password reset link",
                 "description": "\nSends an email containing a password reset link to the user.\n\n- Requires a valid email of an existing user.\n- Response does not reveal if the email is registered, to prevent enumeration.\n    ",
                 "operationId": "authForgotPassword",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -3276,7 +3444,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Your password has been reset successfully."
+                                            "example": "Password has been reset successfully"
                                         }
                                     },
                                     "type": "object"
@@ -3458,6 +3626,11 @@
                 "summary": "Request email update",
                 "description": "\nSends a verification link to the new email address and notifies the old address.\nRequires authentication via Bearer token.\n",
                 "operationId": "authUpdateEmail",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "description": "New unique email address",
                     "required": true,
@@ -3496,26 +3669,6 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Error when the provided email is the current email.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "This email address is already your current address."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
                     },
@@ -3523,24 +3676,7 @@
                         "$ref": "#/components/responses/ValidationError"
                     },
                     "500": {
-                        "description": "Email update failure",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Unable to process email update"
-                                        },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "email_update_failed"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -3583,27 +3719,55 @@
                         "description": "Two-factor authentication disabled successfully, no content"
                     },
                     "400": {
-                        "description": "Invalid or missing 2FA code",
+                        "description": "Invalid or missing 2FA code, or 2FA not enabled",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Invalid two-factor authentication code"
+                                    "oneOf": [
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Two-factor authentication is not enabled"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_not_enabled"
+                                                }
+                                            },
+                                            "type": "object"
                                         },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "twofa_invalid_code"
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Invalid two-factor authentication code"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_invalid_code"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -3808,6 +3972,11 @@
                 "summary": "Resend verification email",
                 "description": "Sends a new email verification link to the authenticated user. Requires a valid Bearer token.",
                 "operationId": "authResendVerificationEmail",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Verification email resent successfully",
@@ -3847,6 +4016,9 @@
                                 }
                             }
                         }
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -5523,6 +5695,257 @@
             },
             "NoContent": {
                 "description": "Operation successful, no content"
+            },
+            "DatabaseError": {
+                "description": "Database error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Database error"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "database_error"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "TicketAlreadyProcessed": {
+                "description": "This ticket was already processed",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "status",
+                                "timestamp",
+                                "user",
+                                "event",
+                                "code",
+                                "message"
+                            ],
+                            "properties": {
+                                "status": {
+                                    "type": "string",
+                                    "example": "used"
+                                },
+                                "timestamp": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "example": "2024-07-26T19:30:00Z"
+                                },
+                                "user": {
+                                    "properties": {
+                                        "firstname": {
+                                            "type": "string",
+                                            "example": "Jean"
+                                        },
+                                        "lastname": {
+                                            "type": "string",
+                                            "example": "Dupont"
+                                        },
+                                        "email": {
+                                            "type": "string",
+                                            "format": "email",
+                                            "example": "jean.dupont@example.com"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "event": {
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "example": "Opening Ceremony"
+                                        },
+                                        "date": {
+                                            "type": "string",
+                                            "format": "date",
+                                            "example": "2024-07-26"
+                                        },
+                                        "time": {
+                                            "type": "string",
+                                            "example": "19h30 (accès recommandé dès 18h00)"
+                                        },
+                                        "location": {
+                                            "type": "string",
+                                            "example": "Stade de France, Saint-Denis"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "ticket_already_processed"
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "This ticket was already used on 2024-07-26T19:30:00Z"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "UserNotFound": {
+                "description": "User not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "User not found"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "user_not_found"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "InvalidVerificationLink": {
+                "description": "Invalid verification link",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Invalid verification link"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "invalid_verification_link"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "AlreadyVerified": {
+                "description": "Email is already verified",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Email is already verified"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "already_verified"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/already-verified"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "VerificationTokenMissing": {
+                "description": "Invalid or expired verification token",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Invalid or expired verification token"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "verification_token_missing"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "EmailUpdateNotFound": {
+                "description": "Email request not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Email request not found"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "email_not_found"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
             }
         },
         "parameters": {

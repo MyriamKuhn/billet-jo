@@ -35,6 +35,8 @@ This endpoint allows a visitor to create a new user account with built-in protec
      *     operationId="registerUser",
      *     tags={"Authentication"},
      *
+     *      @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *
      *       @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(ref="#/components/schemas/RegisterUser")
@@ -42,7 +44,7 @@ This endpoint allows a visitor to create a new user account with built-in protec
      *
      *     @OA\Response(
      *         response=201,
-     *         description="User created successfull. Verification Email sended.",
+     *         description="User created successfully. Verification Email sent.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="success"),
      *             @OA\Property(property="message", type="string", example="Registration successful. Please check your emails.")
@@ -64,7 +66,7 @@ This endpoint allows a visitor to create a new user account with built-in protec
 
         return response()->json([
             'status' => 'success',
-            'message' => __('Registration successful. Please check your emails.'),
+            'message' => 'Registration successful. Please check your emails.',
         ], 201);
     }
 
@@ -116,12 +118,30 @@ This endpoint allows a user to log in and receive an authentication token:
     *
     *     @OA\Response(
     *         response=400,
-    *         description="Bad request (e.g. email not verified or missing/invalid 2FA code)",
-    *         @OA\JsonContent(
-    *             @OA\Property(property="message", type="string", example="Two-factor authentication code is required"),
-    *             @OA\Property(property="code",    type="string", example="twofa_required")
-    *         )
-    *     ),
+    *         description="Bad request: email not verified or 2FA missing/invalid",
+    *   @OA\JsonContent(
+    *     oneOf={
+    *       @OA\Schema(
+    *         required={"message","code"},
+    *         @OA\Property(property="message", type="string", example="Email address not verified"),
+    *         @OA\Property(property="code",    type="string", example="email_not_verified"),
+    *         @OA\Property(property="resend_verification_url",type="string", format="url",
+    *             example="https://api.example.com/api/auth/email/resend",
+    *             description="URL to call to resend the verification email")
+    *       ),
+    *       @OA\Schema(
+    *         required={"message","code"},
+    *         @OA\Property(property="message", type="string", example="Two-factor authentication code is required"),
+    *         @OA\Property(property="code",    type="string", example="twofa_required")
+    *       ),
+    *       @OA\Schema(
+    *         required={"message","code"},
+    *         @OA\Property(property="message", type="string", example="Invalid two-factor authentication code"),
+    *         @OA\Property(property="code",    type="string", example="twofa_invalid")
+    *       )
+    *     }
+    *   )
+    * ),
     *
     *     @OA\Response(
     *         response=401,
@@ -140,6 +160,7 @@ This endpoint allows a user to log in and receive an authentication token:
     *             @OA\Property(property="code",    type="string", example="account_disabled")
     *         )
     *     ),
+    *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
     *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
     * )
@@ -253,6 +274,8 @@ Sends an email containing a password reset link to the user.
      *     operationId="authForgotPassword",
      *     tags={"Authentication"},
      *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -323,7 +346,7 @@ Allows a user to reset their password using a valid reset token:
      *         response=200,
      *         description="Password successfully reset",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Your password has been reset successfully.")
+     *             @OA\Property(property="message", type="string", example="Password has been reset successfully")
      *         )
      *     ),
      *
@@ -361,6 +384,7 @@ Allows a user to reset their password using a valid reset token:
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         $result = $this->authService->resetPassword($request->validated());
+
         return response()->json($result, 200);
     }
 
@@ -457,6 +481,8 @@ Requires authentication via Bearer token.
      *     tags={"Authentication"},
      *     security={{"bearerAuth": {}}},
      *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *
      *     @OA\RequestBody(
      *         required=true,
      *         description="New unique email address",
@@ -474,24 +500,9 @@ Requires authentication via Bearer token.
      *         )
      *     ),
      *
-     *     @OA\Response(
-     *         response=400,
-     *         description="Error when the provided email is the current email.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="error", type="string", example="This email address is already your current address.")
-     *         )
-     *     ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Email update failure",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Unable to process email update"),
-     *             @OA\Property(property="code",    type="string", example="email_update_failed")
-     *         )
-     *     )
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
      * @param UpdateEmailRequest $request
@@ -532,13 +543,24 @@ Requires authentication via Bearer token.
      *     ),
      *     @OA\Response(
      *         response=400,
-     *         description="Invalid or missing 2FA code",
+     *         description="Invalid or missing 2FA code, or 2FA not enabled",
      *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Invalid two-factor authentication code"),
-     *             @OA\Property(property="code",    type="string", example="twofa_invalid_code")
-     *         )
-     *     ),
+     *     oneOf={
+     *       @OA\Schema(
+     *         required={"message","code"},
+     *         @OA\Property(property="message", type="string", example="Two-factor authentication is not enabled"),
+     *         @OA\Property(property="code",    type="string", example="twofa_not_enabled")
+     *       ),
+     *       @OA\Schema(
+     *         required={"message","code"},
+     *         @OA\Property(property="message", type="string", example="Invalid two-factor authentication code"),
+     *         @OA\Property(property="code",    type="string", example="twofa_invalid_code")
+     *       )
+     *     }
+     *   )
+     * ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      */

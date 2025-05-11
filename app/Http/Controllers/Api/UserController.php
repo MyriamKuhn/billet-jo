@@ -9,20 +9,28 @@ use App\Services\UserService;
 use App\Http\Requests\UpdateUserNameRequest;
 use App\Http\Requests\AdminUpdateUserRequest;
 use App\Http\Requests\StoreEmployeeRequest;
+use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
     public function __construct(private UserService $userService) {}
 
     /**
-     * Retrieve the list of all users.
+     * Retrieve the list of all users paginated and filtered.
      *
      * @OA\Get(
      *     path="/api/users",
      *     summary="Retrieve all users (admin only)",
-     *     description="Returns a list of all users. Requires administrator privileges.",
+     *     description="Returns a paginated list of users, filterable by firstname, lastname, email and role.",
      *     tags={"Users"},
      *     security={{"bearerAuth": {}}},
+     *
+     *     @OA\Parameter(name="page", in="query", description="Page number", @OA\Schema(type="integer", default=1)),
+     *     @OA\Parameter(name="per_page", in="query", description="Items per page", @OA\Schema(type="integer", default=15)),
+     *     @OA\Parameter(name="firstname", in="query", description="Recherche par prénom (like)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="lastname",  in="query", description="Recherche par nom (like)",    @OA\Schema(type="string")),
+     *     @OA\Parameter(name="email",     in="query", description="Recherche par email (exact)",  @OA\Schema(type="string")),
+     *     @OA\Parameter(name="role",      in="query", description="Filtrer par rôle",            @OA\Schema(type="string", enum={"admin","employee","user"})),
      *
      *     @OA\Response(
      *         response=200,
@@ -42,9 +50,21 @@ class UserController extends Controller
      *                           @OA\Property(property="email_verified_at", type="string", format="date-time", example="2025-05-01T12:00:00Z"),
      *                           @OA\Property(property="is_active", type="boolean", example=true),
      *                       )
-     *                 )
-     *             )
+     *                 ),
+     *          @OA\Property(property="meta", type="object",
+     *              @OA\Property(property="current_page", type="integer", example=1),
+     *              @OA\Property(property="last_page",    type="integer", example=10),
+     *              @OA\Property(property="per_page",     type="integer", example=15),
+     *              @OA\Property(property="total",        type="integer", example=150)
+     *          ),
+     *          @OA\Property(property="links", type="object",
+     *              @OA\Property(property="first", type="string", example="…?page=1&per_page=15"),
+     *              @OA\Property(property="last",  type="string", example="…?page=10&per_page=15"),
+     *              @OA\Property(property="prev",  type="string|null", example="…?page=1&per_page=15"),
+     *              @OA\Property(property="next",  type="string|null", example="…?page=2&per_page=15")
+     *           )
      *         )
+     *      )
      *     ),
      *
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
@@ -53,13 +73,28 @@ class UserController extends Controller
      *
      * @return JsonResponse
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $users = $this->userService->listAllUsers(auth()->user());
+        $filters = $request->only(['firstname','lastname','email','role']);
+        $page    = (int) $request->query('page', 1);
+        $perPage = (int) $request->query('per_page', 15);
+
+        $paginator = $this->userService
+                        ->listAllUsers(auth()->user(), $filters, $perPage);
 
         return response()->json([
-            'data' => [
-                'users' => $users,
+            'data'  => ['users' => $paginator->items()],
+            'meta'  => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+            'links' => [
+                'first' => $paginator->url(1),
+                'last'  => $paginator->url($paginator->lastPage()),
+                'prev'  => $paginator->previousPageUrl(),
+                'next'  => $paginator->nextPageUrl(),
             ],
         ], 200);
     }
@@ -97,6 +132,7 @@ class UserController extends Controller
      *         )
      *     ),
      *
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
      *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
@@ -178,6 +214,7 @@ class UserController extends Controller
      *     ),
      *
      *     @OA\Response(response=204, description="User updated successfully, no content"),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
@@ -225,21 +262,22 @@ class UserController extends Controller
      *                 property="data",
      *                 nullable=true,
      *                 oneOf={
-     *                   @OA\Schema(
-     *                     type="object",
-     *                     title="EmailUpdate",
-     *                     @OA\Property(property="old_email",  type="string", format="email", example="old@example.com"),
-     *                     @OA\Property(property="new_email",  type="string", format="email", example="new@example.com"),
-     *                     @OA\Property(property="created_at", type="string", format="date-time", example="2025-05-02T12:00:00Z"),
-     *                     @OA\Property(property="updated_at", type="string", format="date-time", example="2025-05-03T12:00:00Z")
-     *                   ),
-     *                   @OA\Schema(type="null")
-     *                 }
-     *             ),
-     *             @OA\Property(property="message", type="string", example="Pending email update retrieved")
-     *         )
-     *     ),
+     *           @OA\Schema(
+     *             type="object",
+     *             title="EmailUpdate",
+     *             @OA\Property(property="old_email",  type="string", format="email", example="old@example.com"),
+     *             @OA\Property(property="new_email",  type="string", format="email", example="new@example.com"),
+     *             @OA\Property(property="created_at", type="string", format="date-time", example="2025-05-02T12:00:00Z"),
+     *             @OA\Property(property="updated_at", type="string", format="date-time", example="2025-05-03T12:00:00Z")
+     *           ),
+     *           @OA\Schema(type="null")
+     *         }
+     *       ),
+     *       @OA\Property(property="message", type="string", example="Checked pending email update")
+     *     )
+     *   ),
      *
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
@@ -280,6 +318,7 @@ The new user is immediately active and email‐verified. Password must meet secu
      *     ),
      *
      *     @OA\Response(response=201, description="Employee created successfully, no content"),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
@@ -313,7 +352,6 @@ The new user is immediately active and email‐verified. Password must meet secu
      *         response=200,
      *         description="Profile retrieved successfully",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
      *             @OA\Property(
      *                 property="user",
      *                 type="object",
