@@ -47,7 +47,7 @@ Returns a paginated list of products that are currently in stock.
 - `per_page`   — items per page (default: 15)
 - `page`       — page number (default: 1)
 ",
-     *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *     @OA\Parameter(name="name",     in="query", description="Filter by product name",     @OA\Schema(type="string")),
      *     @OA\Parameter(name="category", in="query", description="Filter by category",        @OA\Schema(type="string")),
      *     @OA\Parameter(name="location", in="query", description="Filter by location",        @OA\Schema(type="string")),

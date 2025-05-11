@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Paris 2024 Olympic Games Ticketing API",
-        "description": "\nThis API manages the entire ticket lifecycle for the Paris 2024 Olympic Games, covering:\n\n- User registration and profile management\n\n- Shopping cart and payment processing\n\n- Ticket generation and entry validation\n\n\nDeveloped as part of a Bachelor's in Digital Solutions Development, it follows a modular Laravel monolith architecture,\norganized into internal packages (users, tickets, cart, payment, etc.) for maintainability and scalability.\n\nNotifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.\n\nAccess is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).",
+        "description": "\nThis API manages the entire ticket lifecycle for the Paris 2024 Olympic Games, covering:\n\n- User registration and profile management\n\n- Shopping cart and payment processing\n\n- Ticket generation and entry validation\n\n\nDeveloped as part of a Bachelor's in Digital Solutions Development, it follows a modular Laravel monolith architecture,\norganized into internal packages (users, tickets, cart, payment, etc.) for maintainability and scalability.\n\nNotifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.\n\nAccess is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).\n\nThe API supports multiple languages (English, French, German) injected in the header and is designed to be user-friendly and developer-friendly.",
         "contact": {
             "name": "Myriam Kühn",
             "url": "https://myriamkuhn.com/",
@@ -931,6 +931,9 @@
                 "description": "\nReturns a paginated list of products that are currently in stock.\n\n**Optional query parameters**:\n- `name`       — filter by product name\n- `category`   — filter by category\n- `location`   — filter by location\n- `date`       — filter by date (YYYY-MM-DD)\n- `places`     — filter by minimum number of places\n- `sort_by`    — sort field (`name`, `price`, `product_details->date`)\n- `order`      — sort direction (`asc`, `desc`)\n- `per_page`   — items per page (default: 15)\n- `page`       — page number (default: 1)\n",
                 "operationId": "getProductsList",
                 "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
                     {
                         "name": "name",
                         "in": "query",
@@ -4942,14 +4945,16 @@
                         "example": 1
                     },
                     "name": {
+                        "description": "Localized product name based on Accept-Language header",
                         "type": "string",
                         "example": "Billet concert"
                     },
                     "product_details": {
+                        "description": "Localized details object",
                         "type": "object",
                         "example": {
                             "places": 1,
-                            "description": "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle...",
+                            "description": "Assistez à un moment historique ...",
                             "date": "2024-07-26",
                             "time": "19h30 (accès recommandé dès 18h00)",
                             "location": "Stade de France, Saint-Denis",
@@ -4973,13 +4978,11 @@
                     },
                     "created_at": {
                         "type": "string",
-                        "format": "date-time",
-                        "example": "2023-01-01T00:00:00Z"
+                        "format": "date-time"
                     },
                     "updated_at": {
                         "type": "string",
-                        "format": "date-time",
-                        "example": "2023-04-01T12:00:00Z"
+                        "format": "date-time"
                     },
                     "tickets": {
                         "type": "array",
@@ -4992,6 +4995,87 @@
                         "items": {
                             "$ref": "#/components/schemas/CartItem"
                         }
+                    }
+                },
+                "type": "object"
+            },
+            "ProductTranslation": {
+                "required": [
+                    "id",
+                    "product_id",
+                    "locale",
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "product_id": {
+                        "description": "ID du produit parent",
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "locale": {
+                        "description": "Code de la langue de la traduction",
+                        "type": "string",
+                        "example": "fr"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Cérémonie d’ouverture officielle des JO"
+                    },
+                    "product_details": {
+                        "description": "Détails localisés du produit",
+                        "properties": {
+                            "places": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "description": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "example": [
+                                    "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024.",
+                                    "Vivez une soirée exceptionnelle où le sport, la culture et l’émotion se rencontrent..."
+                                ]
+                            },
+                            "date": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2024-07-26"
+                            },
+                            "time": {
+                                "type": "string",
+                                "example": "19h30 (accès recommandé dès 18h00)"
+                            },
+                            "location": {
+                                "type": "string",
+                                "example": "Stade de France, Saint-Denis"
+                            },
+                            "category": {
+                                "type": "string",
+                                "example": "Cérémonies"
+                            },
+                            "image": {
+                                "type": "string",
+                                "format": "uri",
+                                "example": "https://picsum.photos/seed/1/600/400"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-04-22T20:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-04-22T20:00:00Z"
                     }
                 },
                 "type": "object"
@@ -5439,6 +5523,23 @@
             },
             "NoContent": {
                 "description": "Operation successful, no content"
+            }
+        },
+        "parameters": {
+            "AcceptLanguageHeader": {
+                "name": "Accept-Language",
+                "in": "header",
+                "description": "Language of the local response. Supported values : `en`, `fr`, `de`. Default `en`.",
+                "required": false,
+                "schema": {
+                    "type": "string",
+                    "default": "en",
+                    "enum": [
+                        "en",
+                        "fr",
+                        "de"
+                    ]
+                }
             }
         },
         "securitySchemes": {

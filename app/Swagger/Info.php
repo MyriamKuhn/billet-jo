@@ -22,7 +22,9 @@ organized into internal packages (users, tickets, cart, payment, etc.) for maint
 
 Notifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.
 
-Access is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).",
+Access is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).
+
+The API supports multiple languages (English, French, German) injected in the header and is designed to be user-friendly and developer-friendly.",
  *     @OA\Contact(name="Myriam Kühn", email="myriam.kuehn@free.fr", url="https://myriamkuhn.com/"),
  *     @OA\License(name="MIT", url="https://opensource.org/licenses/MIT")
  *   ),
@@ -154,6 +156,20 @@ Access is secured by a restrictive CORS policy and token-based authentication (L
  *   @OA\Tag(name="Invoices",       description="Invoice generation and download"),
  *   @OA\Tag(name="Carts",          description="Operations about shopping cart"),
  *   @OA\Tag(name="Products",       description="Product management, including categories and details")
+ * ),
+ *
+ *   @OA\Parameter(
+ *     parameter="AcceptLanguageHeader",
+ *     name="Accept-Language",
+ *     in="header",
+ *     description="Language of the local response. Supported values : `en`, `fr`, `de`. Default `en`.",
+ *     required=false,
+ *     @OA\Schema(
+ *       type="string",
+ *       enum={"en","fr","de"},
+ *       default="en"
+ *     )
+ *   )
  * )
  */
 class Info {}
