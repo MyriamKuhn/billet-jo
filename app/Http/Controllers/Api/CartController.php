@@ -36,27 +36,31 @@ Returns the current cart contents:
 
 Provide a Bearer token to operate on the user’s cart; omit it to operate on the guest cart.
 ",
+     *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Cart retrieved successfully",
      *         @OA\JsonContent(
+     *             type="object",
      *             required={"data"},
-     *             oneOf={
-     *               @OA\Schema(ref="#/components/schemas/CartMinimal"),
-     *               @OA\Schema(
-     *                 title="GuestCartResponse",
-     *                 type="object",
-     *                 @OA\Property(
-     *                   property="data",
-     *                   type="object",
-     *                   description="Map of product IDs to quantities",
-     *                   @OA\AdditionalProperties(
-     *                     type="integer",
-     *                     example=2
-     *                   )
-     *                 )
-     *               )
-     *             }
+     *             @OA\Property(
+     *               property="data",
+     *               oneOf={
+     *                 @OA\Schema(ref="#/components/schemas/CartMinimal"),
+     *                 @OA\Schema(
+     *                      schema="GuestCart",
+     *                      type="object",
+     *                      required={"cart_items"},
+     *                      @OA\Property(
+     *                          property="cart_items",
+     *                          type="array",
+     *                          @OA\Items(ref="#/components/schemas/CartItemMinimal")
+     *                      )
+     *                  )
+     *               }
+     *             )
      *         )
      *     ),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
@@ -70,19 +74,52 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
     {
         $cart = $this->cartService->getCurrentCart();
 
-        // Authenticated user → CartResource
         if ($cart instanceof Cart) {
-            $cart->load(['cartItems.product' => function($q) {
-                $q->select(['id','name','product_details']);
-            }]);
-            return (new CartResource($cart))
-                ->response()
-                ->setStatusCode(200);
+            // Authenticated
+            $cart->load(['cartItems.product' => fn($q) => $q->select(['id','stock_quantity','name','product_details'])]);
+
+            return response()->json([
+                'data' => (new CartResource($cart))->resolve()
+            ], 200);
         }
 
-        // Guest → array<int,int>
+        // Guest
+        $itemsMap = $cart;
+        $products = Product::whereIn('id', array_keys($itemsMap))
+            ->get(['id','stock_quantity','name','price','sale','product_details']);
+
+        $guestItems = $products->map(function(Product $product) use ($itemsMap) {
+            $qty          = $itemsMap[$product->id];
+            $available    = $product->stock_quantity >= $qty;
+            $original     = $product->price;
+            $discountRate = $product->sale ?? 0.0;
+            $unitPrice    = round($original * (1 - $discountRate), 2);
+            $totalPrice   = round($unitPrice * $qty, 2);
+
+            return [
+                'id'                 => null,
+                'product_id'         => $product->id,
+                'quantity'           => $qty,
+                'in_stock'           => $available,
+                'available_quantity' => $product->stock_quantity,
+                'unit_price'         => $unitPrice,
+                'total_price'        => $totalPrice,
+                'original_price'     => $discountRate > 0 ? $original : null,
+                'discount_rate'      => $discountRate > 0 ? $discountRate : null,
+                'product'            => [
+                    'name'     => $product->name,
+                    'image'    => $product->product_details['image']    ?? null,
+                    'date'     => $product->product_details['date']     ?? null,
+                    'time'     => $product->product_details['time']     ?? null,
+                    'location' => $product->product_details['location'] ?? null,
+                ],
+            ];
+        })->values();
+
         return response()->json([
-            'data' => $cart,  // array productId => qty, ici []
+            'data' => [
+                'cart_items' => $guestItems,
+            ]
         ], 200);
     }
 
@@ -117,7 +154,9 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      *         )
      *     ),
      *     @OA\Response(response=204, ref="#/components/responses/NoContent"),
+     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
      *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=409, ref="#/components/responses/StockUnavailable"),
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")

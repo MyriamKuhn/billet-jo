@@ -22,6 +22,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Stripe\Exception\ApiErrorException;
 use App\Exceptions\TicketAlreadyProcessedException;
 use App\Enums\TicketStatus;
+use App\Exceptions\StockUnavailableException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -41,6 +42,15 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $base = config('app.frontend_url') . '/verification-result';
+        $exceptions->render(function (StockUnavailableException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'code'    => 'stock_unavailable',
+                    'errors'  => $e->details,
+                ], 409);
+            }
+        });
         $exceptions->render(function (TicketAlreadyProcessedException $e, Request $request) {
             if ($request->is('api/*')) {
                 $ticket = $e->ticket;

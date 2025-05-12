@@ -26,11 +26,11 @@ Access is secured by a restrictive CORS policy and token-based authentication (L
 
 The API supports multiple languages (English, French, German) injected in the header and is designed to be user-friendly and developer-friendly.",
  *     @OA\Contact(name="Myriam Kühn", email="myriam.kuehn@free.fr", url="https://myriamkuhn.com/"),
- *     @OA\License(name="MIT", url="https://opensource.org/licenses/MIT")
+ *     @OA\License(name="Full Front documentation", url="https://api-jo2024.mkcodecreations.dev/docs/frontend")
  *   ),
  *   @OA\ExternalDocumentation(
  *     description="Full API documentation",
- *     url="https://docs.paris2024.example.com"
+ *     url="https://api-jo2024.mkcodecreations.dev/docs/backend"
  *   ),
  *
  *   @OA\Server(url="http://localhost:8000", description="Local dev"),
@@ -235,6 +235,26 @@ The API supports multiple languages (English, French, German) injected in the he
  *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
  *      )
  *  ),
+ *  @OA\Response(
+ *   response="StockUnavailable",
+ *   description="Some items in the cart exceed available stock",
+ *   @OA\JsonContent(
+ *     required={"message","code","errors"},
+ *     @OA\Property(property="message", type="string", example="Stock unavailable for one or more items in the cart"),
+ *     @OA\Property(property="code",    type="string", example="stock_unavailable"),
+ *     @OA\Property(
+ *       property="errors",
+ *       type="array",
+ *       @OA\Items(
+ *         type="object",
+ *         @OA\Property(property="product_id",         type="integer", example=42),
+ *         @OA\Property(property="product_name",       type="string",  example="Billet concert"),
+ *         @OA\Property(property="requested_quantity", type="integer", example=5),
+ *         @OA\Property(property="available_quantity", type="integer", example=2)
+ *       )
+ *     )
+ *   )
+ * ),
  *
  * @OA\Parameter(
  *     parameter="AcceptLanguageHeader",

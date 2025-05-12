@@ -9,8 +9,8 @@
             "email": "myriam.kuehn@free.fr"
         },
         "license": {
-            "name": "MIT",
-            "url": "https://opensource.org/licenses/MIT"
+            "name": "Full Front documentation",
+            "url": "https://api-jo2024.mkcodecreations.dev/docs/frontend"
         },
         "version": "1.0.0"
     },
@@ -33,6 +33,11 @@
                 "summary": "Retrieve current shopping cart",
                 "description": "\nReturns the current cart contents:\n\n- **Authenticated users**: full cart model (cart ID, user ID, items with product details)\n- **Guests**: a simple map of product IDs to quantities\n\nProvide a Bearer token to operate on the user’s cart; omit it to operate on the guest cart.\n",
                 "operationId": "getCurrentCart",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Cart retrieved successfully",
@@ -42,25 +47,31 @@
                                     "required": [
                                         "data"
                                     ],
-                                    "oneOf": [
-                                        {
-                                            "$ref": "#/components/schemas/CartMinimal"
-                                        },
-                                        {
-                                            "title": "GuestCartResponse",
-                                            "properties": {
-                                                "data": {
-                                                    "description": "Map of product IDs to quantities",
-                                                    "type": "object",
-                                                    "additionalProperties": {
-                                                        "type": "integer",
-                                                        "example": 2
-                                                    }
+                                    "properties": {
+                                        "data": {
+                                            "oneOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/CartMinimal"
+                                                },
+                                                {
+                                                    "schema": "GuestCart",
+                                                    "required": [
+                                                        "cart_items"
+                                                    ],
+                                                    "properties": {
+                                                        "cart_items": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/components/schemas/CartItemMinimal"
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
                                                 }
-                                            },
-                                            "type": "object"
+                                            ]
                                         }
-                                    ]
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -118,8 +129,14 @@
                     "204": {
                         "$ref": "#/components/responses/NoContent"
                     },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/StockUnavailable"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -336,6 +353,9 @@
                 "operationId": "getPayments",
                 "parameters": [
                     {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
                         "name": "q",
                         "in": "query",
                         "description": "Global search on uuid, invoice_link, transaction_id, user email or user ID",
@@ -495,8 +515,14 @@
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
                     }
                 },
                 "security": [
@@ -512,6 +538,11 @@
                 "summary": "Initiate payment",
                 "description": "Creates a new pending payment and returns a Stripe client secret for checkout.",
                 "operationId": "storePayment",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "description": "Cart identifier and desired payment method",
                     "required": true,
@@ -592,6 +623,9 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/StockUnavailable"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -689,6 +723,9 @@
                                 }
                             }
                         }
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 }
             }
@@ -742,28 +779,8 @@
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
                     },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
                     "404": {
-                        "description": "Payment not found or does not belong to user",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Resource not found"
-                                        },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "not_found"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -869,24 +886,7 @@
                         "$ref": "#/components/responses/Forbidden"
                     },
                     "404": {
-                        "description": "Payment not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Resource not found"
-                                        },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "not_found"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -1071,71 +1071,158 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Create a new product",
-                "description": "\nCreates a new product record.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n",
+                "summary": "Create a new product with translations and images",
+                "description": "Creates a new product record in **3** languages (en, fr, de) with images upload for each languages.",
                 "operationId": "createProduct",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "multipart/form-data": {
                             "schema": {
                                 "required": [
-                                    "name",
                                     "price",
                                     "stock_quantity",
-                                    "product_details[places]",
-                                    "product_details[description]",
-                                    "product_details[date]",
-                                    "product_details[time]",
-                                    "product_details[location]",
-                                    "product_details[category]",
-                                    "product_details[image]"
+                                    "translations[en][name]",
+                                    "translations[fr][name]",
+                                    "translations[de][name]",
+                                    "translations[en][product_details][places]",
+                                    "translations[fr][product_details][places]",
+                                    "translations[de][product_details][places]",
+                                    "translations[en][product_details][description]",
+                                    "translations[fr][product_details][description]",
+                                    "translations[de][product_details][description]",
+                                    "translations[en][product_details][date]",
+                                    "translations[fr][product_details][date]",
+                                    "translations[de][product_details][date]",
+                                    "translations[en][product_details][time]",
+                                    "translations[fr][product_details][time]",
+                                    "translations[de][product_details][time]",
+                                    "translations[en][product_details][location]",
+                                    "translations[fr][product_details][location]",
+                                    "translations[de][product_details][location]",
+                                    "translations[en][product_details][category]",
+                                    "translations[fr][product_details][category]",
+                                    "translations[de][product_details][category]",
+                                    "translations[en][product_details][image]",
+                                    "translations[fr][product_details][image]",
+                                    "translations[de][product_details][image]"
                                 ],
                                 "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Sample Product"
-                                    },
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 49.99
+                                        "example": 100
                                     },
                                     "sale": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 39.99
+                                        "example": 0.1
                                     },
                                     "stock_quantity": {
                                         "type": "integer",
-                                        "example": 100
-                                    },
-                                    "product_details[places]": {
-                                        "type": "integer",
                                         "example": 50
                                     },
-                                    "product_details[description]": {
+                                    "translations[en][name]": {
                                         "type": "string",
-                                        "example": "A detailed description"
+                                        "example": "Opening Ceremony"
                                     },
-                                    "product_details[date]": {
+                                    "translations[en][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[en][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Experience the opening…"
+                                    },
+                                    "translations[en][product_details][date]": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2025-05-15"
+                                        "example": "2024-07-26"
                                     },
-                                    "product_details[time]": {
+                                    "translations[en][product_details][time]": {
                                         "type": "string",
-                                        "example": "14:00"
+                                        "example": "19:30"
                                     },
-                                    "product_details[location]": {
+                                    "translations[en][product_details][location]": {
                                         "type": "string",
-                                        "example": "Paris"
+                                        "example": "Stade de France"
                                     },
-                                    "product_details[category]": {
+                                    "translations[en][product_details][category]": {
                                         "type": "string",
-                                        "example": "Conference"
+                                        "example": "Ceremonies"
                                     },
-                                    "product_details[image]": {
+                                    "translations[en][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[fr][name]": {
+                                        "type": "string",
+                                        "example": "Cérémonie d’ouverture"
+                                    },
+                                    "translations[fr][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[fr][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Assistez à la cérémonie…"
+                                    },
+                                    "translations[fr][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[fr][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[fr][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[fr][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Cérémonies"
+                                    },
+                                    "translations[fr][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[de][name]": {
+                                        "type": "string",
+                                        "example": "Eröffnungszeremonie"
+                                    },
+                                    "translations[de][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[de][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Erleben Sie die Eröffnung…"
+                                    },
+                                    "translations[de][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[de][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[de][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[de][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Zeremonien"
+                                    },
+                                    "translations[de][product_details][image]": {
                                         "type": "file",
                                         "format": "binary"
                                     }
@@ -1181,6 +1268,9 @@
                 "description": "\nReturns a paginated list of all products (including out-of-stock), with optional filtering and sorting.\n\n- **Caching enabled** for better performance\n- **Authentication**: Bearer token (admin only)\n- **Same query parameters** as `/api/products`\n",
                 "operationId": "getProducts",
                 "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
                     {
                         "name": "name",
                         "in": "query",
@@ -1342,6 +1432,9 @@
                 "operationId": "getProductById",
                 "parameters": [
                     {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
                         "name": "product",
                         "in": "path",
                         "description": "ID of product to retrieve",
@@ -1368,6 +1461,9 @@
                             }
                         }
                     },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     },
@@ -1381,7 +1477,7 @@
                     "Products"
                 ],
                 "summary": "Update product details",
-                "description": "\nUpdates the details of an existing product.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n- The image file is optional and will be stored in the `images` disk.\n- The old image will be deleted if a new one is provided.\n- The product ID must exist in the database.\n",
+                "description": "\nUpdates the details of an existing product for all 3 languages.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- **multipart/form-data** content type\n- The image file is optional\n- The old image will be deleted if a new one is provided.\n- The product ID must exist in the database.\n",
                 "operationId": "updateProduct",
                 "parameters": [
                     {
@@ -1401,61 +1497,144 @@
                         "multipart/form-data": {
                             "schema": {
                                 "required": [
-                                    "name",
                                     "price",
                                     "stock_quantity",
-                                    "product_details[places]",
-                                    "product_details[description]",
-                                    "product_details[date]",
-                                    "product_details[time]",
-                                    "product_details[location]",
-                                    "product_details[category]"
+                                    "translations[en][name]",
+                                    "translations[fr][name]",
+                                    "translations[de][name]",
+                                    "translations[en][product_details][places]",
+                                    "translations[fr][product_details][places]",
+                                    "translations[de][product_details][places]",
+                                    "translations[en][product_details][description]",
+                                    "translations[fr][product_details][description]",
+                                    "translations[de][product_details][description]",
+                                    "translations[en][product_details][date]",
+                                    "translations[fr][product_details][date]",
+                                    "translations[de][product_details][date]",
+                                    "translations[en][product_details][time]",
+                                    "translations[fr][product_details][time]",
+                                    "translations[de][product_details][time]",
+                                    "translations[en][product_details][location]",
+                                    "translations[fr][product_details][location]",
+                                    "translations[de][product_details][location]",
+                                    "translations[en][product_details][category]",
+                                    "translations[fr][product_details][category]",
+                                    "translations[de][product_details][category]",
+                                    "translations[en][product_details][image]",
+                                    "translations[fr][product_details][image]",
+                                    "translations[de][product_details][image]"
                                 ],
                                 "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Sample Product"
-                                    },
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 49.99
+                                        "example": 100
                                     },
                                     "sale": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 39.99
+                                        "example": 0.1
                                     },
                                     "stock_quantity": {
                                         "type": "integer",
-                                        "example": 100
-                                    },
-                                    "product_details[places]": {
-                                        "type": "integer",
                                         "example": 50
                                     },
-                                    "product_details[description]": {
+                                    "translations[en][name]": {
                                         "type": "string",
-                                        "example": "A detailed description"
+                                        "example": "Opening Ceremony"
                                     },
-                                    "product_details[date]": {
+                                    "translations[en][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[en][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Experience the opening…"
+                                    },
+                                    "translations[en][product_details][date]": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2025-05-15"
+                                        "example": "2024-07-26"
                                     },
-                                    "product_details[time]": {
+                                    "translations[en][product_details][time]": {
                                         "type": "string",
-                                        "example": "14:00"
+                                        "example": "19:30"
                                     },
-                                    "product_details[location]": {
+                                    "translations[en][product_details][location]": {
                                         "type": "string",
-                                        "example": "Paris"
+                                        "example": "Stade de France"
                                     },
-                                    "product_details[category]": {
+                                    "translations[en][product_details][category]": {
                                         "type": "string",
-                                        "example": "Conference"
+                                        "example": "Ceremonies"
                                     },
-                                    "product_details[image]": {
+                                    "translations[en][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[fr][name]": {
+                                        "type": "string",
+                                        "example": "Cérémonie d’ouverture"
+                                    },
+                                    "translations[fr][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[fr][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Assistez à la cérémonie…"
+                                    },
+                                    "translations[fr][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[fr][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[fr][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[fr][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Cérémonies"
+                                    },
+                                    "translations[fr][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[de][name]": {
+                                        "type": "string",
+                                        "example": "Eröffnungszeremonie"
+                                    },
+                                    "translations[de][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[de][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Erleben Sie die Eröffnung…"
+                                    },
+                                    "translations[de][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[de][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[de][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[de][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Zeremonien"
+                                    },
+                                    "translations[de][product_details][image]": {
                                         "type": "file",
                                         "format": "binary"
                                     }
@@ -1468,6 +1647,83 @@
                 "responses": {
                     "204": {
                         "description": "Product updated successfully, no content"
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/products/{product}/pricing": {
+            "patch": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Update product pricing and stock (admin only)",
+                "description": "Updates the pricing and stock quantity of a product only for an administrator.",
+                "operationId": "updateProductPricing",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID du produit à mettre à jour",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "example": 42
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 59.99
+                                    },
+                                    "sale": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 0.15
+                                    },
+                                    "stock_quantity": {
+                                        "type": "integer",
+                                        "example": 120
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Product pricing updated successfully, no content"
                     },
                     "400": {
                         "$ref": "#/components/responses/BadRequest"
@@ -4357,8 +4613,7 @@
                 },
                 "type": "object"
             },
-            "StoreProduct": {
-                "title": "StoreProduct",
+            "StoreProductSingleLocale": {
                 "required": [
                     "name",
                     "price",
@@ -4368,7 +4623,7 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "example": "Sample Product"
+                        "example": "Billet concert"
                     },
                     "price": {
                         "type": "number",
@@ -4385,7 +4640,51 @@
                         "example": 100
                     },
                     "product_details": {
-                        "$ref": "#/components/schemas/ProductDetails"
+                        "$ref": "#/components/schemas/StoreProductDetailsSingleLocale"
+                    }
+                },
+                "type": "object"
+            },
+            "StoreProductDetailsSingleLocale": {
+                "required": [
+                    "places",
+                    "description",
+                    "date",
+                    "time",
+                    "location",
+                    "category",
+                    "image_url"
+                ],
+                "properties": {
+                    "places": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Description détaillée…"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-07-26"
+                    },
+                    "time": {
+                        "type": "string",
+                        "example": "19:30"
+                    },
+                    "location": {
+                        "type": "string",
+                        "example": "Stade de France"
+                    },
+                    "category": {
+                        "type": "string",
+                        "example": "Cérémonies"
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "format": "url",
+                        "example": "https://…/image.jpg"
                     }
                 },
                 "type": "object"
@@ -4411,6 +4710,14 @@
                     "quantity": {
                         "type": "integer",
                         "example": 3
+                    },
+                    "in_stock": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "available_quantity": {
+                        "type": "integer",
+                        "example": 5
                     },
                     "unit_price": {
                         "type": "number",
@@ -4559,10 +4866,25 @@
                         "example": "https://example.com/invoice/12345"
                     },
                     "cart_snapshot": {
-                        "description": "Instantané du panier",
+                        "description": "Localized snapshot of the cart as seen by the admin",
                         "type": "array",
                         "items": {
+                            "required": [
+                                "product_id",
+                                "product_name",
+                                "ticket_type",
+                                "quantity",
+                                "unit_price"
+                            ],
                             "properties": {
+                                "product_id": {
+                                    "type": "integer",
+                                    "example": 42
+                                },
+                                "product_name": {
+                                    "type": "string",
+                                    "example": "Billet concert"
+                                },
                                 "ticket_type": {
                                     "type": "string",
                                     "example": "adult"
@@ -4628,6 +4950,10 @@
                         "nullable": true
                     },
                     "user": {
+                        "required": [
+                            "id",
+                            "email"
+                        ],
                         "properties": {
                             "id": {
                                 "type": "integer",
@@ -5946,6 +6272,55 @@
                         }
                     }
                 }
+            },
+            "StockUnavailable": {
+                "description": "Some items in the cart exceed available stock",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "errors"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Stock unavailable for one or more items in the cart"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "stock_unavailable"
+                                },
+                                "errors": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "product_id": {
+                                                "type": "integer",
+                                                "example": 42
+                                            },
+                                            "product_name": {
+                                                "type": "string",
+                                                "example": "Billet concert"
+                                            },
+                                            "requested_quantity": {
+                                                "type": "integer",
+                                                "example": 5
+                                            },
+                                            "available_quantity": {
+                                                "type": "integer",
+                                                "example": 2
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
             }
         },
         "parameters": {
@@ -6006,6 +6381,6 @@
     ],
     "externalDocs": {
         "description": "Full API documentation",
-        "url": "https://docs.paris2024.example.com"
+        "url": "https://api-jo2024.mkcodecreations.dev/docs/backend"
     }
 }

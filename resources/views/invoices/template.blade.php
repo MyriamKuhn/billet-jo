@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 
 <head>
     <meta charset="utf-8">
@@ -139,7 +139,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($payment->cart_snapshot as $line)
+                    @foreach ($payment->cart_snapshot['items'] as $line)
                         <tr>
                             <td>{{ $line['product_name'] }}</td>
                             <td>{{ $line['quantity'] }}</td>

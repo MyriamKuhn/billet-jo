@@ -12,7 +12,7 @@ use App\Http\Requests\AdminProductRequest;
 use App\Http\Resources\ProductResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Arr;
+use App\Http\Requests\UpdateProductPricingRequest;
 
 class ProductController extends Controller
 {
@@ -47,6 +47,7 @@ Returns a paginated list of products that are currently in stock.
 - `per_page`   — items per page (default: 15)
 - `page`       — page number (default: 1)
 ",
+     *
      *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *     @OA\Parameter(name="name",     in="query", description="Filter by product name",     @OA\Schema(type="string")),
      *     @OA\Parameter(name="category", in="query", description="Filter by category",        @OA\Schema(type="string")),
@@ -117,6 +118,7 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *     tags={"Products"},
      *     security={{"bearerAuth": {}}},
      *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *     @OA\Parameter(name="name",     in="query", description="Filter by product name",     @OA\Schema(type="string")),
      *     @OA\Parameter(name="category", in="query", description="Filter by category",        @OA\Schema(type="string")),
      *     @OA\Parameter(name="location", in="query", description="Filter by location",        @OA\Schema(type="string")),
@@ -182,6 +184,8 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *     tags={"Products"},
      *     summary="Get product details",
      *     description="Returns the full details of a single product identified by its ID.",
+     *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *     @OA\Parameter(
      *         name="product",
      *         in="path",
@@ -196,6 +200,7 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *             @OA\Property(property="data", ref="#/components/schemas/MinimalProduct")
      *         )
      *     ),
+     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
      *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
@@ -214,71 +219,109 @@ Returns a paginated list of all products (including out-of-stock), with optional
      * Create a new product (admin only).
      *
      * @OA\Post(
-     *     path="/api/products",
-     *     operationId="createProduct",
-     *     tags={"Products"},
-     *     summary="Create a new product",
-     *     description="
-Creates a new product record.
-
-**Requirements**:
-- Bearer authentication (admin only)
-- Valid payload per `StoreProduct` schema
-",
-     *     security={{"bearerAuth":{}}},
+     *   path="/api/products",
+     *   operationId="createProduct",
+     *   tags={"Products"},
+     *   summary="Create a new product with translations and images",
+     *   description="Creates a new product record in **3** languages (en, fr, de) with images upload for each languages.",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\MediaType(
-     *             mediaType="multipart/form-data",
-     *             @OA\Schema(
-     *                 required={
-     *                     "name",
-     *                     "price",
-     *                     "stock_quantity",
-     *                     "product_details[places]",
-     *                     "product_details[description]",
-     *                     "product_details[date]",
-     *                     "product_details[time]",
-     *                     "product_details[location]",
-     *                     "product_details[category]",
-     *                     "product_details[image]"
-     *                 },
-     *                 @OA\Property(property="name",           type="string",  example="Sample Product"),
-     *                 @OA\Property(property="price",          type="number",  format="float", example=49.99),
-     *                 @OA\Property(property="sale",           type="number",  format="float", example=39.99),
-     *                 @OA\Property(property="stock_quantity", type="integer", example=100),
-     *                 @OA\Property(property="product_details[places]",      type="integer", example=50),
-     *                 @OA\Property(property="product_details[description]", type="string",  example="A detailed description"),
-     *                 @OA\Property(property="product_details[date]",        type="string",  format="date", example="2025-05-15"),
-     *                 @OA\Property(property="product_details[time]",        type="string",  example="14:00"),
-     *                 @OA\Property(property="product_details[location]",    type="string",  example="Paris"),
-     *                 @OA\Property(property="product_details[category]",    type="string",  example="Conference"),
-     *                 @OA\Property(property="product_details[image]",       type="file",    format="binary")
-     *             )
-     *         )
-     *     ),
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="multipart/form-data",
+     *       @OA\Schema(
+     *         required={
+     *           "price",
+     *           "stock_quantity",
+     *           "translations[en][name]",
+     *           "translations[fr][name]",
+     *           "translations[de][name]",
+     *           "translations[en][product_details][places]",
+     *           "translations[fr][product_details][places]",
+     *           "translations[de][product_details][places]",
+     *           "translations[en][product_details][description]",
+     *           "translations[fr][product_details][description]",
+     *           "translations[de][product_details][description]",
+     *           "translations[en][product_details][date]",
+     *           "translations[fr][product_details][date]",
+     *           "translations[de][product_details][date]",
+     *           "translations[en][product_details][time]",
+     *           "translations[fr][product_details][time]",
+     *           "translations[de][product_details][time]",
+     *           "translations[en][product_details][location]",
+     *           "translations[fr][product_details][location]",
+     *           "translations[de][product_details][location]",
+     *           "translations[en][product_details][category]",
+     *           "translations[fr][product_details][category]",
+     *           "translations[de][product_details][category]",
+     *           "translations[en][product_details][image]",
+     *           "translations[fr][product_details][image]",
+     *           "translations[de][product_details][image]"
+     *         },
      *
-     *     @OA\Response(response=201, description="Product created successfully, no content"),
-     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
-     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
-     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
-     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
-     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
+     *         @OA\Property(property="price",          type="number",  format="float", example=100.00),
+     *         @OA\Property(property="sale",           type="number",  format="float", example=0.10),
+     *         @OA\Property(property="stock_quantity", type="integer", example=50),
+     *
+     *         @OA\Property(property="translations[en][name]",           type="string",  example="Opening Ceremony"),
+     *         @OA\Property(property="translations[en][product_details][places]",      type="integer", example=1),
+     *         @OA\Property(property="translations[en][product_details][description]", type="string",  example="Experience the opening…"),
+     *         @OA\Property(property="translations[en][product_details][date]",        type="string",  format="date", example="2024-07-26"),
+     *         @OA\Property(property="translations[en][product_details][time]",        type="string",  example="19:30"),
+     *         @OA\Property(property="translations[en][product_details][location]",    type="string",  example="Stade de France"),
+     *         @OA\Property(property="translations[en][product_details][category]",    type="string",  example="Ceremonies"),
+     *         @OA\Property(property="translations[en][product_details][image]",       type="file",    format="binary"),
+     *
+     *         @OA\Property(property="translations[fr][name]",           type="string",  example="Cérémonie d’ouverture"),
+     *         @OA\Property(property="translations[fr][product_details][places]",      type="integer", example=1),
+     *         @OA\Property(property="translations[fr][product_details][description]", type="string",  example="Assistez à la cérémonie…"),
+     *         @OA\Property(property="translations[fr][product_details][date]",        type="string",  format="date", example="2024-07-26"),
+     *         @OA\Property(property="translations[fr][product_details][time]",        type="string",  example="19:30"),
+     *         @OA\Property(property="translations[fr][product_details][location]",    type="string",  example="Stade de France"),
+     *         @OA\Property(property="translations[fr][product_details][category]",    type="string",  example="Cérémonies"),
+     *         @OA\Property(property="translations[fr][product_details][image]",       type="file",    format="binary"),
+     *
+     *         @OA\Property(property="translations[de][name]",           type="string",  example="Eröffnungszeremonie"),
+     *         @OA\Property(property="translations[de][product_details][places]",      type="integer", example=1),
+     *         @OA\Property(property="translations[de][product_details][description]", type="string",  example="Erleben Sie die Eröffnung…"),
+     *         @OA\Property(property="translations[de][product_details][date]",        type="string",  format="date", example="2024-07-26"),
+     *         @OA\Property(property="translations[de][product_details][time]",        type="string",  example="19:30"),
+     *         @OA\Property(property="translations[de][product_details][location]",    type="string",  example="Stade de France"),
+     *         @OA\Property(property="translations[de][product_details][category]",    type="string",  example="Zeremonien"),
+     *         @OA\Property(property="translations[de][product_details][image]",       type="file",    format="binary")
+     *       )
+     *     )
+     *   ),
+     *
+     *   @OA\Response(response=201, description="Product created successfully, no content"),
+     *   @OA\Response(response=400, ref="#/components/responses/BadRequest"),
+     *   @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *   @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *   @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
-     *
-     * @param  StoreProductRequest  $request
-     * @return JsonResponse
      */
     public function store(StoreProductRequest $request): JsonResponse
     {
         // Retrieve the validated data
         $data = $request->validated();
 
-        // Handle the image file
-        $file = $request->file('product_details.image');
-        $stored = $file->store('', 'images');
-        $data['product_details']['image'] = basename($stored);
+        // For each locale, process the image file if it exists
+        foreach (['en','fr','de'] as $locale) {
+            if (isset($data['translations'][$locale]['product_details']['image'])) {
+                /** @var \Illuminate\Http\UploadedFile $file */
+                $file = $request->file("translations.{$locale}.product_details.image");
+
+                // store the image in the 'images' disk
+                $path = $file->store('', 'images');
+
+                // take only the basename of the path to store in the database
+                $data['translations'][$locale]['product_details']['image']
+                    = basename($path);
+            }
+        }
 
         // Product creation
         $product = $this->productService->create($data);
@@ -296,12 +339,12 @@ Creates a new product record.
      *     tags={"Products"},
      *     summary="Update product details",
      *     description="
-Updates the details of an existing product.
+Updates the details of an existing product for all 3 languages.
 
 **Requirements**:
 - Bearer authentication (admin only)
-- Valid payload per `StoreProduct` schema
-- The image file is optional and will be stored in the `images` disk.
+- **multipart/form-data** content type
+- The image file is optional
 - The old image will be deleted if a new one is provided.
 - The product ID must exist in the database.
 ",
@@ -315,35 +358,73 @@ Updates the details of an existing product.
      *         @OA\Schema(type="integer", format="int64")
      *     ),
      *
-     *     @OA\RequestBody(
-     *         required=true,
-     *     @OA\MediaType(mediaType="multipart/form-data",
-     *         @OA\Schema(
-     *                 required={
-     *                     "name",
-     *                     "price",
-     *                     "stock_quantity",
-     *                     "product_details[places]",
-     *                     "product_details[description]",
-     *                     "product_details[date]",
-     *                     "product_details[time]",
-     *                     "product_details[location]",
-     *                     "product_details[category]"
-     *                 },
-     *                @OA\Property(property="name",           type="string",  example="Sample Product"),
-     *                 @OA\Property(property="price",          type="number",  format="float", example=49.99),
-     *                 @OA\Property(property="sale",           type="number",  format="float", example=39.99),
-     *                 @OA\Property(property="stock_quantity", type="integer", example=100),
-     *                 @OA\Property(property="product_details[places]",      type="integer", example=50),
-     *                 @OA\Property(property="product_details[description]", type="string",  example="A detailed description"),
-     *                 @OA\Property(property="product_details[date]",        type="string",  format="date", example="2025-05-15"),
-     *                 @OA\Property(property="product_details[time]",        type="string",  example="14:00"),
-     *                 @OA\Property(property="product_details[location]",    type="string",  example="Paris"),
-     *                 @OA\Property(property="product_details[category]",    type="string",  example="Conference"),
-     *                 @OA\Property(property="product_details[image]",       type="file",    format="binary")
-     *              )
-     *          )
-     *     ),
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\MediaType(
+     *       mediaType="multipart/form-data",
+     *       @OA\Schema(
+     *         required={
+     *           "price",
+     *           "stock_quantity",
+     *           "translations[en][name]",
+     *           "translations[fr][name]",
+     *           "translations[de][name]",
+     *           "translations[en][product_details][places]",
+     *           "translations[fr][product_details][places]",
+     *           "translations[de][product_details][places]",
+     *           "translations[en][product_details][description]",
+     *           "translations[fr][product_details][description]",
+     *           "translations[de][product_details][description]",
+     *           "translations[en][product_details][date]",
+     *           "translations[fr][product_details][date]",
+     *           "translations[de][product_details][date]",
+     *           "translations[en][product_details][time]",
+     *           "translations[fr][product_details][time]",
+     *           "translations[de][product_details][time]",
+     *           "translations[en][product_details][location]",
+     *           "translations[fr][product_details][location]",
+     *           "translations[de][product_details][location]",
+     *           "translations[en][product_details][category]",
+     *           "translations[fr][product_details][category]",
+     *           "translations[de][product_details][category]",
+     *           "translations[en][product_details][image]",
+     *           "translations[fr][product_details][image]",
+     *           "translations[de][product_details][image]"
+     *         },
+     *
+     *         @OA\Property(property="price",          type="number",  format="float", example=100.00),
+     *         @OA\Property(property="sale",           type="number",  format="float", example=0.10),
+     *         @OA\Property(property="stock_quantity", type="integer", example=50),
+     *
+     *         @OA\Property(property="translations[en][name]",           type="string",  example="Opening Ceremony"),
+     *         @OA\Property(property="translations[en][product_details][places]",      type="integer", example=1),
+     *         @OA\Property(property="translations[en][product_details][description]", type="string",  example="Experience the opening…"),
+     *         @OA\Property(property="translations[en][product_details][date]",        type="string",  format="date", example="2024-07-26"),
+     *         @OA\Property(property="translations[en][product_details][time]",        type="string",  example="19:30"),
+     *         @OA\Property(property="translations[en][product_details][location]",    type="string",  example="Stade de France"),
+     *         @OA\Property(property="translations[en][product_details][category]",    type="string",  example="Ceremonies"),
+     *         @OA\Property(property="translations[en][product_details][image]",       type="file",    format="binary"),
+     *
+     *         @OA\Property(property="translations[fr][name]",           type="string",  example="Cérémonie d’ouverture"),
+     *         @OA\Property(property="translations[fr][product_details][places]",      type="integer", example=1),
+     *         @OA\Property(property="translations[fr][product_details][description]", type="string",  example="Assistez à la cérémonie…"),
+     *         @OA\Property(property="translations[fr][product_details][date]",        type="string",  format="date", example="2024-07-26"),
+     *         @OA\Property(property="translations[fr][product_details][time]",        type="string",  example="19:30"),
+     *         @OA\Property(property="translations[fr][product_details][location]",    type="string",  example="Stade de France"),
+     *         @OA\Property(property="translations[fr][product_details][category]",    type="string",  example="Cérémonies"),
+     *         @OA\Property(property="translations[fr][product_details][image]",       type="file",    format="binary"),
+     *
+     *         @OA\Property(property="translations[de][name]",           type="string",  example="Eröffnungszeremonie"),
+     *         @OA\Property(property="translations[de][product_details][places]",      type="integer", example=1),
+     *         @OA\Property(property="translations[de][product_details][description]", type="string",  example="Erleben Sie die Eröffnung…"),
+     *         @OA\Property(property="translations[de][product_details][date]",        type="string",  format="date", example="2024-07-26"),
+     *         @OA\Property(property="translations[de][product_details][time]",        type="string",  example="19:30"),
+     *         @OA\Property(property="translations[de][product_details][location]",    type="string",  example="Stade de France"),
+     *         @OA\Property(property="translations[de][product_details][category]",    type="string",  example="Zeremonien"),
+     *         @OA\Property(property="translations[de][product_details][image]",       type="file",    format="binary")
+     *       )
+     *     )
+     *   ),
      *
      *     @OA\Response(response=204, description="Product updated successfully, no content"),
      *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
@@ -361,26 +442,74 @@ Updates the details of an existing product.
     public function update(StoreProductRequest $request, Product $product): JsonResponse
     {
         $data = $request->validated();
-        $details = $product->product_details;
 
-        // If a new image is provided, replace the old one
-        if ($file = $request->file('product_details.image')) {
-            // Delete the old image
-            if (!empty($details['image'])) {
-            Storage::disk('images')->delete($details['image']);
+        // For eauch locale, process the image file if it exists
+        foreach (['en','fr','de'] as $locale) {
+            if ($file = $request->file("translations.{$locale}.product_details.image")) {
+                // delete the old image if it exists
+                $old = $product
+                    ->translations()
+                    ->where('locale', $locale)
+                    ->first()?->product_details['image']
+                    ?? null;
+
+                if ($old) {
+                    Storage::disk('images')->delete($old);
+                }
+                // store the new image in the 'images' disk
+                $path = $file->store('', 'images');
+                // replace the data with the new image name
+                $data['translations'][$locale]['product_details']['image']
+                    = basename($path);
+            }
         }
-            // Store the new image and name it
-            $stored = $file->store('', 'images');
-            $details['image'] = basename($stored);
-        }
 
-        // Merge the details with the main data
-        $data['product_details'] = array_merge(
-            $details,
-            Arr::except($data['product_details'] ?? [], ['image'])
-        );
+        // Product update
+        $this->productService->update($product, $data);
 
-        $updated = $this->productService->update($product, $data);
+        return response()->json(null, 204);
+    }
+
+    /**
+     * @OA\Patch(
+     *     path="/api/products/{product}/pricing",
+     *     operationId="updateProductPricing",
+     *     tags={"Products"},
+     *     summary="Update product pricing and stock (admin only)",
+     *     description="Updates the pricing and stock quantity of a product only for an administrator.",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="product", in="path", required=true,
+     *         @OA\Schema(type="integer", format="int64", example=42),
+     *         description="ID du produit à mettre à jour"
+     *     ),
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="price",          type="number", format="float", example=59.99),
+     *             @OA\Property(property="sale",           type="number", format="float", example=0.15),
+     *             @OA\Property(property="stock_quantity", type="integer",               example=120)
+     *         )
+     *     ),
+     *
+     *     @OA\Response(response=204, description="Product pricing updated successfully, no content"),
+     *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
+     * )
+     *
+     * @param  UpdateProductPricingRequest  $request
+     * @param  Product  $product
+     * @return JsonResponse
+     */
+    public function updatePricing(UpdateProductPricingRequest $request, Product $product): JsonResponse
+    {
+        $this->productService->updatePricing($product, $request->validated());
 
         return response()->json(null, 204);
     }

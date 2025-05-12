@@ -13,6 +13,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *   @OA\Property(property="id",            type="integer", example=7),
  *   @OA\Property(property="product_id",    type="integer", example=42),
  *   @OA\Property(property="quantity",      type="integer", example=3),
+ *   @OA\Property(property="in_stock",      type="boolean", example=true),
+ *   @OA\Property(property="available_quantity", type="integer", example=5),
  *   @OA\Property(property="unit_price",    type="number",  format="float", example=53.99),
  *   @OA\Property(property="total_price",   type="number",  format="float", example=161.97),
  *   @OA\Property(property="discount_rate", type="number",  format="float", example=0.10, nullable=true),
@@ -36,11 +38,14 @@ class CartItemResource extends JsonResource
         $discountRate   = $this->product->sale ?? 0.0; // ex. 0.10 = 10%
         $unitPrice      = round($originalPrice * (1 - $discountRate), 2);
         $totalPrice     = round($unitPrice * $this->quantity, 2);
+        $available = $this->product->stock_quantity >= $this->quantity;
 
         return [
             'id' => $this->id,
             'product_id' => $this->product_id,
             'quantity' => $this->quantity,
+            'in_stock' => $available,
+            'available_quantity' => $this->product->stock_quantity,
 
             // Price after discount
             'unit_price' => $unitPrice,
@@ -52,7 +57,7 @@ class CartItemResource extends JsonResource
                 'discount_rate' => $discountRate,
             ]),
 
-            // On choisit seulement les champs nécessaires du produit
+            // Select product details
             'product'  => [
                 'name'     => $this->product->name,
                 'image'    => $this->product->product_details['image']    ?? null,

@@ -15,6 +15,7 @@ use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\Writer\PngWriter;
 use App\Mail\TicketsGenerated;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Models\User;
 use App\Enums\PaymentStatus;
@@ -91,7 +92,7 @@ class TicketService
                     ->appends($filters);
     }
 
-    public function generateForPaymentUuid(string $paymentUuid): void
+    public function generateForPaymentUuid(string $paymentUuid, string $locale): void
     {
         $payment = Payment::with('user')
                         ->where('uuid', $paymentUuid)
@@ -100,55 +101,62 @@ class TicketService
         $user = $payment->user;
         $createdTickets = [];
 
-        foreach ($payment->cart_snapshot as $itemData) {
-            // Retrieve the quantity from the item data or default to 1
-            $quantity = $itemData['quantity'] ?? 1;
+        app()->setLocale($locale);
 
-            $product = Product::find($itemData['product_id']);
+        DB::transaction(function() use ($payment, $user, &$createdTickets) {
+            foreach ($payment->cart_snapshot['items'] as $itemData) {
+                $productId = $itemData['product_id'];
+                // Retrieve the quantity from the item data or default to 1
+                $quantity = $itemData['quantity'] ?? 1;
 
-            for ($i = 0; $i < $quantity; $i++) {
-                $token       = (string) Str::uuid();
-                $qrFilename  = "qr_{$token}.png";
-                $pdfFilename = "ticket_{$token}.pdf";
+                $product = Product::findOrFail($productId);
 
-                // Generate and store the QR code
-                $result = Builder::create()
-                    ->writer(new PngWriter())
-                    ->data($token)
-                    ->encoding(new Encoding('UTF-8'))
-                    ->size(300)
-                    ->margin(10)
-                    ->build();
-                Storage::disk('qrcodes')->put($qrFilename, $result->getString());
+                $product->decrement('stock_quantity', $quantity);
 
-                $qrDataUri = $result->getDataUri();
+                for ($i = 0; $i < $quantity; $i++) {
+                    $token       = (string) Str::uuid();
+                    $qrFilename  = "qr_{$token}.png";
+                    $pdfFilename = "ticket_{$token}.pdf";
 
-                // Generate and store the PDF
-                $pdf = Pdf::loadView('tickets.template', [
-                    'user'   => $user,
-                    // passe l'objet product pour avoir tous ses détails
-                    'item'   => (object)[
-                        'product'          => $product,
+                    // Generate and store the QR code
+                    $result = Builder::create()
+                        ->writer(new PngWriter())
+                        ->data($token)
+                        ->encoding(new Encoding('UTF-8'))
+                        ->size(300)
+                        ->margin(10)
+                        ->build();
+                    Storage::disk('qrcodes')->put($qrFilename, $result->getString());
+
+                    $qrDataUri = $result->getDataUri();
+
+                    // Generate and store the PDF
+                    $pdf = Pdf::loadView('tickets.template', [
+                        'user'   => $user,
+                        // passe l'objet product pour avoir tous ses détails
+                        'item'   => (object)[
+                            'product'          => $product,
+                            'product_snapshot' => $itemData,
+                        ],
+                        'token'  => $token,
+                        'qrDataUri' => $qrDataUri,
+                    ]);
+                    Storage::disk('tickets')->put($pdfFilename, $pdf->output());
+
+                    // Save the ticket to the database
+                    $createdTickets[] = Ticket::create([
                         'product_snapshot' => $itemData,
-                    ],
-                    'token'  => $token,
-                    'qrDataUri' => $qrDataUri,
-                ]);
-                Storage::disk('tickets')->put($pdfFilename, $pdf->output());
-
-                // Save the ticket to the database
-                $createdTickets[] = Ticket::create([
-                    'product_snapshot' => $itemData,
-                    'token'            => $token,
-                    'qr_filename'      => $qrFilename,
-                    'pdf_filename'     => $pdfFilename,
-                    'status'           => TicketStatus::Issued->value,
-                    'user_id'          => $user->id,
-                    'payment_id'       => $payment->id,
-                    'product_id'       => $itemData['product_id'],
-                ]);
+                        'token'            => $token,
+                        'qr_filename'      => $qrFilename,
+                        'pdf_filename'     => $pdfFilename,
+                        'status'           => TicketStatus::Issued->value,
+                        'user_id'          => $user->id,
+                        'payment_id'       => $payment->id,
+                        'product_id'       => $itemData['product_id'],
+                    ]);
+                }
             }
-        }
+        });
 
         // Mail sending
         Mail::to($user->email)
