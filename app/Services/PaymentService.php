@@ -199,6 +199,7 @@ class PaymentService
             'product_id'       => $item->product_id,
             'product_name'     => $item->product->name,
             'ticket_type'      => $item->product->product_details['category'],
+            'ticket_places'    => $item->product->product_details['places'],
             'quantity'         => $item->quantity,
             'unit_price'       => (float) $item->product->price,
             'discount_rate'    => (float) $item->product->sale,

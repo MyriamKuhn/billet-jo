@@ -240,6 +240,9 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -279,11 +282,11 @@
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
                     },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -4888,6 +4891,10 @@
                                 "ticket_type": {
                                     "type": "string",
                                     "example": "adult"
+                                },
+                                "product_place": {
+                                    "type": "integer",
+                                    "example": 2
                                 },
                                 "quantity": {
                                     "type": "integer",

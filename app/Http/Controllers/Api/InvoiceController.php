@@ -42,12 +42,13 @@ class InvoiceController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
-     *     @OA\Response(response=403, ref="#/components/responses/Forbidden")
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      */
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user = auth()->user();
 
         $invoices = Payment::query()
             ->where('user_id', $user->id)
@@ -92,8 +93,8 @@ class InvoiceController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
-     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
@@ -154,7 +155,7 @@ class InvoiceController extends Controller
      */
     public function adminDownload(Request $request, string $filename): StreamedResponse
     {
-        $user = $request->user();
+        $user = auth()->user();
         if (! $user->role->isAdmin()) {
             abort(403, 'Forbidden');
         }

@@ -23,6 +23,7 @@ use App\Models\Product;
  *             @OA\Property(property="product_id",   type="integer", example=42),
  *             @OA\Property(property="product_name", type="string",  example="Billet concert"),
  *             @OA\Property(property="ticket_type",  type="string",  example="adult"),
+ *             @OA\Property(property="product_place", type="integer", example=2),
  *             @OA\Property(property="quantity",     type="integer", example=2),
  *             @OA\Property(property="unit_price",   type="number",  format="float", example=50.00)
  *         )
