@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>{{ __('invoice_title', ['invoice_number' =>  $payment->uuid]) }}</title>
+    <title>{{ __('invoice.invoice_title', ['invoice_number' =>  $payment->uuid]) }}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
@@ -118,24 +118,24 @@
     <div class="container">
         <div class="header">
             <img src="{{ public_path('images/jo_logo.png') }}" alt="Logo" class="logo">
-            <h1>{{ __('invoice_title', ['invoice_number' =>  $payment->uuid]) }}</h1>
-            <div class="date">{{ __('invoice_date', ['date' =>  $payment->created_at->format('F j, Y')]) }} </div>
+            <h1>{{ __('invoice.invoice_title', ['invoice_number' =>  $payment->uuid]) }}</h1>
+            <div class="date">{{ __('invoice.invoice_date', ['date' =>  $payment->created_at->format('F j, Y')]) }} </div>
         </div>
 
         <div class="customer">
-            <p><strong>{{ __('invoice_customer') }}</strong> {{ $payment->user->firstname }} {{ $payment->user->lastname }}</p>
-            <p><strong>{{ __('invoice_email') }}</strong> {{ $payment->user->email }}</p>
+            <p><strong>{{ __('invoice.invoice_customer') }}</strong> {{ $payment->user->firstname }} {{ $payment->user->lastname }}</p>
+            <p><strong>{{ __('invoice.invoice_email') }}</strong> {{ $payment->user->email }}</p>
         </div>
 
         <div class="items">
-            <h2>{{ __('invoice_content') }}</h2>
+            <h2>{{ __('invoice.invoice_content') }}</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>{{ __('invoice_product') }}</th>
-                        <th>{{ __('invoice_quantity') }}</th>
-                        <th class="right">{{ __('invoice_unit_price') }}</th>
-                        <th class="right">{{ __('invoice_total_price') }}</th>
+                        <th>{{ __('invoice.invoice_product') }}</th>
+                        <th>{{ __('invoice.invoice_quantity') }}</th>
+                        <th class="right">{{ __('invoice.invoice_unit_price') }}</th>
+                        <th class="right">{{ __('invoice.invoice_total_price') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -153,30 +153,30 @@
 
         <table class="totals">
             <tr>
-                <td><strong>{{ __('invoice_subtotal') }}</strong></td>
+                <td><strong>{{ __('invoice.invoice_subtotal') }}</strong></td>
                 <td class="right">{{ number_format($payment->amount, 2, '.', ' ') }} €</td>
             </tr>
 
             @if ($payment->refunded_amount > 0)
                 <tr>
-                    <td><strong>{{ __('invoice_refunded') }}</strong></td>
+                    <td><strong>{{ __('invoice.invoice_refunded') }}</strong></td>
                     <td class="right">- {{ number_format($payment->refunded_amount, 2, '.', ' ') }} €</td>
                 </tr>
                 <tr>
-                    <td><strong>{{ __('invoice_balance_due') }}</strong></td>
+                    <td><strong>{{ __('invoice.invoice_balance_due') }}</strong></td>
                     <td class="right">{{ number_format($payment->amount - $payment->refunded_amount, 2, '.', ' ') }} €</td>
                 </tr>
             @endif
 
             <tr>
-                <td><strong>{{ __('invoice_total_paid') }}</strong></td>
+                <td><strong>{{ __('invoice.invoice_total_paid') }}</strong></td>
                 <td class="right">{{ number_format($payment->amount - ($payment->refunded_amount ?? 0), 2, '.', ' ') }} €</td>
             </tr>
         </table>
 
         <div class="footer">
-            T{{ __('invoice_thank_you', ['app_name' => config('app.name')]) }}<br>
-            <small>{{ __('invoice_generated', ['app_name' => config('app.name')]) }}</small>
+            T{{ __('invoice.invoice_thank_you', ['app_name' => config('app.name')]) }}<br>
+            <small>{{ __('invoice.invoice_generated', ['app_name' => config('app.name')]) }}</small>
         </div>
     </div>
 </body>

@@ -19,13 +19,15 @@ use App\Models\Product;
  *         description="Localized snapshot of the cart as seen by the admin",
  *         @OA\Items(
  *             type="object",
- *             required={"product_id","product_name","ticket_type","quantity","unit_price"},
+ *             required={"product_id","product_name","ticket_type","ticket_places","quantity","unit_price", "discount_rate","discounted_price"},
  *             @OA\Property(property="product_id",   type="integer", example=42),
  *             @OA\Property(property="product_name", type="string",  example="Billet concert"),
  *             @OA\Property(property="ticket_type",  type="string",  example="adult"),
- *             @OA\Property(property="product_place", type="integer", example=2),
+ *             @OA\Property(property="ticket_places", type="integer", example=2),
  *             @OA\Property(property="quantity",     type="integer", example=2),
- *             @OA\Property(property="unit_price",   type="number",  format="float", example=50.00)
+ *             @OA\Property(property="unit_price",   type="number",  format="float", example=50.00),
+ *             @OA\Property(property="discount_rate", type="number",  format="float", example=0.10),
+ *             @OA\Property(property="discounted_price", type="number", format="float", example=45.00),
  *         )
  *     ),
  *     @OA\Property(property="amount",          type="number", format="float", example=130.00),
@@ -64,11 +66,14 @@ class PaymentResource extends JsonResource
             return [
                 'product_id'    => $line['product_id'],
                 'product_name'  => $product
-                    ? $product->name   // via getNameAttribute()
+                    ? $product->name
                     : ($line['product_name'] ?? null),
                 'ticket_type'   => $product
                     ? $product->product_details['category']
                     : ($line['ticket_type'] ?? null),
+                'ticket_places' => $line['ticket_places'],
+                'discount_rate' => $line['discount_rate'],
+                'discounted_price' => $line['discounted_price'],
                 'quantity'      => $line['quantity'],
                 'unit_price'    => $line['unit_price'],
             ];

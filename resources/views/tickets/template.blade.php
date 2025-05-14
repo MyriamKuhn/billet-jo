@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 <head>
     <meta charset="UTF-8">
-    <title>Ticket – {{ $item->product_snapshot['product_name'] }}</title>
+    <title>{{ __('ticket.ticket_title', ['product_name' => $item->product_snapshot['product_name']]) }}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
@@ -56,34 +56,36 @@
 
         {{-- Attendee Information --}}
         <div class="section">
-            <h3>Attendee Information</h3>
-            <p><strong>Name:</strong> {{ $user->firstname }} {{ $user->lastname }}</p>
-            <p><strong>Email:</strong> {{ $user->email }}</p>
+            <h3>{{ __('ticket.attendee_info') }}</h3>
+            <p><strong>{{ __('ticket.attendee_name') }}</strong> {{ $user->firstname }} {{ $user->lastname }}</p>
+            <p><strong>{{ __('ticket.attendee_email') }}</strong> {{ $user->email }}</p>
         </div>
 
         {{-- Event Details --}}
-        @php $details = $item->product->product_details; @endphp
+        @php
+            $snap = $item->product_snapshot;
+            $details = $item->product->product_details;
+        @endphp
         <div class="section">
-            <h3>Event Details</h3>
-            <p><strong>Category:</strong> {{ $details['category'] }}</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($details['date'])->format('F j, Y') }}</p>
-            <p><strong>Time:</strong> {{ $details['time'] }}</p>
-            <p><strong>Location:</strong> {{ $details['location'] }}</p>
-            <p><strong>Description:</strong> {{ $details['description'] }}</p>
-            <p><strong>Seats:</strong> {{ $item->product_snapshot['quantity'] }}</p>
+            <h3>{{ __('ticket.event_details') }}</h3>
+            <p><strong>{{ __('ticket.event_category') }}</strong>{{ $snap['ticket_type'] }}</p>
+            <p><strong>{{ __('ticket.event_date') }}</strong>{{ \Carbon\Carbon::parse($details['date'])->format('F j, Y') }}</p>
+            <p><strong>{{ __('ticket.event_time') }}</strong>{{ $details['time'] }}</p>
+            <p><strong>{{ __('ticket.event_location') }}</strong>{{ $details['location'] }}</p>
+            <p><strong>{{ __('ticket.event_places') }}</strong>{{ $snap['ticket_places'] }}</p>
         </div>
 
         {{-- QR Code --}}
         <div class="qr-code">
-            <p>Please present this QR code at the entrance</p>
+            <p>{{ __('ticket.qr_code') }}</p>
             <img src="{{ $qrDataUri }}" alt="QR Code">
-            <p><small>Ticket code: {{ $token }}</small></p>
+            <p><small>{{ __('ticket.ticket_code', ['token' => $token]) }}</small></p>
         </div>
 
         {{-- Footer --}}
         <div class="footer">
-            Thank you for your purchase – {{ config('app.name') }}<br>
-            <small>This ticket is valid only for the event above.</small>
+            {{ __('ticket.thank_you', ['app_name' => config('app.name')]) }}<br>
+            <small>{{ __('ticket.validity') }}</small>
         </div>
     </div>
 </body>

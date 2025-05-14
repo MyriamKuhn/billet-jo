@@ -13,3 +13,7 @@ Route::get('/docs/backend', function () {
 Route::get('/docs/frontend', function () {
     return view('frontend');
 });
+
+Route::get('/docs/architecture', function () {
+    return view('architecture');
+});

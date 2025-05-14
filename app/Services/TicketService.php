@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Enums\PaymentStatus;
 use App\Events\InvoiceRequested;
 use App\Events\PaymentSucceeded;
+use App\Exceptions\TicketAlreadyProcessedException;
 
 class TicketService
 {
@@ -32,39 +33,63 @@ class TicketService
      */
     public function getFilteredTickets(array $filters): LengthAwarePaginator
     {
-        $query = Ticket::with(['user','payment','product']);
+        $query = Ticket::query();
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+        // 1) Recherche globale sur token, nom de produit, type de ticket
+        if (! empty($filters['q'])) {
+            $q = $filters['q'];
+            $query->where(function($qb) use ($q) {
+                $qb->where('token', 'like', "%{$q}%")
+                ->orWhere('product_snapshot->product_name', 'like', "%{$q}%")
+                ->orWhere('product_snapshot->ticket_type', 'like', "%{$q}%");
+            });
         }
 
-        if (!empty($filters['user_id'])) {
+        // 2) Filtres simples
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (! empty($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);
-        } elseif (!empty($filters['user_email'])) {
+        } elseif (! empty($filters['user_email'])) {
             $query->whereHas('user', fn($q) =>
                 $q->where('email', $filters['user_email'])
             );
         }
+        if (! empty($filters['product_id'])) {
+            $query->where('product_id', $filters['product_id']);
+        }
+        if (! empty($filters['payment_uuid'])) {
+            $query->where('payment_id', function($q) use ($filters) {
+                $q->select('id')
+                ->from('payments')
+                ->where('uuid', $filters['payment_uuid'])
+                ->limit(1);
+            });
+        }
 
-        $applyDateFilter = function(string $column, string $fromKey, string $toKey) use (&$query, $filters) {
-            if (!empty($filters[$fromKey])) {
-                $query->whereDate($column, '>=', $filters[$fromKey]);
-            }
-            if (!empty($filters[$toKey])) {
-                $query->whereDate($column, '<=', $filters[$toKey]);
-            }
-        };
+        // 3) Filtres de date
+        $applyDate = fn($column,$from,$to) =>
+            tap($query, function($q) use ($column,$from,$to,$filters) {
+                if (! empty($filters[$from])) {
+                    $q->whereDate($column, '>=', $filters[$from]);
+                }
+                if (! empty($filters[$to])) {
+                    $q->whereDate($column, '<=', $filters[$to]);
+                }
+            });
+        $applyDate('created_at','created_from','created_to');
+        $applyDate('updated_at','updated_from','updated_to');
+        $applyDate('used_at','used_from','used_to');
+        $applyDate('refunded_at','refunded_from','refunded_to');
+        $applyDate('cancelled_at','cancelled_from','cancelled_to');
 
-        $applyDateFilter('created_at',   'created_from',   'created_to');
-        $applyDateFilter('updated_at',   'updated_from',   'updated_to');
-        $applyDateFilter('used_at',      'used_from',      'used_to');
-        $applyDateFilter('refunded_at',  'refunded_from',  'refunded_to');
-        $applyDateFilter('cancelled_at', 'cancelled_from', 'cancelled_to');
-
+        // 4) Pagination
         $perPage = $filters['per_page'] ?? 25;
-        return $query->orderByDesc('created_at')
-                    ->paginate($perPage)
-                    ->appends($filters);
+        return $query
+            ->orderByDesc('created_at')
+            ->paginate($perPage)
+            ->appends($filters);
     }
 
     /**
@@ -83,6 +108,22 @@ class TicketService
             $q = $filters['q'];
             // MySQL/Postgres JSON search :
             $query->where('product_snapshot->product_name', 'like', "%{$q}%");
+        }
+
+        // Filtre par date d'événement
+        if (! empty($filters['event_date_from'])) {
+            $query->whereDate(
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(product_snapshot, '$.date'))"),
+                '>=',
+                $filters['event_date_from']
+            );
+        }
+        if (! empty($filters['event_date_to'])) {
+            $query->whereDate(
+                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(product_snapshot, '$.date'))"),
+                '<=',
+                $filters['event_date_to']
+            );
         }
 
         $perPage = $filters['per_page'] ?? 25;
@@ -196,15 +237,18 @@ class TicketService
      * @param  int $productId
      * @param  int $quantity
      */
-    public function createFreeTickets(int $userId, int $productId, int $quantity): void
+    public function createFreeTickets(int $userId, int $productId, int $quantity, string $locale): void
     {
         $user    = User::findOrFail($userId);
         $product = Product::findOrFail($productId);
+
+        app()->setLocale($locale);
 
         $itemData = [
             'product_id'       => $product->id,
             'product_name'     => $product->name,
             'ticket_type'      => $product->product_details['category'],
+            'ticket_places'    => $product->product_details['places'],
             'quantity'         => $quantity,
             'unit_price'       => $product->price,
             'discount_rate'    => 1.0,
@@ -225,9 +269,45 @@ class TicketService
         ]);
 
         // 2) Generate the invoice PDF
-        event(new InvoiceRequested($payment));
+        event(new InvoiceRequested($payment, $locale));
 
         // 3) Generate the tickets
-        event(new PaymentSucceeded($payment));
+        event(new PaymentSucceeded($payment, $locale));
+    }
+
+    /**
+     * Scan a ticket and validate it.
+     *
+     * @param  string $token
+     * @return array
+     */
+    public function scanAndValidate(string $token): array
+    {
+        $ticket = Ticket::with('user','product')
+                        ->where('token', $token)
+                        ->firstOrFail();
+
+        if ($ticket->status !== TicketStatus::Issued) {
+            throw new TicketAlreadyProcessedException($ticket);
+        }
+
+        $ticket->update([
+            'status'  => TicketStatus::Used->value,
+            'used_at' => now(),
+        ]);
+
+        return [
+            'user' => [
+                'firstname' => $ticket->user->firstname,
+                'lastname'  => $ticket->user->lastname,
+                'email'     => $ticket->user->email,
+            ],
+            'event' => [
+                'name'     => $ticket->product->name,
+                'date'     => $ticket->product->product_details['date'] ?? null,
+                'time'     => $ticket->product->product_details['time'] ?? null,
+                'location' => $ticket->product->product_details['location'] ?? null,
+            ],
+        ];
     }
 }

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <title>Welcome to the 2024 Olympics API</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bachelor Project: ticket administration API for Olympic Games 2024 including payments, ticket generation and statistics.">
+    <meta name="author"      content="Myriam Kühn">
+    <meta <meta name="keywords"    content="bachelor, API project, JO 2024, tickets, payment, sport">
     <style>
         body {
             margin: 0;
@@ -59,7 +62,10 @@
         <img src="{{ asset('images/logo_api.png') }}" alt="Logo API JO 2024">
         <h1>Welcome to the 2024 Olympics API</h1>
         <p>This REST API allows you to manage tickets for the 2024 Olympic Games.</p>
-        <a href="{{ url('/api/documentation') }}">View the documentation</a>
+        <a href="{{ url('/api/documentation') }}">View the swagger documentation</a>
+        <a href="{{ url('/docs/backend') }}">View the full backend documentation</a>
+        <a href="{{ url('/docs/frontend') }}">View the full frontend documentation</a>
+        <a href="{{ url('/docs/architecture') }}">View the architecture documentation</a>
     </div>
     <footer>
         <p>&copy; 2024 Myriam Kühn. All rights reserved.</p>

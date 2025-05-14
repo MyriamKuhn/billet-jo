@@ -7,14 +7,13 @@ use App\Http\Requests\TicketScanRequest;
 use App\Http\Requests\TicketUserRequest;
 use App\Http\Resources\TicketResource;
 use App\Http\Requests\TicketIndexRequest;
+use App\Http\Resources\UserTicketResource;
 use App\Services\TicketService;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Ticket;
 use App\Http\Requests\TicketStatusRequest;
 use App\Http\Requests\TicketCreateRequest;
-use App\Exceptions\TicketAlreadyProcessedException;
-use App\Enums\TicketStatus;
 use Illuminate\Http\Request;
 
 
@@ -33,31 +32,133 @@ class TicketController extends Controller
      * @OA\Get(
      *   path="/api/tickets",
      *   summary="Retrieve a filtered, paginated list of all tickets (admin only)",
-     *   description="This endpoint retrieves a list of all tickets with optional filters and pagination. It is intended for admin users only.",
+     *   description="This endpoint retrieves a list of all tickets with optional filters, global search, and pagination. Admin only.",
+     *   operationId="getTickets",
      *   tags={"Tickets"},
      *   security={{"bearerAuth":{}}},
      *
-     *   @OA\Parameter(name="status",      in="query", description="Filter by ticket status",          required=false, @OA\Schema(type="string", enum={"issued","used","refunded","cancelled"})),
-     *   @OA\Parameter(name="user_id",     in="query", description="Filter by user ID",                  required=false, @OA\Schema(type="integer", format="int64")),
-     *   @OA\Parameter(name="user_email",  in="query", description="Filter by user email",               required=false, @OA\Schema(type="string", format="email")),
-     *   @OA\Parameter(name="created_from",in="query", description="Created on or after (YYYY-MM-DD)",  required=false, @OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="created_to",  in="query", description="Created on or before (YYYY-MM-DD)", required=false, @OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="updated_from",in="query", description="Updated on or after (YYYY-MM-DD)",  required=false, @OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="updated_to",  in="query", description="Updated on or before (YYYY-MM-DD)", required=false, @OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="used_from",   in="query", description="Used on or after (YYYY-MM-DD)",     required=false, @OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="used_to",     in="query", description="Used on or before (YYYY-MM-DD)",    required=false, @OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="refunded_from",in="query",description="Refunded on or after (YYYY-MM-DD)", required=false,@OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="refunded_to", in="query", description="Refunded on or before (YYYY-MM-DD)",required=false,@OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="cancelled_from",in="query",description="Cancelled on or after (YYYY-MM-DD)",required=false,@OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="cancelled_to", in="query", description="Cancelled on or before (YYYY-MM-DD)",required=false,@OA\Schema(type="string", format="date")),
-     *   @OA\Parameter(name="per_page",    in="query", description="Items per page (1–100)",             required=false, @OA\Schema(type="integer", default=25, minimum=1, maximum=100)),
+     *   @OA\Parameter(
+     *     name="q",
+     *     in="query",
+     *     description="Global search on ticket token or product name or ticket category",
+     *     @OA\Schema(type="string")
+     *   ),
+     *   @OA\Parameter(
+     *     name="status",
+     *     in="query",
+     *     description="Filter by ticket status",
+     *     @OA\Schema(type="string", enum={"issued","used","refunded","cancelled"})
+     *   ),
+     *   @OA\Parameter(
+     *     name="user_id",
+     *     in="query",
+     *     description="Filter by user ID",
+     *     @OA\Schema(type="integer", format="int64")
+     *   ),
+     *   @OA\Parameter(
+     *     name="user_email",
+     *     in="query",
+     *     description="Filter by user email",
+     *     @OA\Schema(type="string", format="email")
+     *   ),
+     *   @OA\Parameter(
+     *     name="product_id",
+     *     in="query",
+     *     description="Filter by product ID",
+     *     @OA\Schema(type="integer", format="int64")
+     *   ),
+     *   @OA\Parameter(
+     *     name="payment_uuid",
+     *     in="query",
+     *     description="Filter by payment UUID",
+     *     @OA\Schema(type="string", format="uuid")
+     *   ),
+     *   @OA\Parameter(
+     *     name="created_from",
+     *     in="query",
+     *     description="Created on or after (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="created_to",
+     *     in="query",
+     *     description="Created on or before (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="updated_from",
+     *     in="query",
+     *     description="Updated on or after (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="updated_to",
+     *     in="query",
+     *     description="Updated on or before (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="used_from",
+     *     in="query",
+     *     description="Used on or after (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="used_to",
+     *     in="query",
+     *     description="Used on or before (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="refunded_from",
+     *     in="query",
+     *     description="Refunded on or after (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="refunded_to",
+     *     in="query",
+     *     description="Refunded on or before (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="cancelled_from",
+     *     in="query",
+     *     description="Cancelled on or after (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="cancelled_to",
+     *     in="query",
+     *     description="Cancelled on or before (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="per_page",
+     *     in="query",
+     *     description="Items per page (1–100)",
+     *     @OA\Schema(type="integer", default=25, minimum=1, maximum=100)
+     *   ),
+     *   @OA\Parameter(
+     *     name="page",
+     *     in="query",
+     *     description="Page number",
+     *     @OA\Schema(type="integer", default=1)
+     *   ),
      *
      *   @OA\Response(
      *     response=200,
      *     description="Successful response",
      *     @OA\JsonContent(
-     *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/TicketResource")),
-     *       @OA\Property(property="meta", type="object",
+     *       type="object",
+     *       @OA\Property(
+     *         property="data",
+     *         type="array",
+     *         @OA\Items(ref="#/components/schemas/TicketResource")
+     *       ),
+     *       @OA\Property(
+     *         property="meta",
+     *         type="object",
      *         @OA\Property(property="current_page", type="integer", example=1),
      *         @OA\Property(property="last_page",    type="integer", example=10),
      *         @OA\Property(property="per_page",     type="integer", example=25),
@@ -67,12 +168,9 @@ class TicketController extends Controller
      *   ),
      *   @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *   @OA\Response(response=403, ref="#/components/responses/Forbidden"),
-     *   @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *   @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
-     *
-     * @param TicketIndexRequest $request
      */
     public function index(TicketIndexRequest $request)
     {
@@ -113,12 +211,30 @@ class TicketController extends Controller
      *     description="Items per page (1–100)",
      *     @OA\Schema(type="integer", default=25, minimum=1, maximum=100)
      *   ),
+     *   @OA\Parameter(
+     *     name="page",
+     *     in="query",
+     *     description="Page number",
+     *     @OA\Schema(type="integer", default=1, minimum=1)
+     *   ),
+     *   @OA\Parameter(
+     *     name="event_date_from",
+     *     in="query",
+     *     description="Filter tickets for events on or after this date (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
+     *   @OA\Parameter(
+     *     name="event_date_to",
+     *     in="query",
+     *     description="Filter tickets for events on or before this date (YYYY-MM-DD)",
+     *     @OA\Schema(type="string", format="date")
+     *   ),
      *
      *   @OA\Response(
      *     response=200,
      *     description="Successful response",
      *     @OA\JsonContent(
-     *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/TicketResource")),
+     *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/UserTicketResource")),
      *       @OA\Property(property="meta", type="object",
      *         @OA\Property(property="current_page", type="integer"),
      *         @OA\Property(property="last_page",    type="integer"),
@@ -129,7 +245,6 @@ class TicketController extends Controller
      *   ),
      *   @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *   @OA\Response(response=403, ref="#/components/responses/Forbidden"),
-     *   @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *   @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *   @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
@@ -144,7 +259,7 @@ class TicketController extends Controller
         $paginated = $this->ticketService->getUserTickets($userId, $filters);
 
         return Response::json([
-            'data' => TicketResource::collection($paginated),
+            'data' => UserTicketResource::collection($paginated),
             'meta' => [
                 'current_page' => $paginated->currentPage(),
                 'last_page'    => $paginated->lastPage(),
@@ -365,6 +480,8 @@ class TicketController extends Controller
     }
 
     /**
+     * Update the status of a ticket (admin only).
+     *
      * @OA\Put(
      *   path="/api/tickets/admin/{id}/status",
      *   summary="Update ticket status (admin only)",
@@ -403,7 +520,7 @@ class TicketController extends Controller
         $status = $request->validatedStatus();
         $ticket = $this->ticketService->changeStatus($id, $status);
 
-        return response()->json([null], 204);
+        return response()->json(null, 204);
     }
 
     /**
@@ -421,7 +538,8 @@ class TicketController extends Controller
      *       required={"user_id","product_id","quantity"},
      *       @OA\Property(property="user_id",    type="integer", example=1, description="ID of the existing user"),
      *       @OA\Property(property="product_id", type="integer", example=42, description="ID of the product/event"),
-     *       @OA\Property(property="quantity",   type="integer", example=2, description="Number of tickets to generate")
+     *       @OA\Property(property="quantity",   type="integer", example=2, description="Number of tickets to generate"),
+     *       @OA\Property(property="locale",     type="string",  enum={"en","fr","de"}, example="fr", description="Language for invoice/tickets")
      *     )
      *   ),
      *
@@ -438,7 +556,8 @@ class TicketController extends Controller
         $this->ticketService->createFreeTickets(
             $data['user_id'],
             $data['product_id'],
-            $data['quantity']
+            $data['quantity'],
+            $data['locale'],
         );
 
         return response()->json(null, 204);
@@ -454,6 +573,8 @@ class TicketController extends Controller
      *   operationId="scanTicket",
      *   tags={"Tickets"},
      *   security={{"bearerAuth":{}}},
+     *
+     *   @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *
      *   @OA\Parameter(
      *     name="token",
@@ -525,31 +646,8 @@ class TicketController extends Controller
      */
     public function scanTicket(TicketScanRequest $request, string $token)
     {
-        $ticket = Ticket::with('user','product')
-                        ->where('token', $token)
-                        ->firstOrFail();
+        $result = $this->ticketService->scanAndValidate($token);
 
-        if ($ticket->status !== TicketStatus::Issued) {
-            throw new TicketAlreadyProcessedException($ticket);
-        }
-
-        $ticket->update([
-            'status'  => TicketStatus::Used->value,
-            'used_at' => now(),
-        ]);
-
-        return response()->json([
-            'user'  => [
-                'firstname' => $ticket->user->firstname,
-                'lastname'  => $ticket->user->lastname,
-                'email'     => $ticket->user->email,
-            ],
-            'event' => [
-                'name'     => $ticket->product->name,
-                'date'     => $ticket->product->product_details['date'] ?? null,
-                'time'     => $ticket->product->product_details['time'] ?? null,
-                'location' => $ticket->product->product_details['location'] ?? null,
-            ],
-        ], 200);
+        return response()->json($result, 200);
     }
 }
