@@ -32,9 +32,6 @@ class VerifyNewEmailNotificationTest extends TestCase
             )
             ->andReturn('http://example.com/verify?token=dummy-token');
 
-        // Ensure APP_NAME is set for translation
-        Config::set('app.name', 'MyApp');
-
         // Create a notifiable user (without persisting)
         $user = User::factory()->make([
             'email' => 'user@example.com',

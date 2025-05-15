@@ -44,7 +44,7 @@ class TicketControllerTest extends TestCase
             ->assertStatus(403);
 
         $res = $this->actingAs($admin, 'sanctum')
-                    ->getJson('/api/tickets?per_page=2');
+            ->getJson('/api/tickets?per_page=2');
 
         $res->assertStatus(200)
             ->assertJsonStructure([
@@ -52,7 +52,7 @@ class TicketControllerTest extends TestCase
                     '*' => [
                         'id',
                         'token',
-                        'product_snapshot',
+                        'product_snapshot', // ← on garde celui-ci
                         'status',
                         'used_at',
                         'refunded_at',
@@ -61,7 +61,7 @@ class TicketControllerTest extends TestCase
                         'pdf_filename',
                         'user',
                         'payment',
-                        'product',
+                        // 'product',        // ← on supprime
                         'created_at',
                         'updated_at',
                     ],

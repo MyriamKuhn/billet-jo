@@ -214,9 +214,8 @@ class TicketService
     public function changeStatus(int $ticketId, string $status): Ticket
     {
         $ticket = Ticket::findOrFail($ticketId);
-
-        // Update the status and timestamps based on the new status
         $now = Carbon::now();
+
         $timestamps = [
             TicketStatus::Used->value      => ['status' => $status, 'used_at'      => $now],
             TicketStatus::Refunded->value  => ['status' => $status, 'refunded_at'  => $now],
@@ -225,7 +224,16 @@ class TicketService
         ];
 
         $data = $timestamps[$status] ?? ['status' => $status];
-        $ticket->update($data);
+
+        DB::transaction(function() use ($ticket, $data, $status) {
+        // 1) Mise à jour du ticket
+            $ticket->update($data);
+
+            // 2) Si on annule ou on rembourse, on restitue 1 place en stock
+            if (in_array($status, [TicketStatus::Cancelled->value, TicketStatus::Refunded->value], true)) {
+                $ticket->product->increment('stock_quantity', 1);
+            }
+        });
 
         return $ticket;
     }
@@ -309,5 +317,32 @@ class TicketService
                 'location' => $ticket->product->product_details['location'] ?? null,
             ],
         ];
+    }
+
+    /**
+     * Retourne les ventes groupées par produit, avec pagination, recherche & tri.
+     *
+     * @param  array  $filters  q, sort_by, sort_order, per_page
+     */
+    public function getSalesStats(array $filters): LengthAwarePaginator
+    {
+        $query = Ticket::query()
+            ->select('product_id', DB::raw('COUNT(*) as sales_count'))
+            ->whereNotIn('status', ['cancelled', 'refunded'])
+            ->groupBy('product_id')
+            ->join('products', 'products.id', '=', 'tickets.product_id');
+
+        if (!empty($filters['q'])) {
+            $query->where('products.name', 'like', "%{$filters['q']}%");
+        }
+
+        // Tri
+        $sortBy    = $filters['sort_by']    ?? 'sales_count';
+        $sortOrder = $filters['sort_order'] ?? 'desc';
+        $query->orderBy($sortBy, $sortOrder);
+
+        $perPage = $filters['per_page'] ?? 15;
+
+        return $query->paginate($perPage)->appends($filters);
     }
 }

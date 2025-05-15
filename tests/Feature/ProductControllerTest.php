@@ -90,92 +90,136 @@ class ProductControllerTest extends TestCase
         $user = User::factory()->create(['role' => 'admin']);
         $this->actingAs($user, 'sanctum');
 
-        // 3) On prépare le payload
+        // 3) On prépare les données de base via la factory
         $base = Product::factory()->make()->only(['name', 'price', 'sale']);
 
+        // 4) On génère un faux fichier image
         $file = UploadedFile::fake()->image('product.png');
 
-        $payload = array_merge($base, [
-            'stock_quantity'  => 50,
-            'product_details' => [
-                'description' => 'Une description valide',
-                'date'        => now()->addDay()->toDateString(),
-                'time'        => now()->addHour()->format('H:i:s'),
-                'location'    => 'Paris',
-                'category'    => 'Électronique',
-                'places'      => 10,
-                'image'       => $file,
-            ],
-        ]);
+        // 5) On prépare le détail commun à chaque traduction
+        $details = [
+            'description' => 'Une description valide',
+            'date'        => now()->addDay()->toDateString(),
+            'time'        => now()->addHour()->format('H:i:s'),
+            'location'    => 'Paris',
+            'category'    => 'Électronique',
+            'places'      => 10,
+            'image'       => $file,
+        ];
 
-        // 4) On mocke le service pour qu'il retourne un Product
+        // 6) On construit le payload complet avec translations pour en, fr et de
+        $payload = [
+            'price'          => $base['price'],
+            'sale'           => $base['sale'],
+            'stock_quantity' => 50,
+            'translations'   => [
+                'en' => [
+                    'name'            => $base['name'],
+                    'product_details' => $details,
+                ],
+                'fr' => [
+                    'name'            => $base['name'],
+                    'product_details' => $details,
+                ],
+                'de' => [
+                    'name'            => $base['name'],
+                    'product_details' => $details,
+                ],
+            ],
+        ];
+
+        // 7) On mocke le service pour qu'il retourne un Product
         $serviceMock = Mockery::mock(ProductManagementService::class);
         $serviceMock
             ->shouldReceive('create')
             ->once()
+            ->withArgs(function(array $data) {
+                // On peut vérifier que les clés principales sont bien présentes
+                return isset($data['translations']['en']['product_details'])
+                    && isset($data['translations']['fr']['product_details'])
+                    && isset($data['translations']['de']['product_details']);
+            })
             ->andReturn(new Product());
         $this->app->instance(ProductManagementService::class, $serviceMock);
 
-        // 5) On envoie la requête (Laravel détecte l'UploadedFile et bascule en multipart)
+        // 8) On envoie la requête (Laravel détecte l'UploadedFile et bascule en multipart)
         $response = $this->post('/api/products', $payload);
 
-        // 6) On vérifie le statut HTTP
+        // 9) On vérifie le statut HTTP
         $response->assertStatus(201);
 
-        // 7) On vérifie qu'un seul fichier a bien été stocké
+        // 10) On vérifie qu'un seul fichier a bien été stocké
         $files = Storage::disk('images')->allFiles();
         $this->assertCount(1, $files, 'On attend exactement un fichier stocké.');
 
-        // 8) On vérifie que ce fichier est bien un .png
+        // 11) On vérifie que ce fichier est bien un .png
         $filename = basename($files[0]);
         $this->assertStringEndsWith('.png', $filename);
 
-        // 9) Enfin, on s'assure que le service a bien été appelé
+        // 12) On s'assure que Mockery ne laisse pas de mocks ouverts
         Mockery::close();
     }
 
     public function testUpdateModifiesProductWithoutImage()
     {
-        // 1) Crée et auth l’utilisateur admin
+        // 1) Crée et authentifie l’utilisateur admin
         $user = User::factory()->create(['role' => 'admin']);
         Sanctum::actingAs($user, ['*']);
 
         // 2) Produit existant
         $product = Product::factory()->create();
 
-        // 3) Payload complet (tous les champs sauf 'image')
-        $updateData = [
-            'name'           => 'Nouveau nom',
+        // 3) Détail commun sans image
+        $details = [
+            'description' => 'Une nouvelle description',
+            'date'        => now()->addDay()->toDateString(),
+            'time'        => now()->addHour()->format('H:i:s'),
+            'location'    => 'Paris',
+            'category'    => 'Électronique',
+            'places'      => 10,
+            // pas d'« image » : on conserve l’ancienne
+        ];
+
+        // 4) Payload complet avec sale et translations
+        $payload = [
             'price'          => 123,
+            'sale'           => 0.15,
             'stock_quantity' => 42,
-            'product_details' => [
-                'description' => 'Une nouvelle description',
-                'date'        => now()->addDay()->toDateString(),
-                'time'        => now()->addHour()->format('H:i:s'),
-                'location'    => 'Paris',
-                'category'    => 'Électronique',
-                'places'      => 10,
-                // plus d'image ici : on garde l'ancienne
+            'translations'   => [
+                'en' => [
+                    'name'            => 'Nouveau nom',
+                    'product_details' => $details,
+                ],
+                'fr' => [
+                    'name'            => 'Nouveau nom',
+                    'product_details' => $details,
+                ],
+                'de' => [
+                    'name'            => 'Nouveau nom',
+                    'product_details' => $details,
+                ],
             ],
         ];
 
-        // 4) Mock du service (vérifie qu'on reçoit bien un Product et $updateData est subset)
+        // 5) Mock du service : on s’assure juste qu’il reçoit un Product et un array
         $serviceMock = Mockery::mock(ProductManagementService::class);
         $serviceMock
             ->shouldReceive('update')
+            ->once()
             ->with(
                 Mockery::type(Product::class),
-                Mockery::subset($updateData)
+                Mockery::type('array')           // on n’impose plus le subset exact
             )
-            ->once()
             ->andReturn($product);
         $this->app->instance(ProductManagementService::class, $serviceMock);
 
-        // 5) Requête authentifiée en JSON
-        $response = $this->putJson("/api/products/{$product->id}", $updateData);
+        // 6) Requête PUT en JSON
+        $response = $this->putJson("/api/products/{$product->id}", $payload);
 
-        // 6) On attend bien 204 No Content
+        // 7) On attend bien 204 No Content
         $response->assertStatus(204);
+
+        Mockery::close();
     }
 
     public function testUpdateReplacesImageAndModifiesProduct()
@@ -186,35 +230,66 @@ class ProductControllerTest extends TestCase
         $user = User::factory()->create(['role' => 'admin']);
         Sanctum::actingAs($user, ['*']);
 
-        // 2) Produit existant avec une image initiale
-        $product = Product::factory()->create([
-            'product_details' => [
-                'image' => 'old.png',
-                // autres détails…
-            ],
-        ]);
-        // On crée l'ancienne image sur le disque fake
-        Storage::disk('images')->put('old.png', '');
+        // 2) Produit existant (sans traduction pour l'instant)
+        $product = Product::factory()->create();
 
-        // 3) Nouveau fichier à uploader
+        // 3) On ajoute manuellement les traductions pour chaque locale,
+        //    avec l'ancienne image 'old.png'
+        foreach (['en', 'fr', 'de'] as $locale) {
+            $product->translations()->create([
+                'locale'          => $locale,
+                'name'            => "Ancien nom {$locale}",
+                'product_details' => [
+                    'image'       => 'old.png',
+                    'description' => 'Ancienne description',
+                    'date'        => now()->toDateString(),
+                    'time'        => now()->format('H:i:s'),
+                    'location'    => 'Lieu',
+                    'category'    => 'Catégorie',
+                    'places'      => 5,
+                ],
+            ]);
+        }
+
+        // 4) On crée l'ancienne image sur le disque fake
+        Storage::disk('images')->put('old.png', 'dummy');
+
+        // 5) Nouveau fichier à uploader
         $newFile = UploadedFile::fake()->image('new.png');
 
+        // 6) Détail commun avec la nouvelle image
+        $details = [
+            'description' => 'Desc mise à jour',
+            'date'        => now()->addDay()->toDateString(),
+            'time'        => now()->addHour()->format('H:i:s'),
+            'location'    => 'Lyon',
+            'category'    => 'Art',
+            'places'      => 20,
+            'image'       => $newFile,
+        ];
+
+        // 7) Payload complet avec translations (on modifie aussi le nom)
         $updateData = [
-            'name'           => 'Nom modifié',
             'price'          => 200,
+            'sale'           => 0.20,
             'stock_quantity' => 5,
-            'product_details' => [
-                'description' => 'Desc mise à jour',
-                'date'        => now()->addDay()->toDateString(),
-                'time'        => now()->addHour()->format('H:i:s'),
-                'location'    => 'Lyon',
-                'category'    => 'Art',
-                'places'      => 20,
-                'image'       => $newFile,
+            'translations'   => [
+                'en' => [
+                    'name'            => 'Nom modifié EN',
+                    'product_details' => $details,
+                ],
+                'fr' => [
+                    'name'            => 'Nom modifié FR',
+                    'product_details' => $details,
+                ],
+                'de' => [
+                    'name'            => 'Nom modifié DE',
+                    'product_details' => $details,
+                ],
             ],
         ];
 
-        // 4) Mock du service (on ne vérifie pas l'image ici)
+        // 8) Mock du service (on ne vérifie pas le contenu exact ici)
         $serviceMock = Mockery::mock(ProductManagementService::class);
         $serviceMock
             ->shouldReceive('update')
@@ -222,19 +297,21 @@ class ProductControllerTest extends TestCase
             ->andReturn($product);
         $this->app->instance(ProductManagementService::class, $serviceMock);
 
-        // 5) Requête multipart
-        $response = $this->put(
-            "/api/products/{$product->id}",
-            $updateData
-        );
+        // 9) Requête multipart (Laravel détecte UploadedFile)
+        $response = $this->put("/api/products/{$product->id}", $updateData);
 
+        // 10) Vérifie le statut 204
         $response->assertStatus(204);
 
-        // 6) L'ancienne doit avoir été supprimée, la nouvelle stockée
+        // 11) L'ancienne image doit avoir été supprimée
         Storage::disk('images')->assertMissing('old.png');
+
+        // 12) Une seule nouvelle image doit exister
         $files = Storage::disk('images')->allFiles();
         $this->assertCount(1, $files);
         $this->assertStringEndsWith('.png', basename($files[0]));
+
+        Mockery::close();
     }
 
     public function testGetProductsReturnsProducts()

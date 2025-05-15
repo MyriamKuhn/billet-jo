@@ -21,6 +21,11 @@ Route::prefix('tickets')->group(function () {
         ->middleware('auth:sanctum')
         ->name('tickets.user');
 
+    // This route is used to get a list of the amount of tickets that are saled per product for the admin
+    Route::get('/admin/sales', [TicketController::class, 'ticketsPerProduct'])
+        ->middleware('auth:sanctum')
+        ->name('tickets.admin.sales');
+
     // This route is used to get a ticket for the admin
     Route::get('/admin/{filename}', [TicketController::class, 'downloadAdminTicket'])
         ->middleware('auth:sanctum')

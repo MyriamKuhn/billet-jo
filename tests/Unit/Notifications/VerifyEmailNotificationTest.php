@@ -44,8 +44,6 @@ class VerifyEmailNotificationTest extends TestCase
             )
             ->andReturn('http://example.com/verify?id=42&hash=' . sha1($user->getEmailForVerification()));
 
-        Config::set('app.name', 'MyApp');
-
         $notification = new VerifyEmailNotification();
 
         // Act

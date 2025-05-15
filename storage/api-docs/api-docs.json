@@ -2602,6 +2602,137 @@
                 ]
             }
         },
+        "/api/admin/sales": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Get ticket sales count per product (admin only)",
+                "description": "Returns a paginated list of products with the number of tickets sold for each product. Admin only.",
+                "operationId": "494f8029a85bf61ff898537a5df48e0b",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search by product name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sort by field",
+                        "schema": {
+                            "type": "string",
+                            "default": "sales_count",
+                            "enum": [
+                                "product_name",
+                                "sales_count"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Sort direction",
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of product sales",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ProductSalesResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "required": [
+                                                "current_page",
+                                                "last_page",
+                                                "per_page",
+                                                "total"
+                                            ],
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 73
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/users": {
             "get": {
                 "tags": [
@@ -5135,6 +5266,23 @@
                     },
                     "product_details": {
                         "$ref": "#/components/schemas/ProductDetails"
+                    }
+                },
+                "type": "object"
+            },
+            "ProductSalesResource": {
+                "properties": {
+                    "product_id": {
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "product_name": {
+                        "type": "string",
+                        "example": "Concert VIP Ticket"
+                    },
+                    "sales_count": {
+                        "type": "integer",
+                        "example": 128
                     }
                 },
                 "type": "object"

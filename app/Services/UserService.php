@@ -16,10 +16,10 @@ class UserService
      * Return all users for an administrator filtered and paginated.
      *
      * @param  User  $actor  The currently authenticated user
-     * @return Collection<int,User>
+     * @return LengthAwarePaginator
      * @throws AuthorizationException  If the actor is not an admin
      */
-    public function listAllUsers(User $actor, array $filters, int $perPage): LengthAwarePaginator
+    public function listAllUsers(User $actor, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         if (! $actor->role->isAdmin()) {
             throw new AuthorizationException();

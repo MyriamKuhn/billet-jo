@@ -15,6 +15,8 @@ use App\Models\Ticket;
 use App\Http\Requests\TicketStatusRequest;
 use App\Http\Requests\TicketCreateRequest;
 use Illuminate\Http\Request;
+use App\Http\Requests\SalesStatsRequest;
+use App\Http\Resources\ProductSalesResource;
 
 
 class TicketController extends Controller
@@ -650,4 +652,60 @@ class TicketController extends Controller
 
         return response()->json($result, 200);
     }
+
+    /**
+     * Get ticket sales count per product (admin only).
+     *
+     * @OA\Get(
+     *     path="/api/admin/sales",
+     *     summary="Get ticket sales count per product (admin only)",
+     *     description="Returns a paginated list of products with the number of tickets sold for each product. Admin only.",
+     *     tags={"Tickets"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *
+     *     @OA\Parameter(name="q", in="query", description="Search by product name", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="sort_by", in="query", description="Sort by field", @OA\Schema(type="string", enum={"product_name","sales_count"}, default="sales_count")),
+     *     @OA\Parameter(name="sort_order", in="query", description="Sort direction", @OA\Schema(type="string", enum={"asc","desc"}, default="desc")),
+     *     @OA\Parameter(name="per_page", in="query", description="Items per page", @OA\Schema(type="integer", default=15)),
+     *     @OA\Parameter(name="page", in="query", description="Page number", @OA\Schema(type="integer", default=1)),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Paginated list of product sales",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ProductSalesResource")),
+     *             @OA\Property(property="meta", type="object",
+     *                 required={"current_page","last_page","per_page","total"},
+     *                 @OA\Property(property="current_page", type="integer", example=1),
+     *                 @OA\Property(property="last_page",    type="integer", example=5),
+     *                 @OA\Property(property="per_page",     type="integer", example=15),
+     *                 @OA\Property(property="total",        type="integer", example=73)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
+     * ),
+     *
+     * @param SalesStatsRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function salesStats(SalesStatsRequest $request)
+    {
+        $filters   = $request->validatedFilters();
+        $paginator = $this->ticketService->getSalesStats($filters);
+
+        return response()->json([
+            'data'  => ProductSalesResource::collection($paginator),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ], 200);    }
 }

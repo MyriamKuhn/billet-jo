@@ -23,8 +23,6 @@ class ResetPasswordNotificationTest extends TestCase
         // Ensure non-production environment
         $this->app['env'] = 'testing';
 
-        Config::set('app.name', 'MyApp');
-
         $notifiable = (object) ['email' => 'user@example.com'];
         $token = 'abc123';
         $notification = new ResetPasswordNotification($token);
@@ -48,8 +46,6 @@ class ResetPasswordNotificationTest extends TestCase
     {
         // Force production environment
         $this->app['env'] = 'production';
-
-        Config::set('app.name', 'MyApp');
 
         $notifiable = (object) ['email' => 'test@example.com'];
         $token = 'xyz789';

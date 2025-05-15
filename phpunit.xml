@@ -17,6 +17,12 @@
             <directory>app</directory>
         </include>
     </source>
+    <coverage>
+        <report>
+            <clover outputFile="COVERAGE_REPORT/clover.xml"/>
+            <html outputDirectory="COVERAGE_REPORT/html"/>
+        </report>
+    </coverage>
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>

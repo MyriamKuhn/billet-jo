@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <title>Dashboard for D:\GitHub\billet-jo\app\Http</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="../_css/bootstrap.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../_css/nv.d3.min.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../_css/style.css?v=11.0.9" rel="stylesheet" type="text/css">
+  <link href="../_css/custom.css" rel="stylesheet" type="text/css">
+ </head>
+ <body>
+  <header>
+   <div class="container-fluid">
+    <div class="row">
+     <div class="col-md-12">
+      <nav aria-label="breadcrumb">
+       <ol class="breadcrumb">
+         <li class="breadcrumb-item"><a href="../index.html">D:\GitHub\billet-jo\app</a></li>
+         <li class="breadcrumb-item"><a href="index.html">Http</a></li>
+         <li class="breadcrumb-item active">(Dashboard)</li>
+
+       </ol>
+      </nav>
+     </div>
+    </div>
+   </div>
+  </header>
+  <div class="container-fluid">
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Classes</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="classCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="classComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Requests/UpdateProductPricingRequest.php.html#7">App\Http\Requests\UpdateProductPricingRequest</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Resources/UserResource.php.html#24">App\Http\Resources\UserResource</a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Controllers/Api/CartController.php.html#14">App\Http\Controllers\Api\CartController</a></td><td class="text-right">57%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Class</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Controllers/Api/CartController.php.html#14">App\Http\Controllers\Api\CartController</a></td><td class="text-right">20</td></tr>
+       <tr><td><a href="Requests/UpdateProductPricingRequest.php.html#7">App\Http\Requests\UpdateProductPricingRequest</a></td><td class="text-right">12</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-12">
+     <h2>Methods</h2>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Coverage Distribution</h3>
+     <div id="methodCoverageDistribution" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Complexity</h3>
+     <div id="methodComplexity" style="height: 300px;">
+       <svg></svg>
+     </div>
+    </div>
+   </div>
+   <div class="row">
+    <div class="col-md-6">
+     <h3>Insufficient Coverage</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right">Coverage</th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Controllers/Api/ProductController.php.html#510"><abbr title="App\Http\Controllers\Api\ProductController::updatePricing">updatePricing</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Requests/UpdateProductPricingRequest.php.html#12"><abbr title="App\Http\Requests\UpdateProductPricingRequest::authorize">authorize</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Requests/UpdateProductPricingRequest.php.html#22"><abbr title="App\Http\Requests\UpdateProductPricingRequest::rules">rules</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Resources/UserResource.php.html#32"><abbr title="App\Http\Resources\UserResource::toArray">toArray</abbr></a></td><td class="text-right">0%</td></tr>
+       <tr><td><a href="Controllers/Api/CartController.php.html#73"><abbr title="App\Http\Controllers\Api\CartController::show">show</abbr></a></td><td class="text-right">40%</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+    <div class="col-md-6">
+     <h3>Project Risks</h3>
+     <div class="scrollbox">
+      <table class="table">
+       <thead>
+        <tr>
+         <th>Method</th>
+         <th class="text-right"><abbr title="Change Risk Anti-Patterns (CRAP) Index">CRAP</abbr></th>
+        </tr>
+       </thead>
+       <tbody>
+       <tr><td><a href="Controllers/Api/CartController.php.html#73"><abbr title="App\Http\Controllers\Api\CartController::show">show</abbr></a></td><td class="text-right">7</td></tr>
+       <tr><td><a href="Requests/UpdateProductPricingRequest.php.html#12"><abbr title="App\Http\Requests\UpdateProductPricingRequest::authorize">authorize</abbr></a></td><td class="text-right">6</td></tr>
+
+       </tbody>
+      </table>
+     </div>
+    </div>
+   </div>
+   <footer>
+    <hr/>
+    <p>
+     <small>Generated by <a href="https://github.com/sebastianbergmann/php-code-coverage" target="_top">php-code-coverage 11.0.9</a> using <a href="https://www.php.net/" target="_top">PHP 8.3.6</a> and <a href="https://phpunit.de/">PHPUnit 11.5.17</a> at Thu May 15 9:28:35 UTC 2025.</small>
+    </p>
+   </footer>
+  </div>
+  <script src="../_js/jquery.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../_js/d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script src="../_js/nv.d3.min.js?v=11.0.9" type="text/javascript"></script>
+  <script type="text/javascript">
+$(document).ready(function() {
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#classCoverageDistribution svg')
+      .datum(getCoverageDistributionData([2,0,0,0,0,0,1,0,0,0,2,39], "Class Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.multiBarChart();
+    chart.tooltips(false)
+      .showControls(false)
+      .showLegend(false)
+      .reduceXTicks(false)
+      .staggerLabels(true)
+      .yAxis.tickFormat(d3.format('d'));
+
+    d3.select('#methodCoverageDistribution svg')
+      .datum(getCoverageDistributionData([4,0,0,0,0,1,0,0,0,0,2,117], "Method Coverage"))
+      .transition().duration(500).call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getCoverageDistributionData(data, label) {
+    var labels = [
+      '0%',
+      '0-10%',
+      '10-20%',
+      '20-30%',
+      '30-40%',
+      '40-50%',
+      '50-60%',
+      '60-70%',
+      '70-80%',
+      '80-90%',
+      '90-100%',
+      '100%'
+    ];
+    var values = [];
+    $.each(labels, function(key) {
+      values.push({x: labels[key], y: data[key]});
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Cyclomatic Complexity');
+
+    d3.select('#classComplexity svg')
+      .datum(getComplexityData([[57.14285714285714,11,"<a href=\"Controllers\/Api\/CartController.php.html#14\">App\\Http\\Controllers\\Api\\CartController<\/a>"],[100,6,"<a href=\"Controllers\/Api\/InvoiceController.php.html#11\">App\\Http\\Controllers\\Api\\InvoiceController<\/a>"],[100,14,"<a href=\"Controllers\/Api\/PaymentController.php.html#20\">App\\Http\\Controllers\\Api\\PaymentController<\/a>"],[94.54545454545455,14,"<a href=\"Controllers\/Api\/ProductController.php.html#17\">App\\Http\\Controllers\\Api\\ProductController<\/a>"],[100,16,"<a href=\"Controllers\/Api\/TicketController.php.html#20\">App\\Http\\Controllers\\Api\\TicketController<\/a>"],[100,9,"<a href=\"Controllers\/Api\/UserController.php.html#14\">App\\Http\\Controllers\\Api\\UserController<\/a>"],[100,10,"<a href=\"Controllers\/Auth\/AuthController.php.html#18\">App\\Http\\Controllers\\Auth\\AuthController<\/a>"],[100,15,"<a href=\"Controllers\/Auth\/VerificationController.php.html#21\">App\\Http\\Controllers\\Auth\\VerificationController<\/a>"],[100,0,"<a href=\"Controllers\/Controller.php.html#5\">App\\Http\\Controllers\\Controller<\/a>"],[100,2,"<a href=\"Middleware\/CheckOriginMiddleware.php.html#9\">App\\Http\\Middleware\\CheckOriginMiddleware<\/a>"],[100,2,"<a href=\"Middleware\/SetLocalLanguages.php.html#9\">App\\Http\\Middleware\\SetLocalLanguages<\/a>"],[100,5,"<a href=\"Requests\/AdminProductRequest.php.html#8\">App\\Http\\Requests\\AdminProductRequest<\/a>"],[100,3,"<a href=\"Requests\/AdminUpdateUserRequest.php.html#8\">App\\Http\\Requests\\AdminUpdateUserRequest<\/a>"],[100,2,"<a href=\"Requests\/Auth\/DisableTwoFactorRequest.php.html#7\">App\\Http\\Requests\\Auth\\DisableTwoFactorRequest<\/a>"],[100,2,"<a href=\"Requests\/Auth\/ForgotPasswordRequest.php.html#7\">App\\Http\\Requests\\Auth\\ForgotPasswordRequest<\/a>"],[100,2,"<a href=\"Requests\/Auth\/LoginRequest.php.html#7\">App\\Http\\Requests\\Auth\\LoginRequest<\/a>"],[100,2,"<a href=\"Requests\/Auth\/RegisterRequest.php.html#20\">App\\Http\\Requests\\Auth\\RegisterRequest<\/a>"],[100,2,"<a href=\"Requests\/Auth\/ResetPasswordRequest.php.html#8\">App\\Http\\Requests\\Auth\\ResetPasswordRequest<\/a>"],[100,2,"<a href=\"Requests\/Auth\/UpdateEmailRequest.php.html#7\">App\\Http\\Requests\\Auth\\UpdateEmailRequest<\/a>"],[100,2,"<a href=\"Requests\/Auth\/UpdatePasswordRequest.php.html#8\">App\\Http\\Requests\\Auth\\UpdatePasswordRequest<\/a>"],[100,4,"<a href=\"Requests\/IndexProductRequest.php.html#8\">App\\Http\\Requests\\IndexProductRequest<\/a>"],[100,4,"<a href=\"Requests\/PaymentIndexRequest.php.html#7\">App\\Http\\Requests\\PaymentIndexRequest<\/a>"],[100,3,"<a href=\"Requests\/PaymentInitiationRequest.php.html#7\">App\\Http\\Requests\\PaymentInitiationRequest<\/a>"],[100,6,"<a href=\"Requests\/RefundRequest.php.html#9\">App\\Http\\Requests\\RefundRequest<\/a>"],[100,2,"<a href=\"Requests\/StoreEmployeeRequest.php.html#8\">App\\Http\\Requests\\StoreEmployeeRequest<\/a>"],[100,4,"<a href=\"Requests\/StoreProductRequest.php.html#35\">App\\Http\\Requests\\StoreProductRequest<\/a>"],[100,4,"<a href=\"Requests\/TicketCreateRequest.php.html#7\">App\\Http\\Requests\\TicketCreateRequest<\/a>"],[100,4,"<a href=\"Requests\/TicketIndexRequest.php.html#9\">App\\Http\\Requests\\TicketIndexRequest<\/a>"],[100,3,"<a href=\"Requests\/TicketScanRequest.php.html#7\">App\\Http\\Requests\\TicketScanRequest<\/a>"],[100,4,"<a href=\"Requests\/TicketStatusRequest.php.html#9\">App\\Http\\Requests\\TicketStatusRequest<\/a>"],[100,4,"<a href=\"Requests\/TicketStoreRequest.php.html#7\">App\\Http\\Requests\\TicketStoreRequest<\/a>"],[100,3,"<a href=\"Requests\/TicketUserRequest.php.html#7\">App\\Http\\Requests\\TicketUserRequest<\/a>"],[100,3,"<a href=\"Requests\/UpdateCartItemRequest.php.html#7\">App\\Http\\Requests\\UpdateCartItemRequest<\/a>"],[0,3,"<a href=\"Requests\/UpdateProductPricingRequest.php.html#7\">App\\Http\\Requests\\UpdateProductPricingRequest<\/a>"],[100,2,"<a href=\"Requests\/UpdateUserNameRequest.php.html#7\">App\\Http\\Requests\\UpdateUserNameRequest<\/a>"],[100,1,"<a href=\"Resources\/CartItemResource.php.html#33\">App\\Http\\Resources\\CartItemResource<\/a>"],[100,1,"<a href=\"Resources\/CartResource.php.html#22\">App\\Http\\Resources\\CartResource<\/a>"],[100,1,"<a href=\"Resources\/PaymentInitiationResource.php.html#24\">App\\Http\\Resources\\PaymentInitiationResource<\/a>"],[94.44444444444444,3,"<a href=\"Resources\/PaymentResource.php.html#51\">App\\Http\\Resources\\PaymentResource<\/a>"],[100,1,"<a href=\"Resources\/ProductDetailsResource.php.html#22\">App\\Http\\Resources\\ProductDetailsResource<\/a>"],[100,1,"<a href=\"Resources\/ProductResource.php.html#24\">App\\Http\\Resources\\ProductResource<\/a>"],[100,1,"<a href=\"Resources\/TicketResource.php.html#95\">App\\Http\\Resources\\TicketResource<\/a>"],[0,1,"<a href=\"Resources\/UserResource.php.html#24\">App\\Http\\Resources\\UserResource<\/a>"],[100,1,"<a href=\"Resources\/UserTicketResource.php.html#38\">App\\Http\\Resources\\UserTicketResource<\/a>"]], 'Class Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  nv.addGraph(function() {
+    var chart = nv.models.scatterChart()
+      .showDistX(true)
+      .showDistY(true)
+      .showLegend(false)
+      .forceX([0, 100]);
+    chart.tooltipContent(function(graph) {
+      return '<p>' + graph.point.class + '</p>';
+    });
+
+    chart.xAxis.axisLabel('Code Coverage (in percent)');
+    chart.yAxis.axisLabel('Method Complexity');
+
+    d3.select('#methodComplexity svg')
+      .datum(getComplexityData([[100,1,"<a href=\"Controllers\/Api\/CartController.php.html#18\">App\\Http\\Controllers\\Api\\CartController::__construct<\/a>"],[40,4,"<a href=\"Controllers\/Api\/CartController.php.html#73\">App\\Http\\Controllers\\Api\\CartController::show<\/a>"],[100,5,"<a href=\"Controllers\/Api\/CartController.php.html#169\">App\\Http\\Controllers\\Api\\CartController::updateItem<\/a>"],[100,1,"<a href=\"Controllers\/Api\/CartController.php.html#214\">App\\Http\\Controllers\\Api\\CartController::clearCart<\/a>"],[100,1,"<a href=\"Controllers\/Api\/InvoiceController.php.html#49\">App\\Http\\Controllers\\Api\\InvoiceController::index<\/a>"],[100,2,"<a href=\"Controllers\/Api\/InvoiceController.php.html#105\">App\\Http\\Controllers\\Api\\InvoiceController::download<\/a>"],[100,3,"<a href=\"Controllers\/Api\/InvoiceController.php.html#156\">App\\Http\\Controllers\\Api\\InvoiceController::adminDownload<\/a>"],[100,1,"<a href=\"Controllers\/Api\/PaymentController.php.html#22\">App\\Http\\Controllers\\Api\\PaymentController::__construct<\/a>"],[100,1,"<a href=\"Controllers\/Api\/PaymentController.php.html#138\">App\\Http\\Controllers\\Api\\PaymentController::index<\/a>"],[100,1,"<a href=\"Controllers\/Api\/PaymentController.php.html#229\">App\\Http\\Controllers\\Api\\PaymentController::store<\/a>"],[100,8,"<a href=\"Controllers\/Api\/PaymentController.php.html#289\">App\\Http\\Controllers\\Api\\PaymentController::webhook<\/a>"],[100,1,"<a href=\"Controllers\/Api\/PaymentController.php.html#374\">App\\Http\\Controllers\\Api\\PaymentController::showStatus<\/a>"],[100,2,"<a href=\"Controllers\/Api\/PaymentController.php.html#441\">App\\Http\\Controllers\\Api\\PaymentController::refund<\/a>"],[100,1,"<a href=\"Controllers\/Api\/ProductController.php.html#22\">App\\Http\\Controllers\\Api\\ProductController::__construct<\/a>"],[100,2,"<a href=\"Controllers\/Api\/ProductController.php.html#85\">App\\Http\\Controllers\\Api\\ProductController::index<\/a>"],[100,2,"<a href=\"Controllers\/Api\/ProductController.php.html#159\">App\\Http\\Controllers\\Api\\ProductController::getProducts<\/a>"],[100,1,"<a href=\"Controllers\/Api\/ProductController.php.html#211\">App\\Http\\Controllers\\Api\\ProductController::show<\/a>"],[100,3,"<a href=\"Controllers\/Api\/ProductController.php.html#306\">App\\Http\\Controllers\\Api\\ProductController::store<\/a>"],[93.33333333333333,4,"<a href=\"Controllers\/Api\/ProductController.php.html#442\">App\\Http\\Controllers\\Api\\ProductController::update<\/a>"],[0,1,"<a href=\"Controllers\/Api\/ProductController.php.html#510\">App\\Http\\Controllers\\Api\\ProductController::updatePricing<\/a>"],[100,1,"<a href=\"Controllers\/Api\/TicketController.php.html#24\">App\\Http\\Controllers\\Api\\TicketController::__construct<\/a>"],[100,1,"<a href=\"Controllers\/Api\/TicketController.php.html#175\">App\\Http\\Controllers\\Api\\TicketController::index<\/a>"],[100,1,"<a href=\"Controllers\/Api\/TicketController.php.html#255\">App\\Http\\Controllers\\Api\\TicketController::userTickets<\/a>"],[100,2,"<a href=\"Controllers\/Api\/TicketController.php.html#308\">App\\Http\\Controllers\\Api\\TicketController::downloadTicket<\/a>"],[100,3,"<a href=\"Controllers\/Api\/TicketController.php.html#359\">App\\Http\\Controllers\\Api\\TicketController::downloadAdminTicket<\/a>"],[100,2,"<a href=\"Controllers\/Api\/TicketController.php.html#413\">App\\Http\\Controllers\\Api\\TicketController::downloadQr<\/a>"],[100,3,"<a href=\"Controllers\/Api\/TicketController.php.html#464\">App\\Http\\Controllers\\Api\\TicketController::downloadAdminQr<\/a>"],[100,1,"<a href=\"Controllers\/Api\/TicketController.php.html#518\">App\\Http\\Controllers\\Api\\TicketController::updateStatus<\/a>"],[100,1,"<a href=\"Controllers\/Api\/TicketController.php.html#553\">App\\Http\\Controllers\\Api\\TicketController::createForUser<\/a>"],[100,1,"<a href=\"Controllers\/Api\/TicketController.php.html#647\">App\\Http\\Controllers\\Api\\TicketController::scanTicket<\/a>"],[100,1,"<a href=\"Controllers\/Api\/UserController.php.html#16\">App\\Http\\Controllers\\Api\\UserController::__construct<\/a>"],[100,1,"<a href=\"Controllers\/Api\/UserController.php.html#76\">App\\Http\\Controllers\\Api\\UserController::index<\/a>"],[100,1,"<a href=\"Controllers\/Api\/UserController.php.html#144\">App\\Http\\Controllers\\Api\\UserController::show<\/a>"],[100,1,"<a href=\"Controllers\/Api\/UserController.php.html#179\">App\\Http\\Controllers\\Api\\UserController::updateSelf<\/a>"],[100,1,"<a href=\"Controllers\/Api\/UserController.php.html#227\">App\\Http\\Controllers\\Api\\UserController::update<\/a>"],[100,2,"<a href=\"Controllers\/Api\/UserController.php.html#285\">App\\Http\\Controllers\\Api\\UserController::checkEmailUpdate<\/a>"],[100,1,"<a href=\"Controllers\/Api\/UserController.php.html#330\">App\\Http\\Controllers\\Api\\UserController::storeEmployee<\/a>"],[100,1,"<a href=\"Controllers\/Api\/UserController.php.html#370\">App\\Http\\Controllers\\Api\\UserController::showSelf<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#20\">App\\Http\\Controllers\\Auth\\AuthController::__construct<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#61\">App\\Http\\Controllers\\Auth\\AuthController::register<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#168\">App\\Http\\Controllers\\Auth\\AuthController::login<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#213\">App\\Http\\Controllers\\Auth\\AuthController::enableTwoFactor<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#255\">App\\Http\\Controllers\\Auth\\AuthController::logout<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#311\">App\\Http\\Controllers\\Auth\\AuthController::forgotPassword<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#384\">App\\Http\\Controllers\\Auth\\AuthController::resetPassword<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#460\">App\\Http\\Controllers\\Auth\\AuthController::updatePassword<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#511\">App\\Http\\Controllers\\Auth\\AuthController::updateEmail<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/AuthController.php.html#567\">App\\Http\\Controllers\\Auth\\AuthController::disableTwoFactor<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/VerificationController.php.html#23\">App\\Http\\Controllers\\Auth\\VerificationController::__construct<\/a>"],[100,5,"<a href=\"Controllers\/Auth\/VerificationController.php.html#127\">App\\Http\\Controllers\\Auth\\VerificationController::verify<\/a>"],[100,1,"<a href=\"Controllers\/Auth\/VerificationController.php.html#198\">App\\Http\\Controllers\\Auth\\VerificationController::resend<\/a>"],[100,4,"<a href=\"Controllers\/Auth\/VerificationController.php.html#290\">App\\Http\\Controllers\\Auth\\VerificationController::verifyNew<\/a>"],[100,4,"<a href=\"Controllers\/Auth\/VerificationController.php.html#403\">App\\Http\\Controllers\\Auth\\VerificationController::cancelChange<\/a>"],[100,2,"<a href=\"Middleware\/CheckOriginMiddleware.php.html#16\">App\\Http\\Middleware\\CheckOriginMiddleware::handle<\/a>"],[100,2,"<a href=\"Middleware\/SetLocalLanguages.php.html#16\">App\\Http\\Middleware\\SetLocalLanguages::handle<\/a>"],[100,2,"<a href=\"Requests\/AdminProductRequest.php.html#13\">App\\Http\\Requests\\AdminProductRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/AdminProductRequest.php.html#23\">App\\Http\\Requests\\AdminProductRequest::rules<\/a>"],[100,2,"<a href=\"Requests\/AdminProductRequest.php.html#44\">App\\Http\\Requests\\AdminProductRequest::prepareForValidation<\/a>"],[100,2,"<a href=\"Requests\/AdminUpdateUserRequest.php.html#13\">App\\Http\\Requests\\AdminUpdateUserRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/AdminUpdateUserRequest.php.html#23\">App\\Http\\Requests\\AdminUpdateUserRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/Auth\/DisableTwoFactorRequest.php.html#12\">App\\Http\\Requests\\Auth\\DisableTwoFactorRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/Auth\/DisableTwoFactorRequest.php.html#22\">App\\Http\\Requests\\Auth\\DisableTwoFactorRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/Auth\/ForgotPasswordRequest.php.html#12\">App\\Http\\Requests\\Auth\\ForgotPasswordRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/Auth\/ForgotPasswordRequest.php.html#22\">App\\Http\\Requests\\Auth\\ForgotPasswordRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/Auth\/LoginRequest.php.html#12\">App\\Http\\Requests\\Auth\\LoginRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/Auth\/LoginRequest.php.html#22\">App\\Http\\Requests\\Auth\\LoginRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/Auth\/RegisterRequest.php.html#25\">App\\Http\\Requests\\Auth\\RegisterRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/Auth\/RegisterRequest.php.html#35\">App\\Http\\Requests\\Auth\\RegisterRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/Auth\/ResetPasswordRequest.php.html#13\">App\\Http\\Requests\\Auth\\ResetPasswordRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/Auth\/ResetPasswordRequest.php.html#23\">App\\Http\\Requests\\Auth\\ResetPasswordRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/Auth\/UpdateEmailRequest.php.html#12\">App\\Http\\Requests\\Auth\\UpdateEmailRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/Auth\/UpdateEmailRequest.php.html#22\">App\\Http\\Requests\\Auth\\UpdateEmailRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/Auth\/UpdatePasswordRequest.php.html#13\">App\\Http\\Requests\\Auth\\UpdatePasswordRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/Auth\/UpdatePasswordRequest.php.html#23\">App\\Http\\Requests\\Auth\\UpdatePasswordRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/IndexProductRequest.php.html#13\">App\\Http\\Requests\\IndexProductRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/IndexProductRequest.php.html#21\">App\\Http\\Requests\\IndexProductRequest::rules<\/a>"],[100,2,"<a href=\"Requests\/IndexProductRequest.php.html#42\">App\\Http\\Requests\\IndexProductRequest::prepareForValidation<\/a>"],[100,2,"<a href=\"Requests\/PaymentIndexRequest.php.html#12\">App\\Http\\Requests\\PaymentIndexRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/PaymentIndexRequest.php.html#22\">App\\Http\\Requests\\PaymentIndexRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/PaymentIndexRequest.php.html#44\">App\\Http\\Requests\\PaymentIndexRequest::validatedFilters<\/a>"],[100,1,"<a href=\"Requests\/PaymentInitiationRequest.php.html#12\">App\\Http\\Requests\\PaymentInitiationRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/PaymentInitiationRequest.php.html#22\">App\\Http\\Requests\\PaymentInitiationRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/PaymentInitiationRequest.php.html#35\">App\\Http\\Requests\\PaymentInitiationRequest::validatedData<\/a>"],[100,2,"<a href=\"Requests\/RefundRequest.php.html#14\">App\\Http\\Requests\\RefundRequest::authorize<\/a>"],[100,2,"<a href=\"Requests\/RefundRequest.php.html#25\">App\\Http\\Requests\\RefundRequest::prepareForValidation<\/a>"],[100,1,"<a href=\"Requests\/RefundRequest.php.html#48\">App\\Http\\Requests\\RefundRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/RefundRequest.php.html#64\">App\\Http\\Requests\\RefundRequest::messages<\/a>"],[100,1,"<a href=\"Requests\/StoreEmployeeRequest.php.html#13\">App\\Http\\Requests\\StoreEmployeeRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/StoreEmployeeRequest.php.html#23\">App\\Http\\Requests\\StoreEmployeeRequest::rules<\/a>"],[100,2,"<a href=\"Requests\/StoreProductRequest.php.html#40\">App\\Http\\Requests\\StoreProductRequest::authorize<\/a>"],[100,2,"<a href=\"Requests\/StoreProductRequest.php.html#50\">App\\Http\\Requests\\StoreProductRequest::rules<\/a>"],[100,2,"<a href=\"Requests\/TicketCreateRequest.php.html#12\">App\\Http\\Requests\\TicketCreateRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/TicketCreateRequest.php.html#22\">App\\Http\\Requests\\TicketCreateRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/TicketCreateRequest.php.html#37\">App\\Http\\Requests\\TicketCreateRequest::validatedData<\/a>"],[100,2,"<a href=\"Requests\/TicketIndexRequest.php.html#14\">App\\Http\\Requests\\TicketIndexRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/TicketIndexRequest.php.html#24\">App\\Http\\Requests\\TicketIndexRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/TicketIndexRequest.php.html#51\">App\\Http\\Requests\\TicketIndexRequest::validatedFilters<\/a>"],[100,2,"<a href=\"Requests\/TicketScanRequest.php.html#12\">App\\Http\\Requests\\TicketScanRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/TicketScanRequest.php.html#22\">App\\Http\\Requests\\TicketScanRequest::rules<\/a>"],[100,2,"<a href=\"Requests\/TicketStatusRequest.php.html#14\">App\\Http\\Requests\\TicketStatusRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/TicketStatusRequest.php.html#24\">App\\Http\\Requests\\TicketStatusRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/TicketStatusRequest.php.html#39\">App\\Http\\Requests\\TicketStatusRequest::validatedStatus<\/a>"],[100,1,"<a href=\"Requests\/TicketStoreRequest.php.html#12\">App\\Http\\Requests\\TicketStoreRequest::authorize<\/a>"],[100,2,"<a href=\"Requests\/TicketStoreRequest.php.html#22\">App\\Http\\Requests\\TicketStoreRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/TicketStoreRequest.php.html#48\">App\\Http\\Requests\\TicketStoreRequest::validatedUuid<\/a>"],[100,1,"<a href=\"Requests\/TicketUserRequest.php.html#12\">App\\Http\\Requests\\TicketUserRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/TicketUserRequest.php.html#22\">App\\Http\\Requests\\TicketUserRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/TicketUserRequest.php.html#38\">App\\Http\\Requests\\TicketUserRequest::validatedFilters<\/a>"],[100,1,"<a href=\"Requests\/UpdateCartItemRequest.php.html#12\">App\\Http\\Requests\\UpdateCartItemRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/UpdateCartItemRequest.php.html#22\">App\\Http\\Requests\\UpdateCartItemRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/UpdateCartItemRequest.php.html#30\">App\\Http\\Requests\\UpdateCartItemRequest::messages<\/a>"],[0,2,"<a href=\"Requests\/UpdateProductPricingRequest.php.html#12\">App\\Http\\Requests\\UpdateProductPricingRequest::authorize<\/a>"],[0,1,"<a href=\"Requests\/UpdateProductPricingRequest.php.html#22\">App\\Http\\Requests\\UpdateProductPricingRequest::rules<\/a>"],[100,1,"<a href=\"Requests\/UpdateUserNameRequest.php.html#9\">App\\Http\\Requests\\UpdateUserNameRequest::authorize<\/a>"],[100,1,"<a href=\"Requests\/UpdateUserNameRequest.php.html#14\">App\\Http\\Requests\\UpdateUserNameRequest::rules<\/a>"],[100,1,"<a href=\"Resources\/CartItemResource.php.html#35\">App\\Http\\Resources\\CartItemResource::toArray<\/a>"],[100,1,"<a href=\"Resources\/CartResource.php.html#24\">App\\Http\\Resources\\CartResource::toArray<\/a>"],[100,1,"<a href=\"Resources\/PaymentInitiationResource.php.html#32\">App\\Http\\Resources\\PaymentInitiationResource::toArray<\/a>"],[94.44444444444444,3,"<a href=\"Resources\/PaymentResource.php.html#59\">App\\Http\\Resources\\PaymentResource::toArray<\/a>"],[100,1,"<a href=\"Resources\/ProductDetailsResource.php.html#30\">App\\Http\\Resources\\ProductDetailsResource::toArray<\/a>"],[100,1,"<a href=\"Resources\/ProductResource.php.html#26\">App\\Http\\Resources\\ProductResource::toArray<\/a>"],[100,1,"<a href=\"Resources\/TicketResource.php.html#102\">App\\Http\\Resources\\TicketResource::toArray<\/a>"],[0,1,"<a href=\"Resources\/UserResource.php.html#32\">App\\Http\\Resources\\UserResource::toArray<\/a>"],[100,1,"<a href=\"Resources\/UserTicketResource.php.html#45\">App\\Http\\Resources\\UserTicketResource::toArray<\/a>"]], 'Method Complexity'))
+      .transition()
+      .duration(500)
+      .call(chart);
+
+    nv.utils.windowResize(chart.update);
+
+    return chart;
+  });
+
+  function getComplexityData(data, label) {
+    var values = [];
+    $.each(data, function(key) {
+      var value = Math.round(data[key][0]*100) / 100;
+      values.push({
+        x: value,
+        y: data[key][1],
+        class: data[key][2],
+        size: 0.05,
+        shape: 'diamond'
+      });
+    });
+
+    return [
+      {
+        key: label,
+        values: values,
+        color: "#4572A7"
+      }
+    ];
+  }
+});
+  </script>
+ </body>
+</html>

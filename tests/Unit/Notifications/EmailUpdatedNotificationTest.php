@@ -40,8 +40,6 @@ class EmailUpdatedNotificationTest extends TestCase
             )
             ->andReturn('http://example.com/cancel?token=' . $rawToken . '&old_email=' . urlencode($oldEmail));
 
-        Config::set('app.name', 'MyApp');
-
         $notification = new EmailUpdatedNotification($newEmail, $oldEmail, $rawToken);
 
         // Act

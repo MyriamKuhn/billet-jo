@@ -95,19 +95,23 @@ class TicketServiceTest extends TestCase
 
         $user = User::factory()->create();
         $product = Product::factory()->create([
-            'price' => 100,
-            'product_details' => ['category'=>'cat']
+            'price'           => 100,
+            'product_details' => [
+                'category' => 'cat',
+                'places'   => 5,        // <— ajouté ici
+            ],
         ]);
 
-        $this->service->createFreeTickets($user->id, $product->id, 2);
+        // On n’oublie pas le locale
+        $this->service->createFreeTickets($user->id, $product->id, 2, 'en');
 
-        // Payment created
+        // Vérification du paiement
         $payment = Payment::where('user_id', $user->id)->first();
         $this->assertEquals(0.0, (float)$payment->amount);
         $this->assertEquals(PaymentStatus::Paid->value, $payment->status->value);
         $this->assertNotNull($payment->invoice_link);
 
-        // Invoice event dispatched
+        // Événements déclenchés
         Event::assertDispatched(InvoiceRequested::class, fn($e) => $e->payment->id === $payment->id);
         Event::assertDispatched(PaymentSucceeded::class, fn($e) => $e->payment->id === $payment->id);
     }
@@ -115,44 +119,58 @@ class TicketServiceTest extends TestCase
     public function testGenerateForPaymentUuidStoresQrAndPdfAndCreatesTickets(): void
     {
         Mail::fake();
-
         Storage::fake('qrcodes');
         Storage::fake('tickets');
         Event::fake();
 
         $user = User::factory()->create();
+
+        $nowDate  = now()->toDateString();
+        $nowTime  = now()->format('H:i:s');
+        $location = 'TestLocation';
+        $places   = 5;
+
         $product = Product::factory()->create([
-            'product_details' => ['category'=>'cat'],
+            'product_details' => [
+                'category' => 'cat',
+                'places'   => $places,
+                'date'     => $nowDate,
+                'time'     => $nowTime,
+                'location' => $location,
+            ],
             'price' => 50,
-            'sale' => 0.1,
+            'sale'  => 0.1,
         ]);
+
         $payment = Payment::factory()->create([
-            'user_id'=> $user->id,
-            'cart_snapshot' => [[
-                'product_id'=>$product->id,
-                'quantity'=>1,
-                'product_name'=>$product->name,
-                'ticket_type'=>'cat',
-                'unit_price'=>50,
-                'discount_rate'=>0.1,
-                'discounted_price'=>45.0,
-            ]]
+            'user_id'       => $user->id,
+            'cart_snapshot' => [
+                'items' => [[
+                    'product_id'       => $product->id,
+                    'quantity'         => 1,
+                    'product_name'     => $product->name,
+                    'ticket_type'      => 'cat',
+                    'unit_price'       => 50,
+                    'discount_rate'    => 0.1,
+                    'discounted_price' => 45.0,
+                    'date'             => $nowDate,
+                    'time'             => $nowTime,
+                    'location'         => $location,
+                    'ticket_places'    => $places,     // ← ajouté
+                ]],
+            ],
         ]);
 
-        $this->service->generateForPaymentUuid($payment->uuid);
+        // on n’oublie pas le locale
+        $this->service->generateForPaymentUuid($payment->uuid, 'en');
 
-        // Ticket créé en base
         $this->assertDatabaseCount('tickets', 1);
         $ticket = Ticket::first();
 
-        // Vérifie que les fichiers ont bien été écrits avec leurs noms exacts
         Storage::disk('qrcodes')->assertExists($ticket->qr_filename);
         Storage::disk('tickets')->assertExists($ticket->pdf_filename);
 
-        // Mail sent
-        Mail::assertSent(TicketsGenerated::class, function ($mail) use ($user) {
-            return $mail->hasTo($user->email);
-        });
+        Mail::assertSent(TicketsGenerated::class, fn($mail) => $mail->hasTo($user->email));
     }
 
     public function testItFiltersByStatusAndLogsTheSql(): void

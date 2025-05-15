@@ -18,10 +18,13 @@ class CartControllerTest extends TestCase
 
     public function testShowAsGuestReturnsEmptyGuestCart()
     {
-        // Pas de session de panier pré-remplie
         $this->getJson('/api/cart')
             ->assertStatus(200)
-            ->assertExactJson(['data' => []]);
+            ->assertExactJson([
+                'data' => [
+                    'cart_items' => [],
+                ]
+            ]);
     }
 
     public function testShowAsAuthenticatedUserReturnsMinimalCart()
