@@ -20,6 +20,7 @@ use App\Mail\TicketsGenerated;
 use App\Services\TicketService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class TicketServiceTest extends TestCase
 {
@@ -264,5 +265,222 @@ class TicketServiceTest extends TestCase
 
         $this->assertEquals(5, $pag->perPage());
         $this->assertStringContainsString('status='.TicketStatus::Issued->value, $pag->withQueryString()->url(2));
+    }
+
+    public function testGetFilteredTicketsByQ(): void
+    {
+        // Ticket matching by token
+        $t1 = Ticket::factory()->create([
+            'token' => 'ABC123',
+            'product_snapshot' => [
+                'product_name' => 'Concert X',
+                'ticket_type'  => 'VIP',
+            ],
+        ]);
+        // Ticket non-matching
+        $t2 = Ticket::factory()->create([
+            'token' => 'OTHER',
+            'product_snapshot' => [
+                'product_name' => 'Other Product',
+                'ticket_type'  => 'Regular',
+            ],
+        ]);
+
+        // Filter by q matching product_name
+        $paginator = $this->service->getFilteredTickets(['q' => 'Concert']);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $this->assertCount(1, $paginator->items());
+        $this->assertEquals($t1->id, $paginator->items()[0]->id);
+    }
+
+    public function testGetFilteredTicketsByProductIdAndPaymentUuid(): void
+    {
+        $product = Product::factory()->create();
+        $payment = Payment::factory()->create(['uuid' => 'PAY-UUID-123']);
+
+        // Ticket matching both filters
+        $t1 = Ticket::factory()->create([
+            'product_id' => $product->id,
+            'payment_id' => $payment->id,
+        ]);
+        // Ticket with different product_id
+        $t2 = Ticket::factory()->create([
+            'product_id' => $product->id + 1,
+            'payment_id' => $payment->id,
+        ]);
+        // Ticket with different payment_uuid
+        $payment2 = Payment::factory()->create(['uuid' => 'OTHER-UUID']);
+        $t3 = Ticket::factory()->create([
+            'product_id' => $product->id,
+            'payment_id' => $payment2->id,
+        ]);
+
+        $filters = [
+            'product_id'   => $product->id,
+            'payment_uuid' => 'PAY-UUID-123',
+        ];
+
+        $paginator = $this->service->getFilteredTickets($filters);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        // Only t1 matches both product_id and payment_uuid
+        $this->assertCount(1, $paginator->items());
+        $this->assertEquals($t1->id, $paginator->items()[0]->id);
+    }
+
+    public function testGetUserTicketsFiltersByEventDateFrom(): void
+    {
+        // Crée un utilisateur
+        $user = User::factory()->create();
+
+        // Ticket avant la date (ne doit pas passer)
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'product_snapshot' => ['date' => '2025-05-01'],
+        ]);
+        // Ticket après ou égal à date_from (doit passer)
+        $t2 = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'product_snapshot' => ['date' => '2025-06-15'],
+        ]);
+
+        $filters = ['event_date_from' => '2025-06-01'];
+        $paginator = $this->service->getUserTickets($user->id, $filters);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $ids = collect($paginator->items())->pluck('id')->all();
+        $this->assertEquals([$t2->id], $ids);
+    }
+
+    public function testGetUserTicketsFiltersByEventDateTo(): void
+    {
+        $user = User::factory()->create();
+
+        // Ticket après la date_to (ne doit pas passer)
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'product_snapshot' => ['date' => '2025-08-01'],
+        ]);
+        // Ticket avant ou égal to date_to (doit passer)
+        $t2 = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'product_snapshot' => ['date' => '2025-07-01'],
+        ]);
+
+        $filters = ['event_date_to' => '2025-07-15'];
+        $paginator = $this->service->getUserTickets($user->id, $filters);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $ids = collect($paginator->items())->pluck('id')->all();
+        $this->assertEquals([$t2->id], $ids);
+    }
+
+    public function testGetUserTicketsFiltersByBothDates(): void
+    {
+        $user = User::factory()->create();
+
+        // Ticket hors plage
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'product_snapshot' => ['date' => '2025-05-01'],
+        ]);
+        // Ticket dans la plage
+        $t2 = Ticket::factory()->create([
+            'user_id' => $user->id,
+            'product_snapshot' => ['date' => '2025-06-10'],
+        ]);
+        // Ticket hors plage
+        Ticket::factory()->create([
+            'user_id' => $user->id,
+            'product_snapshot' => ['date' => '2025-08-01'],
+        ]);
+
+        $filters = [
+            'event_date_from' => '2025-06-01',
+            'event_date_to'   => '2025-07-01',
+        ];
+        $paginator = $this->service->getUserTickets($user->id, $filters);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $ids = collect($paginator->items())->pluck('id')->all();
+        $this->assertEquals([$t2->id], $ids);
+    }
+
+    public function testGetSalesStatsDefaults(): void
+    {
+        // Création de 2 produits
+        $p1 = Product::factory()->create(['name' => 'Prod A']);
+        $p2 = Product::factory()->create(['name' => 'Prod B']);
+
+        // Tickets non annulés/refundés
+        Ticket::factory()->count(3)->create([
+            'product_id' => $p1->id,
+            'status'     => 'issued',
+        ]);
+        Ticket::factory()->count(1)->create([
+            'product_id' => $p2->id,
+            'status'     => 'issued',
+        ]);
+        // Tickets annulés/refundés (ne doivent pas compter)
+        Ticket::factory()->count(5)->create([
+            'product_id' => $p1->id,
+            'status'     => 'cancelled',
+        ]);
+
+        $paginator = $this->service->getSalesStats([]);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        // On attend 2 produits
+        $this->assertCount(2, $paginator->items());
+
+        // Vérifie l'ordre descendant par sales_count
+        $items = $paginator->items();
+        $this->assertEquals($p1->id, $items[0]['product_id']);
+        $this->assertEquals(3,       $items[0]['sales_count']);
+        $this->assertEquals($p2->id, $items[1]['product_id']);
+        $this->assertEquals(1,       $items[1]['sales_count']);
+    }
+
+    public function testGetSalesStatsWithQFilter(): void
+    {
+        $p1 = Product::factory()->create(['name' => 'Alpha Product']);
+        $p2 = Product::factory()->create(['name' => 'Beta Item']);
+
+        Ticket::factory()->count(2)->create(['product_id' => $p1->id, 'status' => 'issued']);
+        Ticket::factory()->count(2)->create(['product_id' => $p2->id, 'status' => 'issued']);
+
+        // Filtre q cherche "alpha"
+        $paginator = $this->service->getSalesStats(['q' => 'alpha']);
+        $ids = collect($paginator->items())->pluck('product_id')->all();
+        $this->assertEquals([$p1->id], $ids);
+    }
+
+    public function testGetSalesStatsWithCustomSortAndPerPage(): void
+    {
+        // 10 produits avec 1 ticket chacun
+        $products = Product::factory()->count(10)->create();
+        foreach ($products as $prod) {
+            Ticket::factory()->create(['product_id' => $prod->id, 'status' => 'issued']);
+        }
+
+        // per_page à 5, tri par product_id ASC
+        $filters = [
+            'per_page'  => 5,
+            'sort_by'   => 'product_id',
+            'sort_order'=> 'asc',
+        ];
+        $paginator = $this->service->getSalesStats($filters);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $this->assertCount(5, $paginator->items());
+        $this->assertEquals(10, $paginator->total());
+
+        // Le premier id doit être le plus petit
+        $first = $paginator->items()[0]['product_id'];
+        $this->assertEquals(
+            $products->sortBy('id')->first()->id,
+            $first
+        );
     }
 }

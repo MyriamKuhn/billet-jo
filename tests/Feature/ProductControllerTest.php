@@ -14,7 +14,11 @@ use Laravel\Sanctum\Sanctum;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use App\Services\ProductService;
-
+use App\Enums\UserRole;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Requests\UpdateProductPricingRequest;
+use Illuminate\Http\JsonResponse;
+use App\Http\Requests\StoreProductRequest;
 
 class ProductControllerTest extends TestCase
 {
@@ -365,5 +369,127 @@ class ProductControllerTest extends TestCase
         Sanctum::actingAs($user,['*']);
 
         $this->getJson('/api/products/all')->assertStatus(403);
+    }
+
+    public function testUpdateHandlesMissingOldImageViaNullCoalescingFeature()
+    {
+        Storage::fake('images');
+
+        $admin   = User::factory()->create(['role' => UserRole::Admin]);
+        $product = Product::factory()->create();
+
+        // Mock du service en renvoyant $product pour satisfaire le return type
+        $manageMock = Mockery::mock(ProductManagementService::class);
+        $manageMock->shouldReceive('update')
+            ->once()
+            ->withAnyArgs()
+            ->andReturn($product);
+        $this->app->instance(ProductManagementService::class, $manageMock);
+
+        // Payload complet pour la validation
+        $payload = [
+            'price'          => 25.0,
+            'sale'           => 0.1,
+            'stock_quantity' => 10,
+            'translations'   => [
+                'en' => [
+                    'name'            => 'Test EN',
+                    'product_details' => [
+                        'places'      => 1,
+                        'description' => 'Desc EN',
+                        'date'        => '2025-07-01',
+                        'time'        => '18:00',
+                        'location'    => 'Lieu EN',
+                        'category'    => 'Cat EN',
+                    ],
+                ],
+                'fr' => [
+                    'name'            => 'Test FR',
+                    'product_details' => [
+                        'places'      => 2,
+                        'description' => 'Desc FR',
+                        'date'        => '2025-07-02',
+                        'time'        => '19:00',
+                        'location'    => 'Lieu FR',
+                        'category'    => 'Cat FR',
+                    ],
+                ],
+                'de' => [
+                    'name'            => 'Test DE',
+                    'product_details' => [
+                        'places'      => 3,
+                        'description' => 'Desc DE',
+                        'date'        => '2025-07-03',
+                        'time'        => '20:00',
+                        'location'    => 'Lieu DE',
+                        'category'    => 'Cat DE',
+                    ],
+                ],
+            ],
+        ];
+
+        // Fake upload pour 'en'
+        $file = UploadedFile::fake()->image('new-image.jpg');
+        $files = [
+            'translations' => [
+                'en' => [
+                    'product_details' => ['image' => $file],
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($admin, 'sanctum')
+            ->call(
+                'PUT',
+                "/api/products/{$product->id}",
+                $payload,
+                [],      // cookies
+                $files,  // fichiers imbriqués
+                ['CONTENT_TYPE' => 'multipart/form-data']
+            );
+
+        $response->assertStatus(204);
+    }
+
+    public function testAdminCanUpdateProductPricingAndGetsNoContent()
+    {
+        // Fake disk if your updatePricing stores anything
+        // Storage::fake('images'); // only if needed by pricing
+
+        // 1) Create an admin and a product
+        $admin   = User::factory()->create(['role' => UserRole::Admin]);
+        $product = Product::factory()->create();
+
+        // 2) Prepare the valid payload
+        $payload = [
+            'price'          => 59.99,
+            'sale'           => 0.15,
+            'stock_quantity' => 120,
+        ];
+
+        // 3) Stub out the listing service (required by the controller, even if unused here)
+        $listingMock = Mockery::mock(ProductListingService::class);
+        $this->app->instance(ProductListingService::class, $listingMock);
+
+        // 4) Mock the ProductManagementService (the one your controller calls)
+        $manageMock = Mockery::mock(ProductManagementService::class);
+        $manageMock
+            ->shouldReceive('updatePricing')
+            ->once()
+            ->withArgs(function ($passedProduct, $data) use ($product, $payload) {
+                return $passedProduct->id === $product->id
+                    && $data === $payload;
+            })
+            // return whatever your real method signature expects (often the Product, or null)
+            ->andReturnNull();
+        $this->app->instance(ProductManagementService::class, $manageMock);
+
+        // 5) Hit the endpoint as an admin with PUT (not PATCH)
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->putJson("/api/products/{$product->id}/pricing", $payload);
+
+        // 6) Assert 204 No Content
+        $response->assertNoContent();
     }
 }

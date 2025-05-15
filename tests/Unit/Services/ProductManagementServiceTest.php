@@ -191,4 +191,61 @@ class ProductManagementServiceTest extends TestCase
             'price' => 25.00,
         ]);
     }
+
+    public function testUpdatePricingUpdatesPriceSaleAndStock(): void
+    {
+        // 1) Crée un produit avec des valeurs initiales
+        $product = Product::factory()->create([
+            'price'          => 100.00,
+            'sale'           => 0.00,
+            'stock_quantity' => 10,
+        ]);
+
+        // 2) Nouveau jeu de données à appliquer
+        $data = [
+            'price'          => 123.45,
+            'sale'           => 0.25,
+            'stock_quantity' => 20,
+        ];
+
+        // 3) Appelle la méthode
+        $this->service->updatePricing($product, $data);
+
+        // 4) Rafraîchit le modèle depuis la base
+        $product->refresh();
+
+        // 5) Vérifie que les champs ont bien été mis à jour
+        $this->assertEquals(123.45, $product->price);
+        $this->assertEquals(0.25, $product->sale);
+        $this->assertEquals(20, $product->stock_quantity);
+    }
+
+    public function testUpdatePricingDoesNotModifyOtherAttributes(): void
+    {
+        // 1) Crée un produit avec un nom personnalisé
+        $product = Product::factory()->create([
+            'name'           => 'Original Name',
+            'price'          => 50.00,
+            'sale'           => 0.10,
+            'stock_quantity' => 5,
+        ]);
+
+        // 2) Ne met à jour que le pricing et le stock
+        $data = [
+            'price'          => 75.00,
+            'sale'           => 0.15,
+            'stock_quantity' => 8,
+        ];
+
+        $this->service->updatePricing($product, $data);
+        $product->refresh();
+
+        // 3) Vérifie que le nom est resté inchangé
+        $this->assertEquals('Original Name', $product->name);
+
+        // Et que les champs pricing/stock ont bien changé
+        $this->assertEquals(75.00, $product->price);
+        $this->assertEquals(0.15, $product->sale);
+        $this->assertEquals(8, $product->stock_quantity);
+    }
 }

@@ -11,6 +11,8 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\Hash;
 use App\Exceptions\Auth\EmailUpdateNotFoundException;
+use App\Enums\UserRole;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class UserServiceTest extends TestCase
 {
@@ -182,5 +184,105 @@ class UserServiceTest extends TestCase
             'firstname'=>'A','lastname'=>'B',
             'email'=>'x@y.com','twofa_enabled'=>true
         ], $out);
+    }
+
+    public function testThrowsWhenActorNotAdmin(): void
+    {
+        $actor = User::factory()->create([
+            'role' => UserRole::User,
+        ]);
+
+        $this->expectException(AuthorizationException::class);
+        $this->service->listAllUsers($actor);
+    }
+
+    public function testReturnsAllUsersWithoutFilters(): void
+    {
+        $actor = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+
+        // Create additional users
+        $users = User::factory()->count(3)->create();
+
+        $paginator = $this->service->listAllUsers($actor);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        // Includes actor + 3 others
+        $this->assertEquals(4, $paginator->total());
+    }
+
+    public function testFiltersByFirstname(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match1 = User::factory()->create(['firstname' => 'Alice']);
+        User::factory()->create(['firstname' => 'Bob']);
+        $match2 = User::factory()->create(['firstname' => 'Alicia']);
+
+        $filters = ['firstname' => 'Ali'];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $ids = collect($paginator->items())->pluck('id')->all();
+
+        sort($ids);
+        $this->assertEqualsCanonicalizing([
+            $match1->id,
+            $match2->id,
+        ], $ids);
+    }
+
+    public function testFiltersByLastname(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match1 = User::factory()->create(['lastname' => 'Smith']);
+        User::factory()->create(['lastname' => 'Jones']);
+        $match2 = User::factory()->create(['lastname' => 'Smithson']);
+
+        $filters = ['lastname' => 'Smith'];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $ids = collect($paginator->items())->pluck('id')->all();
+
+        sort($ids);
+        $this->assertEqualsCanonicalizing([
+            $match1->id,
+            $match2->id,
+        ], $ids);
+    }
+
+    public function testFiltersByEmail(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match = User::factory()->create(['email' => 'unique@example.com']);
+        User::factory()->create(['email' => 'other@example.com']);
+
+        $filters = ['email' => 'unique@example.com'];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $this->assertCount(1, $paginator->items());
+        $this->assertEquals($match->id, $paginator->items()[0]->id);
+    }
+
+    public function testFiltersByRole(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match1 = User::factory()->create(['role' => UserRole::User]);
+        User::factory()->create(['role' => UserRole::Employee]);
+        $match2 = User::factory()->create(['role' => UserRole::User]);
+
+        $filters = ['role' => UserRole::User->value];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $ids = collect($paginator->items())->pluck('id')->all();
+
+        sort($ids);
+        $this->assertEqualsCanonicalizing([
+            $match1->id,
+            $match2->id,
+        ], $ids);
     }
 }

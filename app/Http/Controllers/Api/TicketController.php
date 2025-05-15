@@ -707,5 +707,6 @@ class TicketController extends Controller
                 'per_page'     => $paginator->perPage(),
                 'total'        => $paginator->total(),
             ],
-        ], 200);    }
+        ], 200);
+    }
 }
