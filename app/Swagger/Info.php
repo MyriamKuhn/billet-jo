@@ -26,11 +26,11 @@ Access is secured by a restrictive CORS policy and token-based authentication (L
 
 The API supports multiple languages (English, French, German) injected in the header and is designed to be user-friendly and developer-friendly.",
  *     @OA\Contact(name="Myriam Kühn", email="myriam.kuehn@free.fr", url="https://myriamkuhn.com/"),
- *     @OA\License(name="Full Front documentation", url="https://api-jo2024.mkcodecreations.dev/docs/frontend")
+ *     @OA\License(name="MIT Licence", url="https://opensource.org/licenses/MIT"),
  *   ),
  *   @OA\ExternalDocumentation(
- *     description="Full API documentation",
- *     url="https://api-jo2024.mkcodecreations.dev/docs/backend"
+ *     description="Full Documentation",
+ *     url="https://api-jo2024.mkcodecreations.dev/"
  *   ),
  *
  *   @OA\Server(url="http://localhost:8000", description="Local dev"),

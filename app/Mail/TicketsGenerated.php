@@ -39,7 +39,7 @@ class TicketsGenerated extends Mailable
         $clientUrl = rtrim(config('app.frontend_url'), '/') . '/client/tickets';
 
         $mail = $this
-            ->subject(__('mail.tickets_generated_subject', ['app_name'=> env('APP_NAME')]))
+            ->subject(__('mail.tickets_generated_subject', ['app_name'=> config('app.name')]))
             ->view('emails.tickets.generated')
             ->with([
                 'user'    => $this->user,

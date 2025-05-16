@@ -9,8 +9,8 @@
             "email": "myriam.kuehn@free.fr"
         },
         "license": {
-            "name": "Full Front documentation",
-            "url": "https://api-jo2024.mkcodecreations.dev/docs/frontend"
+            "name": "MIT Licence",
+            "url": "https://opensource.org/licenses/MIT"
         },
         "version": "1.0.0"
     },
@@ -6771,7 +6771,7 @@
         }
     ],
     "externalDocs": {
-        "description": "Full API documentation",
-        "url": "https://api-jo2024.mkcodecreations.dev/docs/backend"
+        "description": "Full Documentation",
+        "url": "https://api-jo2024.mkcodecreations.dev/"
     }
 }

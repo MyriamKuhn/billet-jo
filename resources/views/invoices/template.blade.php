@@ -28,7 +28,7 @@
             margin-bottom: 20px;
         }
         .logo {
-            max-height: 60px;
+            max-height: 150px;
             margin-bottom: 10px;
         }
         h1 {
@@ -117,9 +117,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ public_path('images/jo_logo.png') }}" alt="Logo" class="logo">
+            <img src="{{ asset('images/jo_logo.png') }}" alt="Logo" class="logo">
             <h1>{{ __('invoice.invoice_title', ['invoice_number' =>  $payment->uuid]) }}</h1>
-            <div class="date">{{ __('invoice.invoice_date', ['date' =>  $payment->created_at->format('F j, Y')]) }} </div>
+            <div class="date">{{ __('invoice.invoice_date', ['date' =>  $payment->created_at->locale(app()->getLocale())->isoFormat('LL')]) }}</div>
         </div>
 
         <div class="customer">
@@ -175,7 +175,7 @@
         </table>
 
         <div class="footer">
-            T{{ __('invoice.invoice_thank_you', ['app_name' => config('app.name')]) }}<br>
+            {{ __('invoice.invoice_thank_you', ['app_name' => config('app.name')]) }}<br>
             <small>{{ __('invoice.invoice_generated', ['app_name' => config('app.name')]) }}</small>
         </div>
     </div>

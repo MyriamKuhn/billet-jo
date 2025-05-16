@@ -66,10 +66,11 @@
         <h1>Welcome to the 2024 Olympics API</h1>
         <p>This REST API allows you to manage tickets for the 2024 Olympic Games.</p>
 
-        <a href="{{ url('/api/documentation') }}" class="btn">Swagger Documentation</a>
+        <a href="{{ url('/api/documentation') }}" class="btn" target="_blank" rel="noopener noreferrer">Swagger Documentation</a>
         <a href="{{ url('/docs/backend') }}" class="btn">Backend Docs</a>
         <a href="{{ url('/docs/frontend') }}" class="btn">Frontend Docs</a>
         <a href="{{ url('/docs/architecture') }}" class="btn">Architecture Docs</a>
+        <a href="https://github.com/MyriamKuhn/billet-jo/blob/main/README.md" class="btn" target="_blank" rel="noopener noreferrer">README</a>
     </div>
     <footer>
         <p>&copy; 2024 Myriam Kühn. All rights reserved.</p>

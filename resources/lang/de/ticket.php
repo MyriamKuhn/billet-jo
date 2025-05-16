@@ -15,4 +15,5 @@ return [
     "ticket_code" => "Ticketcode: :token",
     "thank_you" => "Vielen Dank für Ihren Einkauf bei :app_name! Viel Spaß!",
     "validity" => "Dieses Ticket ist nur für die oben genannte Veranstaltung gültig.",
+    "time_format" => "HH[Uhr]mm",
 ];

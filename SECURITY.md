@@ -40,6 +40,11 @@ This document describes the security practices and policies for the **Ticketing 
    - Stripe webhook secret, API keys loaded via `.env`  
    - Rotate secrets quarterly or after any suspected leak
 
+6. **CORS Configuration**  
+   - Middleware in Laravel to validate the requests `Origin`   
+   - Only the listed origins are allowed
+   - No entry for unknown cross-origin calls (response HTTP 403)  
+
 ---
 
 ## 🕵️ Vulnerability Reporting

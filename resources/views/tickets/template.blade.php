@@ -21,7 +21,7 @@
             border-radius: 10px;
         }
         .header { display: flex; justify-content: space-between; align-items: center; }
-        .logo { max-height: 60px; }
+        .logo { max-height: 100px; }
         .event-title { font-size: 26px; font-weight: 700; }
         .section {
             background: #112832;
@@ -50,7 +50,7 @@
     <div class="container">
         {{-- Header --}}
         <div class="header">
-            <img src="{{ public_path('images/jo_logo.png') }}" alt="Logo" class="logo">
+            <img src="{{ asset('images/jo_logo.png') }}" alt="Logo" class="logo">
             <div class="event-title">{{ $item->product_snapshot['product_name'] }}</div>
         </div>
 
@@ -65,14 +65,21 @@
         @php
             $snap = $item->product_snapshot;
             $details = $item->product->product_details;
+
+            use Carbon\Carbon;
+            // Fusionne date et time pour avoir un seul DateTime
+            $dateTime = Carbon::parse($details['date'].' '.$details['time'])
+                            ->locale(app()->getLocale());
+
+            $timePattern = __('ticket.time_format');
         @endphp
         <div class="section">
             <h3>{{ __('ticket.event_details') }}</h3>
-            <p><strong>{{ __('ticket.event_category') }}</strong>{{ $snap['ticket_type'] }}</p>
-            <p><strong>{{ __('ticket.event_date') }}</strong>{{ \Carbon\Carbon::parse($details['date'])->format('F j, Y') }}</p>
-            <p><strong>{{ __('ticket.event_time') }}</strong>{{ $details['time'] }}</p>
-            <p><strong>{{ __('ticket.event_location') }}</strong>{{ $details['location'] }}</p>
-            <p><strong>{{ __('ticket.event_places') }}</strong>{{ $snap['ticket_places'] }}</p>
+            <p><strong>{{ __('ticket.event_category') }}</strong> {{ $snap['ticket_type'] }}</p>
+            <p><strong>{{ __('ticket.event_date') }}</strong> {{ $dateTime->isoFormat('LL') }}</p>
+            <p><strong>{{ __('ticket.event_time') }}</strong> {{ $dateTime->isoFormat($timePattern) }}</p>
+            <p><strong>{{ __('ticket.event_location') }}</strong> {{ $details['location'] }}</p>
+            <p><strong>{{ __('ticket.event_places') }}</strong> {{ $snap['ticket_places'] }}</p>
         </div>
 
         {{-- QR Code --}}

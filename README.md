@@ -58,7 +58,7 @@ Welcome to the backend of the Olympic Games Ticketing Platform.This project prov
 
 The API is documented with Swagger and is always up-to-date.
 
-Swagger Documentation is available here:
+Full Documentation is available here:
 [https://api-jo2024.mkcodecreations.dev/](https://api-jo2024.mkcodecreations.dev/)
 
 ---
@@ -134,7 +134,7 @@ The application has a **full feature test coverage**, including:
 - Cart and payment logic
 - Performance (N+1 queries detection)
 
-Full HTML report available under [`/COVERAGE_REPORT/index.html`](./COVERAGE_REPORT/index.html).  
+Full HTML report available under [Coverage HTML](https://myriamkuhn.github.io/billet-jo/).  
 
 ✅ **339 tests passed** with **1103 assertions**.  
 📊 **Coverage: 100%**
@@ -158,6 +158,7 @@ We follow industry best practices:
 - **Authorization**: Role-based guards (admin, employee, user)
 - **Input Validation**: FormRequests everywhere, strict OpenAPI schemas
 - **Data protection**: HTTPS enforced, Redis access behind VPC
+- **CORS Configuration**: Only allowed origins can call the API
 - **Vulnerability Scanning**: GitHub CodeQL SAST on push, OWASP ZAP DAST weekly
 
 _For more details → [SECURITY.md](./SECURITY.md)_

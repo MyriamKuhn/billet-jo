@@ -15,4 +15,5 @@ return [
     "ticket_code"=> "Ticket code: :token",
     "thank_you"=> "Thank you for your purchase on :app_name! Have fun!",
     "validity"=> "This ticket is valid only for the event mentioned above.",
+    "time_format"=> "LT",
 ];
