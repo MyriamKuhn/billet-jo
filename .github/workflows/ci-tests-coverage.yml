@@ -2,25 +2,29 @@ name: Publish Coverage Site
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-- name: deploy
-  runs-on: ubuntu-latest
+  deploy:
+    name: Deploy Coverage Site
+    runs-on: ubuntu-latest
 
-  steps:
-    # 1) On récupère tout, y compris le dossier 'coverage_report/html' déjà commité
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+    steps:
+      # 1) On récupère tout, y compris le dossier 'coverage_report/html' déjà commité
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    # 2) On déploie le répertoire existant sur gh-pages
-    - name: Deploy coverage to gh-pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_branch: gh-pages
-        publish_dir: coverage_report/html
+      # 2) On déploie le répertoire existant sur gh-pages
+      - name: Deploy coverage to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: coverage_report/html
+
