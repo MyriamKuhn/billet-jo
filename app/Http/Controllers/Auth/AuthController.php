@@ -87,6 +87,8 @@ This endpoint allows a user to log in and receive an authentication token:
     *     operationId="authLogin",
     *     tags={"Authentication"},
     *
+    *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+    *
     *     @OA\RequestBody(
     *         required=true,
     *         description="User login credentials",

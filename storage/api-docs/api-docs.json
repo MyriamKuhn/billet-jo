@@ -3582,6 +3582,11 @@
                 "summary": "Authenticate user",
                 "description": "\nThis endpoint allows a user to log in and receive an authentication token:\n\n- **Email & password** credentials are required\n- **Remember me** option for extended session duration (1 week)\n- **Two-factor authentication (2FA)** code if enabled\n- **Throttling** to limit brute-force attempts\n    ",
                 "operationId": "authLogin",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "description": "User login credentials",
                     "required": true,
@@ -4961,6 +4966,10 @@
                     "captcha_token": {
                         "type": "string",
                         "example": "03AGdBq24…"
+                    },
+                    "accept_terms": {
+                        "type": "boolean",
+                        "example": true
                     }
                 },
                 "type": "object"

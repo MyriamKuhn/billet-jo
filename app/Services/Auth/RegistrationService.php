@@ -33,6 +33,13 @@ class RegistrationService
             ], 422));
         }
 
+        if ($data['accept_terms'] !== true) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'You must accept the terms and conditions',
+                'code'    => 'terms_not_accepted',
+            ], 422));
+        }
+
         // Create the user
         $user = User::create([
             'firstname'    => $data['firstname'],
