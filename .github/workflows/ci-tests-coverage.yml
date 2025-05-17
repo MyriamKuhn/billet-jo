@@ -1,52 +1,26 @@
-name: CI – Tests & Coverage
+name: Publish Coverage Site
 
-# Déclenche sur push et PR des branches main et develop
 on:
-  pull_request:
-    branches: [ main ]
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 jobs:
-  coverage:
-    runs-on: ubuntu-latest
+- name: deploy
+  runs-on: ubuntu-latest
 
-    steps:
-      # 1) Récupère le code
-      - name: Checkout code
-        uses: actions/checkout@v3
+  steps:
+    # 1) On récupère tout, y compris le dossier 'coverage_report/html' déjà commité
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
-      # 2) Installe PHP 8.3 avec Xdebug pour la couverture
-      - name: Setup PHP 8.3 with Xdebug
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          coverage: xdebug
-
-      # 3) Installe les dépendances Composer
-      - name: Install Composer dependencies
-        run: composer install --no-progress --no-suggest
-
-      # 4) Lancement des tests + génération du rapport HTML
-      - name: Run PHPUnit & generate HTML coverage
-        run: |
-          rm -rf coverage_report
-          ./vendor/bin/phpunit \
-            --configuration phpunit.xml \
-            --coverage-html=coverage_report/html
-
-      # 5) Archive la couverture comme artefact pour téléchargement
-      - name: Upload coverage HTML as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html
-          path: coverage_report/html
-
-      # 6) Déploie sur la branche gh-pages
-      - name: Deploy to gh-pages
-        if: github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: coverage_report/html
+    # 2) On déploie le répertoire existant sur gh-pages
+    - name: Deploy coverage to gh-pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: coverage_report/html
