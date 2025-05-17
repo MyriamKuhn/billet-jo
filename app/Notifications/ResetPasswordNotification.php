@@ -47,7 +47,7 @@ class ResetPasswordNotification extends Notification
             default => 'http://localhost:3000',
         };
 
-        $url = $frontendUrl . '/password-reset?token=' . $this->token . '&email=' . urlencode($notifiable->email);
+        $url = $frontendUrl . '/password-reset?token=' . $this->token . '&email=' . urlencode($notifiable->email) . '&locale=' . app()->getLocale();
 
         return (new MailMessage)
             ->subject(__('mail.subject_password', ['app_name'=> config('app.name')]))

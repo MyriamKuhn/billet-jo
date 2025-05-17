@@ -13,19 +13,103 @@ use Illuminate\Support\Facades\Redis;
 use Mockery;
 use App\Services\CartService;
 use Illuminate\Support\Collection;
+use Laravel\Sanctum\Sanctum;
+use Illuminate\Support\Facades\Session;
 
 class CartControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, withFaker;
 
     public function testShowAsGuestReturnsEmptyGuestCart()
     {
-        $this->getJson('/api/cart')
-            ->assertStatus(200)
-            ->assertExactJson([
+        // 1) Préparation des données
+        $guestCartId = $this->faker->uuid;
+        $product     = Product::factory()->create([
+            'price'          => 12.50,
+            'sale'           => 0.0,
+            'stock_quantity' => 10,
+            'product_details'=> [
+                'image'    => 'img.png',
+                'date'     => '2025-05-17',
+                'time'     => '10:00',
+                'location' => 'Paris',
+            ],
+        ]);
+        $itemsMap = [
+            $product->id => 2,
+        ];
+
+        // 2) Stub du service pour forcer le retour guest
+        $mockService = \Mockery::mock(CartService::class);
+        $mockService
+            ->shouldReceive('getCurrentCart')
+            ->once()
+            ->andReturn($itemsMap);
+        $this->app->instance(CartService::class, $mockService);
+
+        // 3) Simuler la session guest (sans authentification)
+        Session::start();
+        Session::put('guest_cart_id', $guestCartId);
+
+        // 4) Appel de l’API
+        $response = $this->withSession([
+            // nécessaire pour que la session soit prise en compte
+            '_token' => csrf_token(),
+        ])->getJson('/api/cart');
+
+        // 5) Assertions
+        $response->assertStatus(200)
+            // 1 élément dans data.cart_items
+            ->assertJsonCount(1, 'data.cart_items')
+            // Structure globale
+            ->assertJsonStructure([
+                'meta' => ['guest_cart_id'],
                 'data' => [
-                    'cart_items' => [],
-                ]
+                    'cart_items' => [
+                        '*' => [
+                            'product_id',
+                            'quantity',
+                            'in_stock',
+                            'available_quantity',
+                            'unit_price',
+                            'total_price',
+                            'original_price',
+                            'discount_rate',
+                            'product' => [
+                                'name',
+                                'image',
+                                'date',
+                                'time',
+                                'location',
+                            ],
+                        ],
+                    ],
+                ],
+            ])
+            // Contenu exact
+            ->assertJson([
+                'meta' => ['guest_cart_id' => $guestCartId],
+                'data' => [
+                    'cart_items' => [
+                        [
+                            'product_id'         => $product->id,
+                            'quantity'           => 2,
+                            'in_stock'           => true,
+                            'available_quantity' => 10,
+                            'unit_price'         => 12.50,
+                            'total_price'        => 25.00,
+                            'original_price'     => null,
+                            'discount_rate'      => null,
+                            'product'            => [
+                                'name'     => $product->name,
+                                'image'    => 'img.png',
+                                'date'     => '2025-05-17',
+                                'time'     => '10:00',
+                                'location' => 'Paris',
+                            ],
+                        ],
+                    ],
+                ],
             ]);
     }
 

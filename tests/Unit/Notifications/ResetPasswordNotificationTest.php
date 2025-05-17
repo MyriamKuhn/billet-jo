@@ -38,7 +38,7 @@ class ResetPasswordNotificationTest extends TestCase
         $this->assertEquals('emails.password', $mailMessage->view);
         $this->assertArrayHasKey('user', $mailMessage->viewData);
         $this->assertSame($notifiable, $mailMessage->viewData['user']);
-        $expectedUrl = 'http://localhost:3000/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email);
+        $expectedUrl = 'http://localhost:3000/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email) . '&locale=en';
         $this->assertEquals($expectedUrl, $mailMessage->viewData['url']);
     }
 
@@ -53,7 +53,7 @@ class ResetPasswordNotificationTest extends TestCase
 
         $mailMessage = $notification->toMail($notifiable);
 
-        $expectedUrl = 'https://jo2024.mkcodecreations.dev/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email);
+        $expectedUrl = 'https://jo2024.mkcodecreations.dev/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email) . '&locale=en';
         $this->assertEquals($expectedUrl, $mailMessage->viewData['url']);
     }
 

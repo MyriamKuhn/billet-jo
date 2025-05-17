@@ -10,6 +10,7 @@ use App\Models\Cart;
 use App\Http\Resources\CartResource;
 use App\Http\Requests\UpdateCartItemRequest;
 use App\Models\Product;
+use Illuminate\Support\Facades\Session;
 
 class CartController extends Controller
 {
@@ -38,6 +39,20 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
 ",
      *
      *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *     @OA\Parameter(
+     *         name="Authorization",
+     *         in="header",
+     *         required=false,
+     *         @OA\Schema(type="string"),
+     *         description="Bearer token for authenticated users (optional)"
+     *     ),
+     *     @OA\Parameter(
+     *         name="X-Guest-Cart-Id",
+     *         in="header",
+     *         required=false,
+     *         @OA\Schema(type="string", format="uuid"),
+     *         description="Guest cart ID (UUID) for guest users (optional)"
+     *     ),
      *
      *     @OA\Response(
      *         response=200,
@@ -50,19 +65,34 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
      *               oneOf={
      *                 @OA\Schema(ref="#/components/schemas/CartMinimal"),
      *                 @OA\Schema(
-     *                      schema="GuestCart",
-     *                      type="object",
-     *                      required={"cart_items"},
-     *                      @OA\Property(
-     *                          property="cart_items",
-     *                          type="array",
-     *                          @OA\Items(ref="#/components/schemas/CartItemMinimal")
-     *                      )
-     *                  )
-     *               }
-     *             )
+     *                     type="object",
+     *                     required={"meta","data"},
+     *                     @OA\Property(
+     *                         property="meta",
+     *                         type="object",
+     *                         required={"guest_cart_id"},
+     *                         @OA\Property(
+     *                             property="guest_cart_id",
+     *                             type="string",
+     *                             format="uuid",
+     *                             description="UUID unique du panier visiteur"
+     *                         )
+     *                     ),
+     *                     @OA\Property(
+     *                         property="data",
+     *                         type="object",
+     *                         required={"cart_items"},
+     *                         @OA\Property(
+     *                             property="cart_items",
+     *                             type="array",
+     *                             @OA\Items(ref="#/components/schemas/CartItemMinimal")
+     *                         )
+     *                     )
+     *                 )
+     *             }
      *         )
-     *     ),
+     *     )
+     * ),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
@@ -117,6 +147,9 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
         })->values();
 
         return response()->json([
+            'meta' => [
+                'guest_cart_id' => Session::get('guest_cart_id'),
+            ],
             'data' => [
                 'cart_items' => $guestItems,
             ]
@@ -139,6 +172,20 @@ Updates the quantity for a given product in the current cart:
 
 Accessible by guests and authenticated users. Provide a Bearer token to update the user’s cart; omit it to update the guest cart.
 ",
+     *      @OA\Parameter(
+     *         name="Authorization",
+     *         in="header",
+     *         required=false,
+     *         @OA\Schema(type="string"),
+     *         description="Bearer token for authenticated users (optional)"
+     *     ),
+     *     @OA\Parameter(
+     *         name="X-Guest-Cart-Id",
+     *         in="header",
+     *         required=false,
+     *         @OA\Schema(type="string", format="uuid"),
+     *         description="Guest cart ID (UUID) for guest users (optional)"
+     *     ),
      *     @OA\Parameter(
      *         name="product",
      *         in="path",
@@ -203,6 +250,13 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      *     summary="Clear authenticated user's cart",
      *     description="Deletes every item from the current authenticated user’s shopping cart. Requires a valid Bearer token.",
      *     security={{"bearerAuth":{}}},
+     *      @OA\Parameter(
+     *         name="Authorization",
+     *         in="header",
+     *         required=false,
+     *         @OA\Schema(type="string"),
+     *         description="Bearer token for authenticated users (optional)"
+     *     ),
      *     @OA\Response(response=204, ref="#/components/responses/NoContent"),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),

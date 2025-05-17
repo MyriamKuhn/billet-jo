@@ -36,6 +36,25 @@
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "Bearer token for authenticated users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Guest-Cart-Id",
+                        "in": "header",
+                        "description": "Guest cart ID (UUID) for guest users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
                     }
                 ],
                 "responses": {
@@ -54,16 +73,37 @@
                                                     "$ref": "#/components/schemas/CartMinimal"
                                                 },
                                                 {
-                                                    "schema": "GuestCart",
                                                     "required": [
-                                                        "cart_items"
+                                                        "meta",
+                                                        "data"
                                                     ],
                                                     "properties": {
-                                                        "cart_items": {
-                                                            "type": "array",
-                                                            "items": {
-                                                                "$ref": "#/components/schemas/CartItemMinimal"
-                                                            }
+                                                        "meta": {
+                                                            "required": [
+                                                                "guest_cart_id"
+                                                            ],
+                                                            "properties": {
+                                                                "guest_cart_id": {
+                                                                    "description": "UUID unique du panier visiteur",
+                                                                    "type": "string",
+                                                                    "format": "uuid"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "data": {
+                                                            "required": [
+                                                                "cart_items"
+                                                            ],
+                                                            "properties": {
+                                                                "cart_items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "$ref": "#/components/schemas/CartItemMinimal"
+                                                                    }
+                                                                }
+                                                            },
+                                                            "type": "object"
                                                         }
                                                     },
                                                     "type": "object"
@@ -94,6 +134,25 @@
                 "description": "\nUpdates the quantity for a given product in the current cart:\n\n- **quantity > 0**: set the new quantity\n- **quantity = 0**: remove the item from the cart\n\nAccessible by guests and authenticated users. Provide a Bearer token to update the user’s cart; omit it to update the guest cart.\n",
                 "operationId": "updateCartItem",
                 "parameters": [
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "Bearer token for authenticated users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Guest-Cart-Id",
+                        "in": "header",
+                        "description": "Guest cart ID (UUID) for guest users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
                     {
                         "name": "product",
                         "in": "path",
@@ -158,6 +217,17 @@
                 "summary": "Clear authenticated user's cart",
                 "description": "Deletes every item from the current authenticated user’s shopping cart. Requires a valid Bearer token.",
                 "operationId": "823e170674e885d4d258f01dffa19120",
+                "parameters": [
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "Bearer token for authenticated users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "204": {
                         "$ref": "#/components/responses/NoContent"
@@ -185,11 +255,97 @@
                     "Invoices"
                 ],
                 "summary": "List user invoices",
-                "description": "Returns a list of invoices for the logged-in user, including download URLs.",
+                "description": "Returns a paginated list of the authenticated user’s invoices, with optional filters (status, date range), sorting and pagination.",
                 "operationId": "listInvoices",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by invoice status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "paid",
+                                "failed",
+                                "refunded"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Filter invoices created on or after this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Filter invoices created on or before this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Field to sort by",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "created_at",
+                            "enum": [
+                                "uuid",
+                                "amount",
+                                "created_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Sort direction",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number to retrieve",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List of invoices",
+                        "description": "Paginated list of invoices",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -201,7 +357,7 @@
                                                     "uuid": {
                                                         "type": "string",
                                                         "format": "uuid",
-                                                        "example": "..."
+                                                        "example": "550e8400-e29b-41d4-a716-446655440000"
                                                     },
                                                     "amount": {
                                                         "type": "number",
@@ -228,6 +384,12 @@
                                                 },
                                                 "type": "object"
                                             }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
