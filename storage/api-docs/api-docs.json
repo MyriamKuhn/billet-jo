@@ -3166,7 +3166,7 @@
                     "Users"
                 ],
                 "summary": "Modify a user's details (admin only)",
-                "description": "Allows an administrator to update a user's status, 2FA setting, name, email, or role.",
+                "description": "Allows an administrator to update a user's status, 2FA setting, name, email, role or verified email.",
                 "operationId": "updateUserByAdmin",
                 "parameters": [
                     {
