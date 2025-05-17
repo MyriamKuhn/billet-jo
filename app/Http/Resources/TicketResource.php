@@ -10,28 +10,86 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *   schema="TicketResource",
  *   type="object",
  *   title="TicketResource",
- *   @OA\Property(property="id", type="integer", example=1),
- *   @OA\Property(property="token", type="string", example="550e8400-e29b-41d4-a716-446655440000"),
+ *
+ *   @OA\Property(property="id",               type="integer", example=1),
+ *   @OA\Property(property="token",            type="string",  example="550e8400-e29b-41d4-a716-446655440000"),
+ *
  *   @OA\Property(
  *     property="product_snapshot",
  *     type="object",
- *     @OA\Property(property="product_name", type="string", example="Concert X"),
- *     @OA\Property(property="ticket_type", type="string", example="VIP"),
- *     @OA\Property(property="unit_price", type="number", format="float", example=49.99),
- *     @OA\Property(property="discount_rate", type="number", format="float", example=0.1),
- *     @OA\Property(property="discounted_price", type="number", format="float", example=44.99)
+ *             required={"product_id","product_name","ticket_type","ticket_places","quantity","unit_price", "discount_rate","discounted_price"},
+ *             @OA\Property(property="product_id",   type="integer", example=42),
+ *             @OA\Property(property="product_name", type="string",  example="Billet concert"),
+ *             @OA\Property(property="ticket_type",  type="string",  example="adult"),
+ *             @OA\Property(property="ticket_places", type="integer", example=2),
+ *             @OA\Property(property="quantity",     type="integer", example=2),
+ *             @OA\Property(property="unit_price",   type="number",  format="float", example=50.00),
+ *             @OA\Property(property="discount_rate", type="number",  format="float", example=0.10),
+ *             @OA\Property(property="discounted_price", type="number", format="float", example=45.00),
  *   ),
- *   @OA\Property(property="status", type="string", enum={"issued","used","refunded","cancelled"}, example="issued"),
- *   @OA\Property(property="used_at", type="string", format="date-time", nullable=true, example="2025-05-10T14:00:00Z"),
- *   @OA\Property(property="refunded_at", type="string", format="date-time", nullable=true, example=null),
- *   @OA\Property(property="cancelled_at", type="string", format="date-time", nullable=true, example=null),
- *   @OA\Property(property="qr_filename", type="string", example="uuid.png"),
- *   @OA\Property(property="pdf_filename", type="string", example="uuid.pdf"),
- *   @OA\Property(property="user", ref="#/components/schemas/UserResource"),
- *   @OA\Property(property="payment", ref="#/components/schemas/PaymentResource"),
- *   @OA\Property(property="product", ref="#/components/schemas/MinimalProduct"),
- *   @OA\Property(property="created_at", type="string", format="date-time", example="2025-05-10T12:00:00Z"),
- *   @OA\Property(property="updated_at", type="string", format="date-time", example="2025-05-10T12:30:00Z")
+ *
+ *   @OA\Property(
+ *     property="status",
+ *     type="string",
+ *     enum={"issued","used","refunded","cancelled"},
+ *     example="issued"
+ *   ),
+ *   @OA\Property(
+ *     property="used_at",
+ *     type="string",
+ *     format="date-time",
+ *     nullable=true,
+ *     example="2025-05-10T14:00:00Z"
+ *   ),
+ *   @OA\Property(
+ *     property="refunded_at",
+ *     type="string",
+ *     format="date-time",
+ *     nullable=true,
+ *     example=null
+ *   ),
+ *   @OA\Property(
+ *     property="cancelled_at",
+ *     type="string",
+ *     format="date-time",
+ *     nullable=true,
+ *     example=null
+ *   ),
+ *
+ *   @OA\Property(property="qr_filename",  type="string", example="qr_123e4567-e89b-12d3-a456-426614174000.png"),
+ *   @OA\Property(property="pdf_filename", type="string", example="ticket_123e4567-e89b-12d3-a456-426614174000.pdf"),
+ *
+ *   @OA\Property(
+ *     property="user",
+ *     type="object",
+ *     required={"id","firstname","lastname","email"},
+ *     @OA\Property(property="id",        type="integer", example=1),
+ *     @OA\Property(property="firstname", type="string",  example="Jean"),
+ *     @OA\Property(property="lastname",  type="string",  example="Dupont"),
+ *     @OA\Property(property="email",     type="string",  format="email", example="jean.dupont@example.com")
+ *   ),
+ *
+ *   @OA\Property(
+ *     property="payment",
+ *     type="object",
+ *     required={"id","uuid","status"},
+ *     @OA\Property(property="id",     type="integer", example=42),
+ *     @OA\Property(property="uuid",   type="string",  format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+ *     @OA\Property(property="status", type="string",  example="paid")
+ *   ),
+ *
+ *   @OA\Property(
+ *     property="created_at",
+ *     type="string",
+ *     format="date-time",
+ *     example="2025-05-10T12:00:00Z"
+ *   ),
+ *   @OA\Property(
+ *     property="updated_at",
+ *     type="string",
+ *     format="date-time",
+ *     example="2025-05-10T12:30:00Z"
+ *   )
  * )
  */
 class TicketResource extends JsonResource
@@ -48,16 +106,27 @@ class TicketResource extends JsonResource
             'token'            => $this->token,
             'product_snapshot' => $this->product_snapshot,
             'status'           => $this->status->value,
-            'used_at'          => $this->used_at,
-            'refunded_at'      => $this->refunded_at,
-            'cancelled_at'     => $this->cancelled_at,
+            'used_at'          => optional($this->used_at)?->toIso8601String(),
+            'refunded_at'      => optional($this->refunded_at)?->toIso8601String(),
+            'cancelled_at'     => optional($this->cancelled_at)?->toIso8601String(),
             'qr_filename'      => $this->qr_code_url,
             'pdf_filename'     => $this->pdf_url,
-            'user'             => new UserResource($this->whenLoaded('user')),
-            'payment'          => new PaymentResource($this->whenLoaded('payment')),
-            'product'          => new ProductResource($this->whenLoaded('product')),
-            'created_at'       => $this->created_at,
-            'updated_at'       => $this->updated_at,
+
+            'user' => [
+                'id'        => $this->user->id,
+                'firstname' => $this->user->firstname,
+                'lastname'  => $this->user->lastname,
+                'email'     => $this->user->email,
+            ],
+
+            'payment' => [
+                'id'   => $this->payment->id,
+                'uuid' => $this->payment->uuid,
+                'status' => $this->payment->status->value,
+            ],
+
+            'created_at' => $this->created_at->toIso8601String(),
+            'updated_at' => $this->updated_at->toIso8601String(),
         ];
     }
 }

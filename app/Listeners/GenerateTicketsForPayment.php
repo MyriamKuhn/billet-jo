@@ -24,6 +24,6 @@ class GenerateTicketsForPayment
     public function handle(PaymentSucceeded $event): void
     {
         // Give the payment UUID to the ticket service to generate tickets
-        $this->tickets->generateForPaymentUuid($event->payment->uuid);
+        $this->tickets->generateForPaymentUuid($event->payment->uuid, $event->locale);
     }
 }

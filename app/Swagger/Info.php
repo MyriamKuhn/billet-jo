@@ -22,13 +22,15 @@ organized into internal packages (users, tickets, cart, payment, etc.) for maint
 
 Notifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.
 
-Access is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).",
+Access is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).
+
+The API supports multiple languages (English, French, German) injected in the header and is designed to be user-friendly and developer-friendly.",
  *     @OA\Contact(name="Myriam Kühn", email="myriam.kuehn@free.fr", url="https://myriamkuhn.com/"),
- *     @OA\License(name="MIT", url="https://opensource.org/licenses/MIT")
+ *     @OA\License(name="MIT Licence", url="https://opensource.org/licenses/MIT"),
  *   ),
  *   @OA\ExternalDocumentation(
- *     description="Full API documentation",
- *     url="https://docs.paris2024.example.com"
+ *     description="Full Documentation",
+ *     url="https://api-jo2024.mkcodecreations.dev/"
  *   ),
  *
  *   @OA\Server(url="http://localhost:8000", description="Local dev"),
@@ -144,8 +146,129 @@ Access is secured by a restrictive CORS policy and token-based authentication (L
  *     @OA\Response(
  *       response="NoContent",
  *       description="Operation successful, no content"
+ *     ),
+ *  @OA\Response(
+ *      response="DatabaseError",
+ *      description="Database error",
+ *      @OA\JsonContent(
+ *          required={"message","code"},
+ *          @OA\Property(property="message", type="string", example="Database error"),
+ *          @OA\Property(property="code",    type="string", example="database_error")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="TicketAlreadyProcessed",
+ *      description="This ticket was already processed",
+ *          @OA\JsonContent(
+ *              required={"status","timestamp","user","event","code","message"},
+ *              @OA\Property(property="status",    type="string", example="used"),
+ *              @OA\Property(property="timestamp", type="string", format="date-time", example="2024-07-26T19:30:00Z"),
+ *
+ *              @OA\Property(
+ *                  property="user",
+ *                  type="object",
+ *                  @OA\Property(property="firstname", type="string", example="Jean"),
+ *                  @OA\Property(property="lastname",  type="string", example="Dupont"),
+ *                  @OA\Property(property="email",     type="string", format="email", example="jean.dupont@example.com")
+ *              ),
+ *
+ *              @OA\Property(
+ *                  property="event",
+ *                  type="object",
+ *                  @OA\Property(property="name",     type="string", example="Opening Ceremony"),
+ *                  @OA\Property(property="date",     type="string", format="date", example="2024-07-26"),
+ *                  @OA\Property(property="time",     type="string", example="19h30 (accès recommandé dès 18h00)"),
+ *                  @OA\Property(property="location", type="string", example="Stade de France, Saint-Denis")
+ *              ),
+ *
+ *              @OA\Property(property="code",    type="string", example="ticket_already_processed"),
+ *              @OA\Property(property="message", type="string", example="This ticket was already used on 2024-07-26T19:30:00Z")
+ *          )
+ *  ),
+ *  @OA\Response(
+ *      response="UserNotFound",
+ *      description="User not found",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="User not found"),
+ *          @OA\Property(property="code",         type="string", example="user_not_found"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="InvalidVerificationLink",
+ *      description="Invalid verification link",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Invalid verification link"),
+ *          @OA\Property(property="code",         type="string", example="invalid_verification_link"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="AlreadyVerified",
+ *      description="Email is already verified",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Email is already verified"),
+ *          @OA\Property(property="code",         type="string", example="already_verified"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/already-verified")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="VerificationTokenMissing",
+ *      description="Invalid or expired verification token",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Invalid or expired verification token"),
+ *          @OA\Property(property="code",         type="string", example="verification_token_missing"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *      response="EmailUpdateNotFound",
+ *      description="Email request not found",
+ *      @OA\JsonContent(
+ *          required={"message","code","redirect_url"},
+ *          @OA\Property(property="message",      type="string", example="Email request not found"),
+ *          @OA\Property(property="code",         type="string", example="email_not_found"),
+ *          @OA\Property(property="redirect_url", type="string", format="url", example="https://frontend.app/verification-result/invalid")
+ *      )
+ *  ),
+ *  @OA\Response(
+ *   response="StockUnavailable",
+ *   description="Some items in the cart exceed available stock",
+ *   @OA\JsonContent(
+ *     required={"message","code","errors"},
+ *     @OA\Property(property="message", type="string", example="Stock unavailable for one or more items in the cart"),
+ *     @OA\Property(property="code",    type="string", example="stock_unavailable"),
+ *     @OA\Property(
+ *       property="errors",
+ *       type="array",
+ *       @OA\Items(
+ *         type="object",
+ *         @OA\Property(property="product_id",         type="integer", example=42),
+ *         @OA\Property(property="product_name",       type="string",  example="Billet concert"),
+ *         @OA\Property(property="requested_quantity", type="integer", example=5),
+ *         @OA\Property(property="available_quantity", type="integer", example=2)
+ *       )
  *     )
- *   ),
+ *   )
+ * ),
+ *
+ * @OA\Parameter(
+ *     parameter="AcceptLanguageHeader",
+ *     name="Accept-Language",
+ *     in="header",
+ *     description="Language of the local response. Supported values : `en`, `fr`, `de`. Default `en`.",
+ *     required=false,
+ *     @OA\Schema(
+ *       type="string",
+ *       enum={"en","fr","de"},
+ *       default="en"
+ *     )
+ *   )
+ * ),
  *
  *   @OA\Tag(name="Authentication", description="User authentication and registration"),
  *   @OA\Tag(name="Users",          description="Operations related to user management"),

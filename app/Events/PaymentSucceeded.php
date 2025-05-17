@@ -12,13 +12,15 @@ class PaymentSucceeded
     use Dispatchable, SerializesModels;
 
     public Payment $payment;
+    public string $locale;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(Payment $payment)
+    public function __construct(Payment $payment, string $locale = null)
     {
         $this->payment = $payment;
+        $this->locale  = $locale ?? app()->getLocale();
     }
 
     /**

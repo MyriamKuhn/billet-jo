@@ -11,17 +11,106 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Redis;
 use Mockery;
+use App\Services\CartService;
+use Illuminate\Support\Collection;
+use Laravel\Sanctum\Sanctum;
+use Illuminate\Support\Facades\Session;
 
 class CartControllerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, withFaker;
 
     public function testShowAsGuestReturnsEmptyGuestCart()
     {
-        // Pas de session de panier pré-remplie
-        $this->getJson('/api/cart')
-            ->assertStatus(200)
-            ->assertExactJson(['data' => []]);
+        // 1) Préparation des données
+        $guestCartId = $this->faker->uuid;
+        $product     = Product::factory()->create([
+            'price'          => 12.50,
+            'sale'           => 0.0,
+            'stock_quantity' => 10,
+            'product_details'=> [
+                'image'    => 'img.png',
+                'date'     => '2025-05-17',
+                'time'     => '10:00',
+                'location' => 'Paris',
+            ],
+        ]);
+        $itemsMap = [
+            $product->id => 2,
+        ];
+
+        // 2) Stub du service pour forcer le retour guest
+        $mockService = \Mockery::mock(CartService::class);
+        $mockService
+            ->shouldReceive('getCurrentCart')
+            ->once()
+            ->andReturn($itemsMap);
+        $this->app->instance(CartService::class, $mockService);
+
+        // 3) Simuler la session guest (sans authentification)
+        Session::start();
+        Session::put('guest_cart_id', $guestCartId);
+
+        // 4) Appel de l’API
+        $response = $this->withSession([
+            // nécessaire pour que la session soit prise en compte
+            '_token' => csrf_token(),
+        ])->getJson('/api/cart');
+
+        // 5) Assertions
+        $response->assertStatus(200)
+            // 1 élément dans data.cart_items
+            ->assertJsonCount(1, 'data.cart_items')
+            // Structure globale
+            ->assertJsonStructure([
+                'meta' => ['guest_cart_id'],
+                'data' => [
+                    'cart_items' => [
+                        '*' => [
+                            'product_id',
+                            'quantity',
+                            'in_stock',
+                            'available_quantity',
+                            'unit_price',
+                            'total_price',
+                            'original_price',
+                            'discount_rate',
+                            'product' => [
+                                'name',
+                                'image',
+                                'date',
+                                'time',
+                                'location',
+                            ],
+                        ],
+                    ],
+                ],
+            ])
+            // Contenu exact
+            ->assertJson([
+                'meta' => ['guest_cart_id' => $guestCartId],
+                'data' => [
+                    'cart_items' => [
+                        [
+                            'product_id'         => $product->id,
+                            'quantity'           => 2,
+                            'in_stock'           => true,
+                            'available_quantity' => 10,
+                            'unit_price'         => 12.50,
+                            'total_price'        => 25.00,
+                            'original_price'     => null,
+                            'discount_rate'      => null,
+                            'product'            => [
+                                'name'     => $product->name,
+                                'image'    => 'img.png',
+                                'date'     => '2025-05-17',
+                                'time'     => '10:00',
+                                'location' => 'Paris',
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
     }
 
     public function testShowAsAuthenticatedUserReturnsMinimalCart()
@@ -151,7 +240,11 @@ class CartControllerTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user, 'sanctum');
 
-        $product = Product::factory()->create(['id' => 200]);
+        // on précise un stock suffisant pour la montée à 5 unités
+        $product = Product::factory()->create([
+            'id'             => 200,
+            'stock_quantity' => 10,
+        ]);
         $cart = Cart::factory()->create(['user_id' => $user->id]);
 
         // Panier initial : 3 unités
@@ -161,7 +254,7 @@ class CartControllerTest extends TestCase
             'quantity'   => 3,
         ]);
 
-        // Ajoute 2 de plus → total doit passer à 5
+        // Maintenant on passe à 5, et le stock est suffisant
         $this->patchJson("/api/cart/items/{$product->id}", ['quantity' => 5])
             ->assertNoContent();
         $this->assertDatabaseHas('cart_items', [
@@ -170,7 +263,7 @@ class CartControllerTest extends TestCase
             'quantity'   => 5,
         ]);
 
-        // Réduit à 1 → total 1
+        // Puis on redescend à 1
         $this->patchJson("/api/cart/items/{$product->id}", ['quantity' => 1])
             ->assertNoContent();
         $this->assertDatabaseHas('cart_items', [
@@ -194,5 +287,95 @@ class CartControllerTest extends TestCase
 
         // Tous les items doivent avoir disparu
         $this->assertDatabaseCount('cart_items', 0);
+    }
+
+    public function testShowAsGuestMapsItemsCorrectlyWithoutDiscount()
+    {
+        // 1) On monte localement un mock de CartService
+        $mock = Mockery::mock(CartService::class);
+        $this->app->instance(CartService::class, $mock);
+
+        // 2) Crée un produit sans remise, stock OK
+        $product = Product::factory()->create([
+            'price'           => 20.00,
+            'sale'            => null,
+            'stock_quantity'  => 10,
+            'product_details' => [
+                'image'    => 'https://example.com/img.jpg',
+                'date'     => '2025-09-10',
+                'time'     => '14:00',
+                'location' => 'Hall C',
+            ],
+        ]);
+
+        // 3) On définit le comportement du mock
+        $mock->shouldReceive('getCurrentCart')
+            ->once()
+            ->andReturn([ $product->id => 3 ]);
+
+        // 4) On appelle l’endpoint
+        $response = $this->getJson('/api/cart');
+
+        // 5) Assertions sur la structure et les calculs
+        $response->assertStatus(200)
+                ->assertJsonCount(1, 'data.cart_items');
+
+        $item = $response->json('data.cart_items.0');
+
+        $this->assertEquals($product->id,       $item['product_id']);
+        $this->assertEquals(3,                  $item['quantity']);
+        $this->assertTrue($item['in_stock']);
+        $this->assertEquals(10,                 $item['available_quantity']);
+        $this->assertEquals(20.00,              $item['unit_price']);
+        $this->assertEquals(60.00,              $item['total_price']);
+        $this->assertNull($item['original_price']);
+        $this->assertNull($item['discount_rate']);
+        $this->assertEquals('Hall C',           $item['product']['location']);
+        $this->assertEquals('https://example.com/img.jpg', $item['product']['image']);
+    }
+
+    public function testShowAsGuestMapsItemsCorrectlyWithDiscountAndOutOfStock()
+    {
+        // 1) Mock local de CartService
+        $mock = Mockery::mock(CartService::class);
+        $this->app->instance(CartService::class, $mock);
+
+        // 2) Produit avec remise, stock insuffisant
+        $product = Product::factory()->create([
+            'price'           => 100.00,
+            'sale'            => 0.25,
+            'stock_quantity'  => 1,
+            'product_details' => [
+                'image'    => 'https://example.com/img2.jpg',
+                'date'     => '2025-10-01',
+                'time'     => '19:30',
+                'location' => 'Arena D',
+            ],
+        ]);
+
+        // 3) On définit le comportement du mock
+        $mock->shouldReceive('getCurrentCart')
+            ->once()
+            ->andReturn([ $product->id => 5 ]);
+
+        // 4) Appel à l’API
+        $response = $this->getJson('/api/cart');
+
+        // 5) Assertions
+        $response->assertStatus(200)
+                ->assertJsonCount(1, 'data.cart_items');
+
+        $item = $response->json('data.cart_items.0');
+
+        $this->assertEquals($product->id,       $item['product_id']);
+        $this->assertEquals(5,                  $item['quantity']);
+        $this->assertFalse($item['in_stock']);
+        $this->assertEquals(1,                  $item['available_quantity']);
+        $this->assertEquals(75.00,              $item['unit_price']);
+        $this->assertEquals(375.00,             $item['total_price']);
+        $this->assertEquals(100.00,             $item['original_price']);
+        $this->assertEquals(0.25,               $item['discount_rate']);
+        $this->assertEquals('Arena D',          $item['product']['location']);
+        $this->assertEquals('https://example.com/img2.jpg', $item['product']['image']);
     }
 }

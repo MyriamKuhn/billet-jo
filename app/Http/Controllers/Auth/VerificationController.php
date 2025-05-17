@@ -172,6 +172,8 @@ Validates the email verification link.
      *     tags={"Authentication"},
      *     security={{"bearerAuth": {}}},
      *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Verification email resent successfully",
@@ -189,6 +191,7 @@ Validates the email verification link.
      *             @OA\Property(property="code",    type="string", example="already_verified")
      *         )
      *     ),
+     *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      */

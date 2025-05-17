@@ -8,34 +8,44 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use App\Models\EmailUpdate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class UserService
 {
     /**
-     * Return all users for an administrator.
+     * Return all users for an administrator filtered and paginated.
      *
      * @param  User  $actor  The currently authenticated user
-     * @return Collection<int,User>
+     * @return LengthAwarePaginator
      * @throws AuthorizationException  If the actor is not an admin
      */
-    public function listAllUsers(User $actor): Collection
+    public function listAllUsers(User $actor, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        if (!$actor->role->isAdmin()) {
+        if (! $actor->role->isAdmin()) {
             throw new AuthorizationException();
         }
 
-        return User::select([
-                'id',
-                'firstname',
-                'lastname',
-                'email',
-                'created_at',
-                'updated_at',
-                'role',
-                'twofa_enabled',
-                'email_verified_at',
-                'is_active',
-            ])->get();
+        $query = User::select([
+            'id','firstname','lastname','email',
+            'created_at','updated_at','role',
+            'twofa_enabled','email_verified_at','is_active',
+        ]);
+
+        if (! empty($filters['firstname'])) {
+            $query->where('firstname', 'like', '%'.$filters['firstname'].'%');
+        }
+        if (! empty($filters['lastname'])) {
+            $query->where('lastname', 'like', '%'.$filters['lastname'].'%');
+        }
+        if (! empty($filters['email'])) {
+            $query->where('email', $filters['email']);
+        }
+        if (! empty($filters['role'])) {
+            $query->where('role', $filters['role']);
+        }
+
+        return $query->paginate($perPage)
+                    ->appends(request()->only(['page','per_page','firstname','lastname','email','role']));
     }
 
     /**
@@ -111,6 +121,10 @@ class UserService
             }
         }
 
+        if (array_key_exists('verify_email', $data) && $data['verify_email']) {
+            $target->markEmailAsVerified();
+        }
+
         foreach (['firstname','lastname','email','role'] as $field) {
             if (array_key_exists($field, $data)) {
                 $target->$field = $data[$field];
@@ -126,6 +140,7 @@ class UserService
             'is_active'     => $target->is_active,
             'twofa_enabled' => $target->twofa_enabled,
             'role'          => $target->role,
+            'email_verified_at' => $target->email_verified_at,
         ];
     }
 

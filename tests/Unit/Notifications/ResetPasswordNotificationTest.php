@@ -23,8 +23,6 @@ class ResetPasswordNotificationTest extends TestCase
         // Ensure non-production environment
         $this->app['env'] = 'testing';
 
-        Config::set('app.name', 'MyApp');
-
         $notifiable = (object) ['email' => 'user@example.com'];
         $token = 'abc123';
         $notification = new ResetPasswordNotification($token);
@@ -40,7 +38,7 @@ class ResetPasswordNotificationTest extends TestCase
         $this->assertEquals('emails.password', $mailMessage->view);
         $this->assertArrayHasKey('user', $mailMessage->viewData);
         $this->assertSame($notifiable, $mailMessage->viewData['user']);
-        $expectedUrl = 'http://localhost:3000/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email);
+        $expectedUrl = 'http://localhost:3000/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email) . '&locale=en';
         $this->assertEquals($expectedUrl, $mailMessage->viewData['url']);
     }
 
@@ -49,15 +47,13 @@ class ResetPasswordNotificationTest extends TestCase
         // Force production environment
         $this->app['env'] = 'production';
 
-        Config::set('app.name', 'MyApp');
-
         $notifiable = (object) ['email' => 'test@example.com'];
         $token = 'xyz789';
         $notification = new ResetPasswordNotification($token);
 
         $mailMessage = $notification->toMail($notifiable);
 
-        $expectedUrl = 'https://jo2024.mkcodecreations.dev/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email);
+        $expectedUrl = 'https://jo2024.mkcodecreations.dev/password-reset?token=' . $token . '&email=' . urlencode($notifiable->email) . '&locale=en';
         $this->assertEquals($expectedUrl, $mailMessage->viewData['url']);
     }
 

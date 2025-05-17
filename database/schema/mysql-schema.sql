@@ -185,6 +185,23 @@ CREATE TABLE `personal_access_tokens` (
   KEY `personal_access_tokens_tokenable_type_tokenable_id_index` (`tokenable_type`,`tokenable_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `product_translations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `product_translations` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `locale` varchar(2) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `product_details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`product_details`)),
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `product_id` bigint(20) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `prod_loc_unique` (`product_id`,`locale`),
+  KEY `product_translations_locale_index` (`locale`),
+  CONSTRAINT `product_translations_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `products`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -283,3 +300,4 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (6,'2025_04_22_1954
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (7,'2025_04_22_200446_create_tickets_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (8,'2025_04_22_203104_create_cart_items_table',1);
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (9,'2025_04_23_200508_create_personal_access_tokens_table',1);
+INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES (10,'2025_05_11_132754_create_product_translations_table',1);

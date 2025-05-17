@@ -12,7 +12,9 @@ class PaymentSucceededTest extends TestCase
     public function testBroadcastOnReturnsPrivateChannel(): void
     {
         $payment = new Payment();
-        $event   = new PaymentSucceeded($payment);
+
+        // On fournit explicitement une locale pour éviter l’appel à app()->getLocale()
+        $event   = new PaymentSucceeded($payment, 'fr');
 
         $channels = $event->broadcastOn();
 

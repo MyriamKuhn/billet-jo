@@ -12,6 +12,8 @@ use Illuminate\Database\QueryException;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use App\Exceptions\StockUnavailableException;
+use App\Models\Product;
 
 class CartService
 {
@@ -99,6 +101,23 @@ class CartService
             // Validate quantity
             throw new BadRequestHttpException('Quantity must be at least 1');
         }
+
+        $currentCart = $this->getCurrentCart();
+
+        if ($currentCart instanceof Cart) {
+            // Authenticated user: load cart items from the database
+            $currentCart->load(['cartItems']);
+            $items = $currentCart->cartItems
+                ->pluck('quantity', 'product_id')
+                ->toArray();
+        } else {
+            // Guest cart: Redis hash
+            $items = $currentCart;
+        }
+
+        $items[$productId] = ($items[$productId] ?? 0) + $qty;
+
+        $this->assertStockAvailable($items);
 
         if (auth()->check()) {
             // Logged in: persist cart in database
@@ -298,6 +317,49 @@ class CartService
                 ['exception' => $e]
             );
             throw $e;
+        }
+    }
+
+    /**
+     * Assert that stock is available for all items in the cart.
+     *
+     * @param  \App\Models\Cart  $cart
+     * @throws StockUnavailableException
+     * @return void
+     */
+    public function assertStockAvailable(Cart|array $cartOrItems): void
+    {
+        if ($cartOrItems instanceof Cart) {
+            $cartOrItems->load(['cartItems.product' => fn($q) => $q->select(['id','stock_quantity','name'])]);
+            $items = $cartOrItems->cartItems->mapWithKeys(fn($item) => [
+                $item->product_id => $item->quantity
+            ])->toArray();
+        } else {
+            $items = $cartOrItems;
+        }
+
+        $products = Product::whereIn('id', array_keys($items))
+            ->get(['id','stock_quantity','name']);
+
+        $errors = [];
+
+        foreach ($products as $product) {
+            $requested = $items[$product->id] ?? 0;
+            if ($requested > $product->stock_quantity) {
+                $errors[] = [
+                    'product_id'         => $product->id,
+                    'product_name'       => $product->name,
+                    'requested_quantity' => $requested,
+                    'available_quantity' => $product->stock_quantity,
+                ];
+            }
+        }
+
+        if (! empty($errors)) {
+            throw new StockUnavailableException(
+                'Stock unavailable for one or more items in the cart',
+                $errors
+            );
         }
     }
 }

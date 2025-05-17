@@ -22,6 +22,8 @@ class GenerateInvoicePdf
     public function handle(InvoiceRequested $event): void
     {
         $payment = $event->payment;
+
+        app()->setLocale($event->locale);
         // Generate the PDF
         $pdf = Pdf::loadView('invoices.template', [
             'payment' => $payment,
