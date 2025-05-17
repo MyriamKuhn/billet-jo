@@ -11,7 +11,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 class EmailVerificationService
 {
     /**
-     * Vérifie et marque l’email de l’utilisateur comme vérifié.
+     * Verify and mark the user's email as verified.
      *
      * @param  int    $userId
      * @param  string $hash

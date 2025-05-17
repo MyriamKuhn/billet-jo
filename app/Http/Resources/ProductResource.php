@@ -28,14 +28,11 @@ class ProductResource extends JsonResource
         return [
             'id'             => $this->id,
             'name'           => $this->name,
-            'price'          => $this->price,
-            'sale'           => $this->sale,
+            'price'          => (float) $this->price,
+            'sale'           => (float) $this->sale,
             'stock_quantity' => $this->stock_quantity,
 
-            // On injecte notre Resource du JSON colonné
-            'product_details'=> new ProductDetailsResource(
-                $this->product_details  // array issu du cast
-            ),
+            'product_details'=> new ProductDetailsResource($this->product_details),
         ];
     }
 }

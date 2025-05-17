@@ -15,6 +15,7 @@ use Illuminate\Validation\Rules\Password;
  *   @OA\Property(property="password",            type="string", format="password", example="Str0ngP@ssw0rd!"),
  *   @OA\Property(property="password_confirmation", type="string", format="password", example="Str0ngP@ssw0rd!"),
  *   @OA\Property(property="captcha_token",       type="string", example="03AGdBq24…"),
+ *   @OA\Property(property="accept_terms",       type="boolean", example=true),
  * )
  */
 class RegisterRequest extends FormRequest
@@ -45,6 +46,7 @@ class RegisterRequest extends FormRequest
                                     ->numbers()
                                     ->symbols()],
             'captcha_token' => 'required|string',
+            'accept_terms' => 'required|boolean',
         ];
     }
 }

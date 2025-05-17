@@ -49,7 +49,7 @@ class EmailUpdatedNotification extends Notification
         $url = $this->getCancelLink($notifiable);
 
         return (new MailMessage)
-            ->subject(__('mail.subject_email_update_request_cancel', ['app_name'=> env('APP_NAME')]))
+            ->subject(__('mail.subject_email_update_request_cancel', ['app_name'=> config('app.name')]))
             ->view('emails.updaterevoke', [
                 'user' => $notifiable,
                 'newEmail'=> $this->newEmail,
