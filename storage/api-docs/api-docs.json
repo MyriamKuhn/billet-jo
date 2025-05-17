@@ -3216,6 +3216,10 @@
                                             "user"
                                         ],
                                         "example": "employee"
+                                    },
+                                    "verify_email": {
+                                        "type": "boolean",
+                                        "example": true
                                     }
                                 },
                                 "type": "object"

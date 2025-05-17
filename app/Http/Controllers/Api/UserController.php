@@ -188,7 +188,7 @@ class UserController extends Controller
      * @OA\Patch(
      *     path="/api/users/{user}",
      *     summary="Modify a user's details (admin only)",
-     *     description="Allows an administrator to update a user's status, 2FA setting, name, email, or role.",
+     *     description="Allows an administrator to update a user's status, 2FA setting, name, email, role or verified email.",
      *     operationId="updateUserByAdmin",
      *     tags={"Users"},
      *     security={{"bearerAuth":{}}},
@@ -209,7 +209,8 @@ class UserController extends Controller
      *             @OA\Property(property="firstname",     type="string",  example="Alice"),
      *             @OA\Property(property="lastname",      type="string",  example="Dupont"),
      *             @OA\Property(property="email",         type="string",  format="email", example="alice@example.com"),
-     *             @OA\Property(property="role",          type="string",  enum={"admin","employee","user"}, example="employee")
+     *             @OA\Property(property="role",          type="string",  enum={"admin","employee","user"}, example="employee"),
+     *             @OA\Property(property="verify_email",  type="boolean", example=true)
      *         )
      *     ),
      *

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1747479533">
-  <project timestamp="1747479533">
+<coverage generated="1747520778">
+  <project timestamp="1747520778">
     <file name="D:\GitHub\billet-jo\app\Enums\PaymentMethod.php">
       <metrics loc="11" ncloc="11" classes="0" methods="0" coveredmethods="0" conditionals="0" coveredconditionals="0" statements="0" coveredstatements="0" elements="0" coveredelements="0"/>
     </file>
@@ -15,8 +15,8 @@
         <class name="App\Enums\UserRole" namespace="App\Enums">
           <metrics complexity="3" methods="3" coveredmethods="3" conditionals="0" coveredconditionals="0" statements="3" coveredstatements="3" elements="6" coveredelements="6"/>
         </class>
-        <line num="16" type="method" name="isAdmin" visibility="public" complexity="1" crap="1" count="46"/>
-        <line num="18" type="stmt" count="46"/>
+        <line num="16" type="method" name="isAdmin" visibility="public" complexity="1" crap="1" count="51"/>
+        <line num="18" type="stmt" count="51"/>
         <line num="26" type="method" name="isEmployee" visibility="public" complexity="1" crap="1" count="4"/>
         <line num="28" type="stmt" count="4"/>
         <line num="36" type="method" name="isUser" visibility="public" complexity="1" crap="1" count="1"/>
@@ -547,7 +547,7 @@
         <class name="App\Http\Controllers\Api\UserController" namespace="App\Http\Controllers\Api">
           <metrics complexity="9" methods="8" coveredmethods="8" conditionals="0" coveredconditionals="0" statements="50" coveredstatements="50" elements="58" coveredelements="58"/>
         </class>
-        <line num="16" type="method" name="__construct" visibility="public" complexity="1" crap="1" count="9"/>
+        <line num="16" type="method" name="__construct" visibility="public" complexity="1" crap="1" count="10"/>
         <line num="76" type="method" name="index" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="78" type="stmt" count="1"/>
         <line num="79" type="stmt" count="1"/>
@@ -578,33 +578,33 @@
         <line num="181" type="stmt" count="1"/>
         <line num="182" type="stmt" count="1"/>
         <line num="184" type="stmt" count="1"/>
-        <line num="227" type="method" name="update" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="229" type="stmt" count="1"/>
-        <line num="230" type="stmt" count="1"/>
-        <line num="231" type="stmt" count="1"/>
-        <line num="232" type="stmt" count="1"/>
-        <line num="233" type="stmt" count="1"/>
-        <line num="235" type="stmt" count="1"/>
-        <line num="285" type="method" name="checkEmailUpdate" visibility="public" complexity="2" crap="2" count="2"/>
-        <line num="287" type="stmt" count="2"/>
+        <line num="228" type="method" name="update" visibility="public" complexity="1" crap="1" count="2"/>
+        <line num="230" type="stmt" count="2"/>
+        <line num="231" type="stmt" count="2"/>
+        <line num="232" type="stmt" count="2"/>
+        <line num="233" type="stmt" count="2"/>
+        <line num="234" type="stmt" count="2"/>
+        <line num="236" type="stmt" count="2"/>
+        <line num="286" type="method" name="checkEmailUpdate" visibility="public" complexity="2" crap="2" count="2"/>
         <line num="288" type="stmt" count="2"/>
-        <line num="290" type="stmt" count="2"/>
+        <line num="289" type="stmt" count="2"/>
         <line num="291" type="stmt" count="2"/>
         <line num="292" type="stmt" count="2"/>
         <line num="293" type="stmt" count="2"/>
-        <line num="330" type="method" name="storeEmployee" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="332" type="stmt" count="1"/>
+        <line num="294" type="stmt" count="2"/>
+        <line num="331" type="method" name="storeEmployee" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="333" type="stmt" count="1"/>
         <line num="334" type="stmt" count="1"/>
         <line num="335" type="stmt" count="1"/>
-        <line num="337" type="stmt" count="1"/>
-        <line num="370" type="method" name="showSelf" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="372" type="stmt" count="1"/>
+        <line num="336" type="stmt" count="1"/>
+        <line num="338" type="stmt" count="1"/>
+        <line num="371" type="method" name="showSelf" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="373" type="stmt" count="1"/>
-        <line num="375" type="stmt" count="1"/>
+        <line num="374" type="stmt" count="1"/>
         <line num="376" type="stmt" count="1"/>
         <line num="377" type="stmt" count="1"/>
-        <metrics loc="380" ncloc="103" classes="1" methods="8" coveredmethods="8" conditionals="0" coveredconditionals="0" statements="50" coveredstatements="50" elements="58" coveredelements="58"/>
+        <line num="378" type="stmt" count="1"/>
+        <metrics loc="381" ncloc="103" classes="1" methods="8" coveredmethods="8" conditionals="0" coveredconditionals="0" statements="50" coveredstatements="50" elements="58" coveredelements="58"/>
       </file>
     </package>
     <package name="App\Http\Controllers\Auth">
@@ -620,40 +620,40 @@
         <line num="68" type="stmt" count="1"/>
         <line num="69" type="stmt" count="1"/>
         <line num="70" type="stmt" count="1"/>
-        <line num="168" type="method" name="login" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="170" type="stmt" count="1"/>
+        <line num="170" type="method" name="login" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="172" type="stmt" count="1"/>
-        <line num="213" type="method" name="enableTwoFactor" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="215" type="stmt" count="1"/>
+        <line num="174" type="stmt" count="1"/>
+        <line num="215" type="method" name="enableTwoFactor" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="217" type="stmt" count="1"/>
-        <line num="255" type="method" name="logout" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="257" type="stmt" count="1"/>
+        <line num="219" type="stmt" count="1"/>
+        <line num="257" type="method" name="logout" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="259" type="stmt" count="1"/>
-        <line num="311" type="method" name="forgotPassword" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="313" type="stmt" count="1"/>
+        <line num="261" type="stmt" count="1"/>
+        <line num="313" type="method" name="forgotPassword" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="315" type="stmt" count="1"/>
-        <line num="384" type="method" name="resetPassword" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="386" type="stmt" count="1"/>
+        <line num="317" type="stmt" count="1"/>
+        <line num="386" type="method" name="resetPassword" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="388" type="stmt" count="1"/>
-        <line num="460" type="method" name="updatePassword" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="462" type="stmt" count="1"/>
-        <line num="463" type="stmt" count="1"/>
+        <line num="390" type="stmt" count="1"/>
+        <line num="462" type="method" name="updatePassword" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="464" type="stmt" count="1"/>
         <line num="465" type="stmt" count="1"/>
+        <line num="466" type="stmt" count="1"/>
         <line num="467" type="stmt" count="1"/>
-        <line num="511" type="method" name="updateEmail" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="513" type="stmt" count="1"/>
-        <line num="514" type="stmt" count="1"/>
+        <line num="469" type="stmt" count="1"/>
+        <line num="513" type="method" name="updateEmail" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="515" type="stmt" count="1"/>
         <line num="516" type="stmt" count="1"/>
+        <line num="517" type="stmt" count="1"/>
         <line num="518" type="stmt" count="1"/>
-        <line num="567" type="method" name="disableTwoFactor" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="569" type="stmt" count="1"/>
-        <line num="570" type="stmt" count="1"/>
+        <line num="520" type="stmt" count="1"/>
+        <line num="569" type="method" name="disableTwoFactor" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="571" type="stmt" count="1"/>
         <line num="572" type="stmt" count="1"/>
+        <line num="573" type="stmt" count="1"/>
         <line num="574" type="stmt" count="1"/>
-        <metrics loc="577" ncloc="99" classes="1" methods="10" coveredmethods="10" conditionals="0" coveredconditionals="0" statements="32" coveredstatements="32" elements="42" coveredelements="42"/>
+        <line num="576" type="stmt" count="1"/>
+        <metrics loc="579" ncloc="99" classes="1" methods="10" coveredmethods="10" conditionals="0" coveredconditionals="0" statements="32" coveredstatements="32" elements="42" coveredelements="42"/>
       </file>
       <file name="D:\GitHub\billet-jo\app\Http\Controllers\Auth\VerificationController.php">
         <class name="App\Http\Controllers\Auth\VerificationController" namespace="App\Http\Controllers\Auth">
@@ -763,12 +763,12 @@
         <class name="App\Http\Middleware\SetLocalLanguages" namespace="App\Http\Middleware">
           <metrics complexity="2" methods="1" coveredmethods="1" conditionals="0" coveredconditionals="0" statements="5" coveredstatements="5" elements="6" coveredelements="6"/>
         </class>
-        <line num="16" type="method" name="handle" visibility="public" complexity="2" crap="2" count="94"/>
-        <line num="19" type="stmt" count="94"/>
-        <line num="22" type="stmt" count="94"/>
-        <line num="23" type="stmt" count="94"/>
-        <line num="27" type="stmt" count="94"/>
-        <line num="29" type="stmt" count="94"/>
+        <line num="16" type="method" name="handle" visibility="public" complexity="2" crap="2" count="95"/>
+        <line num="19" type="stmt" count="95"/>
+        <line num="22" type="stmt" count="95"/>
+        <line num="23" type="stmt" count="95"/>
+        <line num="27" type="stmt" count="95"/>
+        <line num="29" type="stmt" count="95"/>
         <metrics loc="32" ncloc="23" classes="1" methods="1" coveredmethods="1" conditionals="0" coveredconditionals="0" statements="5" coveredstatements="5" elements="6" coveredelements="6"/>
       </file>
     </package>
@@ -806,25 +806,26 @@
       </file>
       <file name="D:\GitHub\billet-jo\app\Http\Requests\AdminUpdateUserRequest.php">
         <class name="App\Http\Requests\AdminUpdateUserRequest" namespace="App\Http\Requests">
-          <metrics complexity="3" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="14" coveredstatements="14" elements="16" coveredelements="16"/>
+          <metrics complexity="3" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="15" coveredstatements="15" elements="17" coveredelements="17"/>
         </class>
-        <line num="13" type="method" name="authorize" visibility="public" complexity="2" crap="2" count="1"/>
-        <line num="15" type="stmt" count="1"/>
-        <line num="23" type="method" name="rules" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="25" type="stmt" count="1"/>
-        <line num="27" type="stmt" count="1"/>
-        <line num="28" type="stmt" count="1"/>
-        <line num="29" type="stmt" count="1"/>
-        <line num="30" type="stmt" count="1"/>
-        <line num="31" type="stmt" count="1"/>
-        <line num="32" type="stmt" count="1"/>
-        <line num="33" type="stmt" count="1"/>
-        <line num="34" type="stmt" count="1"/>
-        <line num="35" type="stmt" count="1"/>
-        <line num="36" type="stmt" count="1"/>
-        <line num="37" type="stmt" count="1"/>
-        <line num="38" type="stmt" count="1"/>
-        <metrics loc="41" ncloc="33" classes="1" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="14" coveredstatements="14" elements="16" coveredelements="16"/>
+        <line num="13" type="method" name="authorize" visibility="public" complexity="2" crap="2" count="2"/>
+        <line num="15" type="stmt" count="2"/>
+        <line num="23" type="method" name="rules" visibility="public" complexity="1" crap="1" count="2"/>
+        <line num="25" type="stmt" count="2"/>
+        <line num="27" type="stmt" count="2"/>
+        <line num="28" type="stmt" count="2"/>
+        <line num="29" type="stmt" count="2"/>
+        <line num="30" type="stmt" count="2"/>
+        <line num="31" type="stmt" count="2"/>
+        <line num="32" type="stmt" count="2"/>
+        <line num="33" type="stmt" count="2"/>
+        <line num="34" type="stmt" count="2"/>
+        <line num="35" type="stmt" count="2"/>
+        <line num="36" type="stmt" count="2"/>
+        <line num="37" type="stmt" count="2"/>
+        <line num="38" type="stmt" count="2"/>
+        <line num="39" type="stmt" count="2"/>
+        <metrics loc="42" ncloc="34" classes="1" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="15" coveredstatements="15" elements="17" coveredelements="17"/>
       </file>
       <file name="D:\GitHub\billet-jo\app\Http\Requests\IndexProductRequest.php">
         <class name="App\Http\Requests\IndexProductRequest" namespace="App\Http\Requests">
@@ -1275,12 +1276,11 @@
       </file>
       <file name="D:\GitHub\billet-jo\app\Http\Requests\Auth\RegisterRequest.php">
         <class name="App\Http\Requests\Auth\RegisterRequest" namespace="App\Http\Requests\Auth">
-          <metrics complexity="2" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="13" coveredstatements="13" elements="15" coveredelements="15"/>
+          <metrics complexity="2" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="14" coveredstatements="14" elements="16" coveredelements="16"/>
         </class>
-        <line num="25" type="method" name="authorize" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="27" type="stmt" count="1"/>
-        <line num="35" type="method" name="rules" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="37" type="stmt" count="1"/>
+        <line num="26" type="method" name="authorize" visibility="public" complexity="1" crap="1" count="1"/>
+        <line num="28" type="stmt" count="1"/>
+        <line num="36" type="method" name="rules" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="38" type="stmt" count="1"/>
         <line num="39" type="stmt" count="1"/>
         <line num="40" type="stmt" count="1"/>
@@ -1292,7 +1292,9 @@
         <line num="46" type="stmt" count="1"/>
         <line num="47" type="stmt" count="1"/>
         <line num="48" type="stmt" count="1"/>
-        <metrics loc="51" ncloc="31" classes="1" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="13" coveredstatements="13" elements="15" coveredelements="15"/>
+        <line num="49" type="stmt" count="1"/>
+        <line num="50" type="stmt" count="1"/>
+        <metrics loc="53" ncloc="32" classes="1" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="14" coveredstatements="14" elements="16" coveredelements="16"/>
       </file>
       <file name="D:\GitHub\billet-jo\app\Http\Requests\Auth\ResetPasswordRequest.php">
         <class name="App\Http\Requests\Auth\ResetPasswordRequest" namespace="App\Http\Requests\Auth">
@@ -1732,8 +1734,8 @@
         <line num="108" type="stmt" count="2"/>
         <line num="116" type="method" name="emailUpdate" visibility="public" complexity="1" crap="1" count="3"/>
         <line num="118" type="stmt" count="3"/>
-        <line num="126" type="method" name="sendEmailVerificationNotification" visibility="public" complexity="1" crap="1" count="3"/>
-        <line num="128" type="stmt" count="3"/>
+        <line num="126" type="method" name="sendEmailVerificationNotification" visibility="public" complexity="1" crap="1" count="4"/>
+        <line num="128" type="stmt" count="4"/>
         <line num="137" type="method" name="sendPasswordResetNotification" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="139" type="stmt" count="1"/>
         <metrics loc="142" ncloc="72" classes="1" methods="6" coveredmethods="6" conditionals="0" coveredconditionals="0" statements="6" coveredstatements="6" elements="12" coveredelements="12"/>
@@ -1805,27 +1807,27 @@
         <class name="App\Notifications\VerifyEmailNotification" namespace="App\Notifications">
           <metrics complexity="5" methods="5" coveredmethods="5" conditionals="0" coveredconditionals="0" statements="20" coveredstatements="20" elements="25" coveredelements="25"/>
         </class>
-        <line num="18" type="method" name="__construct" visibility="public" complexity="1" crap="1" count="6"/>
-        <line num="21" type="stmt" count="6"/>
-        <line num="28" type="method" name="via" visibility="public" complexity="1" crap="1" count="4"/>
-        <line num="30" type="stmt" count="4"/>
-        <line num="36" type="method" name="toMail" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="38" type="stmt" count="1"/>
-        <line num="40" type="stmt" count="1"/>
-        <line num="41" type="stmt" count="1"/>
-        <line num="42" type="stmt" count="1"/>
-        <line num="43" type="stmt" count="1"/>
-        <line num="44" type="stmt" count="1"/>
-        <line num="45" type="stmt" count="1"/>
-        <line num="54" type="method" name="verificationUrl" visibility="protected" complexity="1" crap="1" count="1"/>
-        <line num="56" type="stmt" count="1"/>
-        <line num="57" type="stmt" count="1"/>
-        <line num="58" type="stmt" count="1"/>
-        <line num="59" type="stmt" count="1"/>
-        <line num="60" type="stmt" count="1"/>
-        <line num="61" type="stmt" count="1"/>
-        <line num="62" type="stmt" count="1"/>
-        <line num="63" type="stmt" count="1"/>
+        <line num="18" type="method" name="__construct" visibility="public" complexity="1" crap="1" count="7"/>
+        <line num="21" type="stmt" count="7"/>
+        <line num="28" type="method" name="via" visibility="public" complexity="1" crap="1" count="5"/>
+        <line num="30" type="stmt" count="5"/>
+        <line num="36" type="method" name="toMail" visibility="public" complexity="1" crap="1" count="2"/>
+        <line num="38" type="stmt" count="2"/>
+        <line num="40" type="stmt" count="2"/>
+        <line num="41" type="stmt" count="2"/>
+        <line num="42" type="stmt" count="2"/>
+        <line num="43" type="stmt" count="2"/>
+        <line num="44" type="stmt" count="2"/>
+        <line num="45" type="stmt" count="2"/>
+        <line num="54" type="method" name="verificationUrl" visibility="protected" complexity="1" crap="1" count="2"/>
+        <line num="56" type="stmt" count="2"/>
+        <line num="57" type="stmt" count="2"/>
+        <line num="58" type="stmt" count="2"/>
+        <line num="59" type="stmt" count="2"/>
+        <line num="60" type="stmt" count="2"/>
+        <line num="61" type="stmt" count="2"/>
+        <line num="62" type="stmt" count="2"/>
+        <line num="63" type="stmt" count="2"/>
         <line num="71" type="method" name="toArray" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="73" type="stmt" count="1"/>
         <line num="74" type="stmt" count="1"/>
@@ -1866,31 +1868,31 @@
         <class name="App\Providers\AppServiceProvider" namespace="App\Providers">
           <metrics complexity="2" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="15" coveredstatements="15" elements="17" coveredelements="17"/>
         </class>
-        <line num="16" type="method" name="register" visibility="public" complexity="1" crap="1" count="335"/>
-        <line num="19" type="stmt" count="335"/>
+        <line num="16" type="method" name="register" visibility="public" complexity="1" crap="1" count="342"/>
+        <line num="19" type="stmt" count="342"/>
         <line num="20" type="stmt" count="1"/>
         <line num="22" type="stmt" count="1"/>
         <line num="23" type="stmt" count="1"/>
         <line num="24" type="stmt" count="1"/>
         <line num="25" type="stmt" count="1"/>
         <line num="26" type="stmt" count="1"/>
-        <line num="27" type="stmt" count="335"/>
-        <line num="30" type="stmt" count="335"/>
+        <line num="27" type="stmt" count="342"/>
+        <line num="30" type="stmt" count="342"/>
         <line num="31" type="stmt" count="8"/>
-        <line num="32" type="stmt" count="335"/>
-        <line num="38" type="method" name="boot" visibility="public" complexity="1" crap="1" count="335"/>
-        <line num="40" type="stmt" count="335"/>
-        <line num="41" type="stmt" count="335"/>
-        <line num="42" type="stmt" count="335"/>
-        <line num="43" type="stmt" count="335"/>
+        <line num="32" type="stmt" count="342"/>
+        <line num="38" type="method" name="boot" visibility="public" complexity="1" crap="1" count="342"/>
+        <line num="40" type="stmt" count="342"/>
+        <line num="41" type="stmt" count="342"/>
+        <line num="42" type="stmt" count="342"/>
+        <line num="43" type="stmt" count="342"/>
         <metrics loc="46" ncloc="38" classes="1" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="15" coveredstatements="15" elements="17" coveredelements="17"/>
       </file>
       <file name="D:\GitHub\billet-jo\app\Providers\EventServiceProvider.php">
         <class name="App\Providers\EventServiceProvider" namespace="App\Providers">
           <metrics complexity="1" methods="1" coveredmethods="1" conditionals="0" coveredconditionals="0" statements="1" coveredstatements="1" elements="2" coveredelements="2"/>
         </class>
-        <line num="30" type="method" name="boot" visibility="public" complexity="1" crap="1" count="335"/>
-        <line num="32" type="stmt" count="335"/>
+        <line num="30" type="method" name="boot" visibility="public" complexity="1" crap="1" count="342"/>
+        <line num="32" type="stmt" count="342"/>
         <metrics loc="36" ncloc="27" classes="1" methods="1" coveredmethods="1" conditionals="0" coveredconditionals="0" statements="1" coveredstatements="1" elements="2" coveredelements="2"/>
       </file>
     </package>
@@ -2130,11 +2132,11 @@
       </file>
       <file name="D:\GitHub\billet-jo\app\Services\Auth\RegistrationService.php">
         <class name="App\Services\Auth\RegistrationService" namespace="App\Services\Auth">
-          <metrics complexity="4" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="18" coveredstatements="18" elements="20" coveredelements="20"/>
+          <metrics complexity="5" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="23" coveredstatements="23" elements="25" coveredelements="25"/>
         </class>
-        <line num="14" type="method" name="__construct" visibility="public" complexity="1" crap="1" count="3"/>
-        <line num="23" type="method" name="register" visibility="public" complexity="3" crap="3" count="3"/>
-        <line num="26" type="stmt" count="3"/>
+        <line num="14" type="method" name="__construct" visibility="public" complexity="1" crap="1" count="5"/>
+        <line num="23" type="method" name="register" visibility="public" complexity="4" crap="4" count="5"/>
+        <line num="26" type="stmt" count="5"/>
         <line num="27" type="stmt" count="1"/>
         <line num="28" type="stmt" count="1"/>
         <line num="29" type="stmt" count="1"/>
@@ -2142,16 +2144,21 @@
         <line num="31" type="stmt" count="1"/>
         <line num="32" type="stmt" count="1"/>
         <line num="33" type="stmt" count="1"/>
-        <line num="37" type="stmt" count="2"/>
-        <line num="38" type="stmt" count="2"/>
-        <line num="39" type="stmt" count="2"/>
-        <line num="40" type="stmt" count="2"/>
-        <line num="41" type="stmt" count="2"/>
-        <line num="42" type="stmt" count="2"/>
-        <line num="43" type="stmt" count="2"/>
-        <line num="46" type="stmt" count="2"/>
-        <line num="48" type="stmt" count="2"/>
-        <metrics loc="51" ncloc="41" classes="1" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="18" coveredstatements="18" elements="20" coveredelements="20"/>
+        <line num="36" type="stmt" count="4"/>
+        <line num="37" type="stmt" count="1"/>
+        <line num="38" type="stmt" count="1"/>
+        <line num="39" type="stmt" count="1"/>
+        <line num="40" type="stmt" count="1"/>
+        <line num="44" type="stmt" count="3"/>
+        <line num="45" type="stmt" count="3"/>
+        <line num="46" type="stmt" count="3"/>
+        <line num="47" type="stmt" count="3"/>
+        <line num="48" type="stmt" count="3"/>
+        <line num="49" type="stmt" count="3"/>
+        <line num="50" type="stmt" count="3"/>
+        <line num="53" type="stmt" count="3"/>
+        <line num="55" type="stmt" count="3"/>
+        <metrics loc="58" ncloc="48" classes="1" methods="2" coveredmethods="2" conditionals="0" coveredconditionals="0" statements="23" coveredstatements="23" elements="25" coveredelements="25"/>
       </file>
       <file name="D:\GitHub\billet-jo\app\Services\Auth\TwoFactorService.php">
         <class name="App\Services\Auth\TwoFactorService" namespace="App\Services\Auth">
@@ -2809,7 +2816,7 @@
       </file>
       <file name="D:\GitHub\billet-jo\app\Services\UserService.php">
         <class name="App\Services\UserService" namespace="App\Services">
-          <metrics complexity="23" methods="7" coveredmethods="7" conditionals="0" coveredconditionals="0" statements="80" coveredstatements="80" elements="87" coveredelements="87"/>
+          <metrics complexity="25" methods="7" coveredmethods="7" conditionals="0" coveredconditionals="0" statements="83" coveredstatements="83" elements="90" coveredelements="90"/>
         </class>
         <line num="22" type="method" name="listAllUsers" visibility="public" complexity="6" crap="6" count="8"/>
         <line num="24" type="stmt" count="8"/>
@@ -2846,59 +2853,62 @@
         <line num="90" type="stmt" count="1"/>
         <line num="91" type="stmt" count="1"/>
         <line num="92" type="stmt" count="1"/>
-        <line num="105" type="method" name="updateUserByAdmin" visibility="public" complexity="7" crap="7" count="2"/>
-        <line num="107" type="stmt" count="2"/>
-        <line num="108" type="stmt" count="1"/>
-        <line num="112" type="stmt" count="1"/>
+        <line num="105" type="method" name="updateUserByAdmin" visibility="public" complexity="9" crap="9" count="7"/>
+        <line num="107" type="stmt" count="7"/>
+        <line num="108" type="stmt" count="2"/>
+        <line num="112" type="stmt" count="5"/>
         <line num="113" type="stmt" count="1"/>
-        <line num="116" type="stmt" count="1"/>
+        <line num="116" type="stmt" count="5"/>
         <line num="118" type="stmt" count="1"/>
         <line num="119" type="stmt" count="1"/>
         <line num="120" type="stmt" count="1"/>
-        <line num="124" type="stmt" count="1"/>
-        <line num="125" type="stmt" count="1"/>
-        <line num="126" type="stmt" count="1"/>
+        <line num="124" type="stmt" count="5"/>
+        <line num="125" type="stmt" count="2"/>
+        <line num="128" type="stmt" count="5"/>
+        <line num="129" type="stmt" count="5"/>
         <line num="130" type="stmt" count="1"/>
-        <line num="132" type="stmt" count="1"/>
-        <line num="133" type="stmt" count="1"/>
-        <line num="134" type="stmt" count="1"/>
-        <line num="135" type="stmt" count="1"/>
-        <line num="136" type="stmt" count="1"/>
-        <line num="137" type="stmt" count="1"/>
-        <line num="138" type="stmt" count="1"/>
-        <line num="139" type="stmt" count="1"/>
-        <line num="151" type="method" name="checkEmailUpdate" visibility="public" complexity="3" crap="3" count="1"/>
-        <line num="153" type="stmt" count="1"/>
-        <line num="154" type="stmt" count="1"/>
-        <line num="157" type="stmt" count="1"/>
+        <line num="134" type="stmt" count="5"/>
+        <line num="136" type="stmt" count="5"/>
+        <line num="137" type="stmt" count="5"/>
+        <line num="138" type="stmt" count="5"/>
+        <line num="139" type="stmt" count="5"/>
+        <line num="140" type="stmt" count="5"/>
+        <line num="141" type="stmt" count="5"/>
+        <line num="142" type="stmt" count="5"/>
+        <line num="143" type="stmt" count="5"/>
+        <line num="144" type="stmt" count="5"/>
+        <line num="156" type="method" name="checkEmailUpdate" visibility="public" complexity="3" crap="3" count="1"/>
         <line num="158" type="stmt" count="1"/>
         <line num="159" type="stmt" count="1"/>
         <line num="162" type="stmt" count="1"/>
         <line num="163" type="stmt" count="1"/>
         <line num="164" type="stmt" count="1"/>
-        <line num="165" type="stmt" count="1"/>
-        <line num="166" type="stmt" count="1"/>
         <line num="167" type="stmt" count="1"/>
-        <line num="179" type="method" name="createEmployee" visibility="public" complexity="2" crap="2" count="1"/>
-        <line num="181" type="stmt" count="1"/>
-        <line num="182" type="stmt" count="1"/>
-        <line num="185" type="stmt" count="1"/>
+        <line num="168" type="stmt" count="1"/>
+        <line num="169" type="stmt" count="1"/>
+        <line num="170" type="stmt" count="1"/>
+        <line num="171" type="stmt" count="1"/>
+        <line num="172" type="stmt" count="1"/>
+        <line num="184" type="method" name="createEmployee" visibility="public" complexity="2" crap="2" count="1"/>
         <line num="186" type="stmt" count="1"/>
         <line num="187" type="stmt" count="1"/>
-        <line num="188" type="stmt" count="1"/>
-        <line num="189" type="stmt" count="1"/>
         <line num="190" type="stmt" count="1"/>
         <line num="191" type="stmt" count="1"/>
         <line num="192" type="stmt" count="1"/>
         <line num="193" type="stmt" count="1"/>
-        <line num="202" type="method" name="getSelfInfo" visibility="public" complexity="1" crap="1" count="1"/>
-        <line num="204" type="stmt" count="1"/>
-        <line num="205" type="stmt" count="1"/>
-        <line num="206" type="stmt" count="1"/>
-        <line num="207" type="stmt" count="1"/>
-        <line num="208" type="stmt" count="1"/>
+        <line num="194" type="stmt" count="1"/>
+        <line num="195" type="stmt" count="1"/>
+        <line num="196" type="stmt" count="1"/>
+        <line num="197" type="stmt" count="1"/>
+        <line num="198" type="stmt" count="1"/>
+        <line num="207" type="method" name="getSelfInfo" visibility="public" complexity="1" crap="1" count="1"/>
         <line num="209" type="stmt" count="1"/>
-        <metrics loc="212" ncloc="151" classes="1" methods="7" coveredmethods="7" conditionals="0" coveredconditionals="0" statements="80" coveredstatements="80" elements="87" coveredelements="87"/>
+        <line num="210" type="stmt" count="1"/>
+        <line num="211" type="stmt" count="1"/>
+        <line num="212" type="stmt" count="1"/>
+        <line num="213" type="stmt" count="1"/>
+        <line num="214" type="stmt" count="1"/>
+        <metrics loc="217" ncloc="156" classes="1" methods="7" coveredmethods="7" conditionals="0" coveredconditionals="0" statements="83" coveredstatements="83" elements="90" coveredelements="90"/>
       </file>
     </package>
     <package name="App\Swagger">
@@ -2922,6 +2932,6 @@
         <metrics loc="18" ncloc="18" classes="1" methods="1" coveredmethods="1" conditionals="0" coveredconditionals="0" statements="4" coveredstatements="4" elements="5" coveredelements="5"/>
       </file>
     </package>
-    <metrics files="92" loc="9498" ncloc="4869" classes="87" methods="266" coveredmethods="266" conditionals="0" coveredconditionals="0" statements="2080" coveredstatements="2080" elements="2346" coveredelements="2346"/>
+    <metrics files="92" loc="9516" ncloc="4883" classes="87" methods="266" coveredmethods="266" conditionals="0" coveredconditionals="0" statements="2090" coveredstatements="2090" elements="2356" coveredelements="2356"/>
   </project>
 </coverage>

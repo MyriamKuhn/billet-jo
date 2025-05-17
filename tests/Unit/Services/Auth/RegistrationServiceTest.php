@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Log;
+use Mockery;
 
 class RegistrationServiceTest extends TestCase
 {
@@ -27,6 +28,20 @@ class RegistrationServiceTest extends TestCase
         // Mock du CaptchaService
         $this->captchaMock = \Mockery::mock(CaptchaService::class);
         $this->service     = new RegistrationService($this->captchaMock);
+    }
+
+    protected function tearDown(): void
+    {
+        Mockery::close();
+        parent::tearDown();
+    }
+
+    private function makeService(): RegistrationService
+    {
+        // On mocke le CaptchaService pour bypasser la vérif en environnement 'testing'
+        $captcha = Mockery::mock(CaptchaService::class);
+        $captcha->shouldReceive('verify')->andReturn(true);
+        return new RegistrationService($captcha);
     }
 
     public function testRegisterCreatesUserAndDispatchesEventInNonProduction()
@@ -46,6 +61,7 @@ class RegistrationServiceTest extends TestCase
             'email'         => 'alice@example.com',
             'password'      => 'Str0ngP@ssword2025!',
             'captcha_token' => 'ignored',
+            'accept_terms'  => true,
         ];
 
         $user = $this->service->register($data);
@@ -125,6 +141,7 @@ class RegistrationServiceTest extends TestCase
             'email'         => 'carol@example.com',
             'password'      => 'Y3tAn0therP@ss!',
             'captcha_token' => 'good-token',
+            'accept_terms' => true,
         ];
 
         $user = $this->service->register($data);
@@ -141,5 +158,56 @@ class RegistrationServiceTest extends TestCase
 
         // Event Registered dispatché
         Event::assertDispatched(Registered::class, fn($e) => $e->user->id === $user->id);
+    }
+
+    public function testThrowIfAcceptTermsFalse()
+    {
+        $service = $this->makeService();
+
+        $data = [
+            'firstname'     => 'Alice',
+            'lastname'      => 'Dupont',
+            'email'         => 'alice@example.com',
+            'password'      => 'secret123',
+            'captcha_token' => 'dummy',
+            'accept_terms'  => false,
+        ];
+
+        try {
+            $service->register($data);
+            $this->fail('HttpResponseException non lancé lorsque accept_terms = false');
+        } catch (HttpResponseException $e) {
+            $response = $e->getResponse();
+            $this->assertEquals(422, $response->getStatusCode());
+
+            $payload = $response->getData(true);
+            $this->assertEquals(
+                'You must accept the terms and conditions',
+                $payload['message']
+            );
+            $this->assertEquals(
+                'terms_not_accepted',
+                $payload['code']
+            );
+        }
+    }
+
+    public function testRegisterSucceedsWhenAcceptTermsTrue()
+    {
+        $service = $this->makeService();
+
+        $data = [
+            'firstname'     => 'Alice',
+            'lastname'      => 'Dupont',
+            'email'         => 'alice@example.com',
+            'password'      => 'secret123',
+            'captcha_token' => 'dummy',
+            'accept_terms'  => true,  // ← toujours présent
+        ];
+
+        $user = $service->register($data);
+
+        $this->assertInstanceOf(User::class, $user);
+        $this->assertEquals('alice@example.com', $user->email);
     }
 }

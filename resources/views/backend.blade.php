@@ -133,6 +133,13 @@
         p {
             margin: 0.5rem 0;
         }
+
+        img {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 1rem;
+            cursor: zoom-in;
+        }
     </style>
 </head>
 
@@ -222,6 +229,9 @@
                 <li><strong>Manual resend:</strong><code>POST /api/auth/email/resend</code> (Auth required via Bearer token).</li>
             </ul>
             <p class="note">⚠️ By problems with verification, please contact administration with your registered email.</p>
+            <a href="{{ asset('images/verify_example.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('images/verify_example.png') }}" alt="Email Verification Example">
+            </a>
 
             <h3>4.2 Login & Two-Factor Authentication</h3>
             <code>POST /api/auth/login</code>
@@ -244,6 +254,9 @@
                 <li><strong>Request:</strong> <code>POST /api/auth/password/forgot</code> { email } sends reset front URL<pre><code>/password-reset?token=...&email=john@example.com&locale=fr</code></pre></li>
                 <li><strong>Perform:</strong> <code>POST /api/auth/password/reset</code></li>
             </ul>
+            <a href="{{ asset('images/reset_password_example.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('images/reset_password_example.png') }}" alt="Password Reset Example">
+            </a>
 
             <h3>4.5 Change password</h3>
             <code>POST /api/auth/password</code>
@@ -264,6 +277,12 @@
                     </li>
                 </ul>
             </ul>
+            <a href="{{ asset('images/new_verify_example.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('images/new_verify_example.png') }}" alt="New Email Verification Example">
+            </a>
+            <a href="{{ asset('images/cancel_email_request_example.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('images/cancel_email_request_example.png') }}" alt="Cancel Email Request Example">
+            </a>
         </div>
 
         <div class="section" id="orders">
@@ -285,10 +304,13 @@ const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
                 </li>
             </ul>
 
-
             <h3>5.2 Stripe webhook</h3>
             <code>POST /api/payments/webhook</code>
             <p>Verify signature and handle events (invoices, tickets, email with tickets, stock updates).</p>
+            <p class="note">⚠️ The front-end should not call this endpoint directly. It is called by Stripe when a payment is made.</p>
+            <a href="{{ asset('images/email_tickets_example.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('images/email_tickets_example.png') }}" alt="Email Tickets Example">
+            </a>
 
             <h3>5.3 Status & Clear cart</h3>
             <code>GET /api/payments/{uuid}</code>
@@ -329,6 +351,14 @@ const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
             </ul>
             <p class="note">⚠️ Only tickets marked “issued” are valid for scanning.</p>
             <p class="note">⚠️ For free tickets, the front-end should call <code>POST /api/tickets</code> with the user_id, locale and quantity. The backend will generate the invoices and the tickets and send them to the user via email.</p>
+
+            <a href="{{ asset('images/invoice_example.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('images/invoice_example.png') }}" alt="Invoice Example">
+            </a>
+            <a href="{{ asset('images/ticket_example.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('images/ticket_example.png') }}" alt="Ticket Example">
+            </a>
+
         </div>
 
         <div class="section" id="admin">

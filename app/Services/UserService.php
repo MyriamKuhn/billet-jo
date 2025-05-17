@@ -121,6 +121,10 @@ class UserService
             }
         }
 
+        if (array_key_exists('verify_email', $data) && $data['verify_email']) {
+            $target->markEmailAsVerified();
+        }
+
         foreach (['firstname','lastname','email','role'] as $field) {
             if (array_key_exists($field, $data)) {
                 $target->$field = $data[$field];
@@ -136,6 +140,7 @@ class UserService
             'is_active'     => $target->is_active,
             'twofa_enabled' => $target->twofa_enabled,
             'role'          => $target->role,
+            'email_verified_at' => $target->email_verified_at,
         ];
     }
 
