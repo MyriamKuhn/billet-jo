@@ -15,6 +15,7 @@ use App\Models\Product;
 use Illuminate\Database\QueryException;
 use Psr\Log\LoggerInterface;
 use InvalidArgumentException;
+use App\Exceptions\StockUnavailableException;
 
 class CartServiceTest extends TestCase
 {
@@ -553,5 +554,94 @@ class CartServiceTest extends TestCase
 
         // 6) Vérification triviale pour que PHPUnit compte le test
         $this->assertTrue(true);
+    }
+
+    public function testAssertStockAvailableWithArrayPassesWhenStockSufficient(): void
+    {
+        // Crée 2 produits avec un stock défini
+        $p1 = Product::factory()->create(['stock_quantity' => 5]);
+        $p2 = Product::factory()->create(['stock_quantity' => 10]);
+
+        // Demande des quantités inférieures ou égales au stock
+        $items = [
+            $p1->id => 3,
+            $p2->id => 10,
+        ];
+
+        // Ne doit pas lancer d'exception
+        $this->service->assertStockAvailable($items);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAssertStockAvailableWithArrayThrowsExceptionWhenStockInsufficient(): void
+    {
+        $p1 = Product::factory()->create(['stock_quantity' => 2]);
+        $p2 = Product::factory()->create(['stock_quantity' => 4]);
+
+        $items = [
+            $p1->id => 5,  // plus que disponible
+            $p2->id => 3,  // OK
+        ];
+
+        try {
+            $this->service->assertStockAvailable($items);
+            $this->fail('Expected StockUnavailableException was not thrown');
+        } catch (StockUnavailableException $e) {
+            $details = $e->details;
+            $this->assertCount(1, $details);
+            $this->assertEquals([
+                'product_id'         => $p1->id,
+                'product_name'       => $p1->name,
+                'requested_quantity' => 5,
+                'available_quantity' => 2,
+            ], $details[0]);
+        }
+    }
+
+    public function testAssertStockAvailableWithCartPassesWhenStockSufficient(): void
+    {
+        // Produit et panier
+        $product = Product::factory()->create(['stock_quantity' => 7]);
+        $cart    = Cart::factory()->create();
+
+        CartItem::factory()->create([
+            'cart_id'    => $cart->id,
+            'product_id' => $product->id,
+            'quantity'   => 7,
+        ]);
+
+        // Charge via instance de Cart : on ne doit pas obtenir d'exception
+        $this->service->assertStockAvailable($cart);
+
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAssertStockAvailableWithCartThrowsExceptionWhenStockInsufficient(): void
+    {
+        $product = Product::factory()->create(['stock_quantity' => 1]);
+        $cart    = Cart::factory()->create();
+
+        CartItem::factory()->create([
+            'cart_id'    => $cart->id,
+            'product_id' => $product->id,
+            'quantity'   => 3,
+        ]);
+
+        $this->expectException(StockUnavailableException::class);
+        $this->expectExceptionMessage('Stock unavailable for one or more items in the cart');
+
+        try {
+            $this->service->assertStockAvailable($cart);
+        } catch (StockUnavailableException $e) {
+            // Vérifie quand même le détail
+            $this->assertCount(1, $e->details);
+            $detail = $e->details[0];
+            $this->assertEquals($product->id, $detail['product_id']);
+            $this->assertEquals($product->name, $detail['product_name']);
+            $this->assertEquals(3, $detail['requested_quantity']);
+            $this->assertEquals(1, $detail['available_quantity']);
+            throw $e;
+        }
     }
 }

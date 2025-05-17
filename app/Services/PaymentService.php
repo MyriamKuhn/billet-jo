@@ -14,7 +14,11 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentService
 {
-    public function __construct(protected StripeClient $stripe) {}
+    private CartService $cartService;
+
+    public function __construct(protected StripeClient $stripe, CartService $cartService) {
+        $this->cartService = $cartService;
+    }
 
     /**
      * Paginate the payments with optional filters and sorting.
@@ -104,12 +108,13 @@ class PaymentService
 
             // 2) Create a new pending payment record in the database
             $cart     = $this->loadCart($userId, $cartId);
-            $snapshot = $this->buildSnapshot($cart);
-            $amount   = $this->calculateAmount($snapshot);
+            $this->cartService->assertStockAvailable($cart);
+            $rawSnapshot = $this->buildSnapshot($cart);
+            $amount   = $this->calculateAmount($rawSnapshot);
 
             $uuid           = (string) Str::uuid();
             $filename       = "invoice_{$uuid}.pdf";
-            $snapshotWithId = array_merge($snapshot, ['cart_id' => $cartId]);
+            $snapshotWithId = array_merge($rawSnapshot, ['cart_id' => $cartId]);
 
             $payment = Payment::create([
                 'uuid'           => $uuid,
@@ -141,7 +146,7 @@ class PaymentService
                 ]);
                 $payment->update(['status' => PaymentStatus::Failed]);
                 DB::commit();
-                abort(502, 'Payment gateway error, please try again later.');
+                abort(502, 'Payment gateway error, please try again later');
             }
 
             // 4) Finalize the payment by storing Stripe transaction details
@@ -188,25 +193,23 @@ class PaymentService
      */
     private function buildSnapshot(Cart $cart): array
     {
-        return $cart->cartItems->map(fn($item) => [
-            'product_id'      => $item->product_id,
-            'product_name'    => $item->product->name,
-            'ticket_type'     => $item->product->product_details['category'],
+        $cart->load(['cartItems.product.translations']);
 
-            'quantity'        => $item->quantity,
-
-            // Original unit price
-            'unit_price'      => (float) $item->product->price,
-
-            // Discount rate (e.g. 0.1 for 10%)
-            'discount_rate'   => (float) $item->product->sale,
-
-            // Price after discount, rounded to two decimals
-            'discounted_price'=> round(
-                                    $item->product->price * (1 - $item->product->sale),
-                                    2
-                                ),
+        $lines = $cart->cartItems->map(fn($item) => [
+            'product_id'       => $item->product_id,
+            'product_name'     => $item->product->name,
+            'ticket_type'      => $item->product->product_details['category'],
+            'ticket_places'    => $item->product->product_details['places'],
+            'quantity'         => $item->quantity,
+            'unit_price'       => (float) $item->product->price,
+            'discount_rate'    => (float) $item->product->sale,
+            'discounted_price' => round($item->product->price * (1 - $item->product->sale), 2),
         ])->toArray();
+
+        return [
+            'locale' => app()->getLocale(),  // ← on y stocke la locale courante
+            'items'  => $lines,
+        ];
     }
 
     /**
@@ -217,10 +220,8 @@ class PaymentService
      */
     private function calculateAmount(array $snapshot): float
     {
-        return array_reduce($snapshot, function($total, $line) {
-            // Use the discounted_price for the calculation
-            return $total + ($line['discounted_price'] * $line['quantity']);
-        }, 0.0);
+        return collect($snapshot['items'])
+                    ->reduce(fn($total, $line) => $total + ($line['discounted_price'] * $line['quantity']), 0.0);
     }
 
     /**

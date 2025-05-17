@@ -25,6 +25,7 @@ class TicketCreateRequest extends FormRequest
             'user_id'    => ['required','integer','exists:users,id'],
             'product_id' => ['required','integer','exists:products,id'],
             'quantity'   => ['required','integer','min:1'],
+            'locale'     => ['sometimes','string','in:en,fr,de'],
         ];
     }
 
@@ -35,6 +36,8 @@ class TicketCreateRequest extends FormRequest
      */
     public function validatedData(): array
     {
-        return $this->validated();
+        $data = $this->validated();
+        $data['locale'] = $data['locale'] ?? explode(',', $this->header('Accept-Language','en'))[0];
+        return $data;
     }
 }

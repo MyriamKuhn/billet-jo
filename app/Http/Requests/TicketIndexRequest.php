@@ -24,10 +24,14 @@ class TicketIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'q'                 => 'sometimes|string',
             'status'            => 'sometimes|in:issued,used,refunded,cancelled',
             'user_id'           => 'sometimes|integer|exists:users,id',
             'user_email'        => 'sometimes|email|exists:users,email',
+            'product_id'     => 'sometimes|integer|exists:products,id',
+            'payment_uuid'   => 'sometimes|string|exists:payments,uuid',
             'per_page'          => 'sometimes|integer|min:1|max:100',
+            'page'           => 'sometimes|integer|min:1',
             'created_from'      => 'sometimes|date',
             'created_to'        => 'sometimes|date|after_or_equal:created_from',
             'updated_from'      => 'sometimes|date',
@@ -48,10 +52,14 @@ class TicketIndexRequest extends FormRequest
     {
         return collect($this->validated())
             ->only([
+                'q',
                 'status',
                 'user_id',
                 'user_email',
+                'product_id',
+                'payment_uuid',
                 'per_page',
+                'page',
                 'created_from', 'created_to',
                 'updated_from', 'updated_to',
                 'used_from',    'used_to',

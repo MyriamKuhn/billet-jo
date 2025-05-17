@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Models\Product;
 
 /**
  * @OA\Schema(
@@ -15,12 +16,18 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     @OA\Property(
  *         property="cart_snapshot",
  *         type="array",
- *         description="Instantané du panier",
+ *         description="Localized snapshot of the cart as seen by the admin",
  *         @OA\Items(
  *             type="object",
- *             @OA\Property(property="ticket_type", type="string", example="adult"),
- *             @OA\Property(property="quantity",    type="integer", example=2),
- *             @OA\Property(property="unit_price",  type="number", format="float", example=50.00)
+ *             required={"product_id","product_name","ticket_type","ticket_places","quantity","unit_price", "discount_rate","discounted_price"},
+ *             @OA\Property(property="product_id",   type="integer", example=42),
+ *             @OA\Property(property="product_name", type="string",  example="Billet concert"),
+ *             @OA\Property(property="ticket_type",  type="string",  example="adult"),
+ *             @OA\Property(property="ticket_places", type="integer", example=2),
+ *             @OA\Property(property="quantity",     type="integer", example=2),
+ *             @OA\Property(property="unit_price",   type="number",  format="float", example=50.00),
+ *             @OA\Property(property="discount_rate", type="number",  format="float", example=0.10),
+ *             @OA\Property(property="discounted_price", type="number", format="float", example=45.00),
  *         )
  *     ),
  *     @OA\Property(property="amount",          type="number", format="float", example=130.00),
@@ -33,6 +40,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *     @OA\Property(
  *         property="user",
  *         type="object",
+ *         required={"id","email"},
  *         @OA\Property(property="id",    type="integer", example=1),
  *         @OA\Property(property="email", type="string",  format="email", example="user@example.com")
  *     ),
@@ -50,23 +58,44 @@ class PaymentResource extends JsonResource
      */
     public function toArray($request): array
     {
+        $products = $this->whenLoaded('snapshot_products');
+
+        $localizedSnapshot = collect($this->cart_snapshot['items'])->map(function($line) use ($products) {
+            $product = $products[$line['product_id']] ?? null;
+
+            return [
+                'product_id'    => $line['product_id'],
+                'product_name'  => $product
+                    ? $product->name
+                    : ($line['product_name'] ?? null),
+                'ticket_type'   => $product
+                    ? $product->product_details['category']
+                    : ($line['ticket_type'] ?? null),
+                'ticket_places' => $line['ticket_places'],
+                'discount_rate' => $line['discount_rate'],
+                'discounted_price' => $line['discounted_price'],
+                'quantity'      => $line['quantity'],
+                'unit_price'    => $line['unit_price'],
+            ];
+        })->toArray();
+
         return [
-            'uuid'             => $this->uuid,
-            'invoice_link'     => $this->invoice_link,
-            'cart_snapshot'    => $this->cart_snapshot,
-            'amount'           => $this->amount,
-            'payment_method'   => $this->payment_method->value,
-            'status'           => $this->status->value,
-            'transaction_id'   => $this->transaction_id,
-            'paid_at'          => optional($this->paid_at)->toIso8601String(),
-            'refunded_at'      => optional($this->refunded_at)->toIso8601String(),
-            'refunded_amount'  => $this->refunded_amount,
-            'user'             => [
+            'uuid'            => $this->uuid,
+            'invoice_link'    => $this->invoice_link,
+            'cart_snapshot'   => $localizedSnapshot,
+            'amount'          => $this->amount,
+            'payment_method'  => $this->payment_method->value,
+            'status'          => $this->status->value,
+            'transaction_id'  => $this->transaction_id,
+            'paid_at'         => optional($this->paid_at)->toIso8601String(),
+            'refunded_at'     => optional($this->refunded_at)->toIso8601String(),
+            'refunded_amount' => $this->refunded_amount,
+            'user'            => [
                 'id'    => $this->user->id,
                 'email' => $this->user->email,
             ],
-            'created_at'       => $this->created_at->toIso8601String(),
-            'updated_at'       => $this->updated_at->toIso8601String(),
+            'created_at'      => $this->created_at->toIso8601String(),
+            'updated_at'      => $this->updated_at->toIso8601String(),
         ];
     }
 }

@@ -35,6 +35,7 @@ class AdminUpdateUserRequest extends FormRequest
                 Rule::unique('users','email')->ignore($userId),
             ],
             'role'           => 'nullable|in:admin,employee,user',
+            'verify_email'   => 'nullable|boolean',
         ];
     }
 }

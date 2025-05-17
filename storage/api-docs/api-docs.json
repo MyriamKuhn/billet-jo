@@ -2,14 +2,14 @@
     "openapi": "3.0.0",
     "info": {
         "title": "Paris 2024 Olympic Games Ticketing API",
-        "description": "\nThis API manages the entire ticket lifecycle for the Paris 2024 Olympic Games, covering:\n\n- User registration and profile management\n\n- Shopping cart and payment processing\n\n- Ticket generation and entry validation\n\n\nDeveloped as part of a Bachelor's in Digital Solutions Development, it follows a modular Laravel monolith architecture,\norganized into internal packages (users, tickets, cart, payment, etc.) for maintainability and scalability.\n\nNotifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.\n\nAccess is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).",
+        "description": "\nThis API manages the entire ticket lifecycle for the Paris 2024 Olympic Games, covering:\n\n- User registration and profile management\n\n- Shopping cart and payment processing\n\n- Ticket generation and entry validation\n\n\nDeveloped as part of a Bachelor's in Digital Solutions Development, it follows a modular Laravel monolith architecture,\norganized into internal packages (users, tickets, cart, payment, etc.) for maintainability and scalability.\n\nNotifications (emails and system messages) are handled internally via a dedicated Laravel service and are not exposed publicly.\n\nAccess is secured by a restrictive CORS policy and token-based authentication (Laravel Sanctum).\n\nThe API supports multiple languages (English, French, German) injected in the header and is designed to be user-friendly and developer-friendly.",
         "contact": {
             "name": "Myriam Kühn",
             "url": "https://myriamkuhn.com/",
             "email": "myriam.kuehn@free.fr"
         },
         "license": {
-            "name": "MIT",
+            "name": "MIT Licence",
             "url": "https://opensource.org/licenses/MIT"
         },
         "version": "1.0.0"
@@ -33,6 +33,30 @@
                 "summary": "Retrieve current shopping cart",
                 "description": "\nReturns the current cart contents:\n\n- **Authenticated users**: full cart model (cart ID, user ID, items with product details)\n- **Guests**: a simple map of product IDs to quantities\n\nProvide a Bearer token to operate on the user’s cart; omit it to operate on the guest cart.\n",
                 "operationId": "getCurrentCart",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "Bearer token for authenticated users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Guest-Cart-Id",
+                        "in": "header",
+                        "description": "Guest cart ID (UUID) for guest users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Cart retrieved successfully",
@@ -42,25 +66,52 @@
                                     "required": [
                                         "data"
                                     ],
-                                    "oneOf": [
-                                        {
-                                            "$ref": "#/components/schemas/CartMinimal"
-                                        },
-                                        {
-                                            "title": "GuestCartResponse",
-                                            "properties": {
-                                                "data": {
-                                                    "description": "Map of product IDs to quantities",
-                                                    "type": "object",
-                                                    "additionalProperties": {
-                                                        "type": "integer",
-                                                        "example": 2
-                                                    }
+                                    "properties": {
+                                        "data": {
+                                            "oneOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/CartMinimal"
+                                                },
+                                                {
+                                                    "required": [
+                                                        "meta",
+                                                        "data"
+                                                    ],
+                                                    "properties": {
+                                                        "meta": {
+                                                            "required": [
+                                                                "guest_cart_id"
+                                                            ],
+                                                            "properties": {
+                                                                "guest_cart_id": {
+                                                                    "description": "UUID unique du panier visiteur",
+                                                                    "type": "string",
+                                                                    "format": "uuid"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        },
+                                                        "data": {
+                                                            "required": [
+                                                                "cart_items"
+                                                            ],
+                                                            "properties": {
+                                                                "cart_items": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "$ref": "#/components/schemas/CartItemMinimal"
+                                                                    }
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "type": "object"
                                                 }
-                                            },
-                                            "type": "object"
+                                            ]
                                         }
-                                    ]
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -83,6 +134,25 @@
                 "description": "\nUpdates the quantity for a given product in the current cart:\n\n- **quantity > 0**: set the new quantity\n- **quantity = 0**: remove the item from the cart\n\nAccessible by guests and authenticated users. Provide a Bearer token to update the user’s cart; omit it to update the guest cart.\n",
                 "operationId": "updateCartItem",
                 "parameters": [
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "Bearer token for authenticated users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Guest-Cart-Id",
+                        "in": "header",
+                        "description": "Guest cart ID (UUID) for guest users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
                     {
                         "name": "product",
                         "in": "path",
@@ -118,8 +188,14 @@
                     "204": {
                         "$ref": "#/components/responses/NoContent"
                     },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/StockUnavailable"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -141,6 +217,17 @@
                 "summary": "Clear authenticated user's cart",
                 "description": "Deletes every item from the current authenticated user’s shopping cart. Requires a valid Bearer token.",
                 "operationId": "823e170674e885d4d258f01dffa19120",
+                "parameters": [
+                    {
+                        "name": "Authorization",
+                        "in": "header",
+                        "description": "Bearer token for authenticated users (optional)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
                 "responses": {
                     "204": {
                         "$ref": "#/components/responses/NoContent"
@@ -168,11 +255,97 @@
                     "Invoices"
                 ],
                 "summary": "List user invoices",
-                "description": "Returns a list of invoices for the logged-in user, including download URLs.",
+                "description": "Returns a paginated list of the authenticated user’s invoices, with optional filters (status, date range), sorting and pagination.",
                 "operationId": "listInvoices",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by invoice status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "paid",
+                                "failed",
+                                "refunded"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Filter invoices created on or after this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Filter invoices created on or before this date (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Field to sort by",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "created_at",
+                            "enum": [
+                                "uuid",
+                                "amount",
+                                "created_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Sort direction",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number to retrieve",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List of invoices",
+                        "description": "Paginated list of invoices",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -184,7 +357,7 @@
                                                     "uuid": {
                                                         "type": "string",
                                                         "format": "uuid",
-                                                        "example": "..."
+                                                        "example": "550e8400-e29b-41d4-a716-446655440000"
                                                     },
                                                     "amount": {
                                                         "type": "number",
@@ -211,6 +384,12 @@
                                                 },
                                                 "type": "object"
                                             }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
                                         }
                                     },
                                     "type": "object"
@@ -223,6 +402,9 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -262,11 +444,11 @@
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
                     },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -335,6 +517,9 @@
                 "description": "Returns a paginated list of payments for administrators.",
                 "operationId": "getPayments",
                 "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
                     {
                         "name": "q",
                         "in": "query",
@@ -495,8 +680,14 @@
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
                     }
                 },
                 "security": [
@@ -512,6 +703,11 @@
                 "summary": "Initiate payment",
                 "description": "Creates a new pending payment and returns a Stripe client secret for checkout.",
                 "operationId": "storePayment",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "description": "Cart identifier and desired payment method",
                     "required": true,
@@ -592,6 +788,9 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/StockUnavailable"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -689,6 +888,9 @@
                                 }
                             }
                         }
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
                     }
                 }
             }
@@ -742,28 +944,8 @@
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
                     },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
                     "404": {
-                        "description": "Payment not found or does not belong to user",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Resource not found"
-                                        },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "not_found"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -869,24 +1051,7 @@
                         "$ref": "#/components/responses/Forbidden"
                     },
                     "404": {
-                        "description": "Payment not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Resource not found"
-                                        },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "not_found"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/NotFound"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -931,6 +1096,9 @@
                 "description": "\nReturns a paginated list of products that are currently in stock.\n\n**Optional query parameters**:\n- `name`       — filter by product name\n- `category`   — filter by category\n- `location`   — filter by location\n- `date`       — filter by date (YYYY-MM-DD)\n- `places`     — filter by minimum number of places\n- `sort_by`    — sort field (`name`, `price`, `product_details->date`)\n- `order`      — sort direction (`asc`, `desc`)\n- `per_page`   — items per page (default: 15)\n- `page`       — page number (default: 1)\n",
                 "operationId": "getProductsList",
                 "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
                     {
                         "name": "name",
                         "in": "query",
@@ -1068,71 +1236,158 @@
                 "tags": [
                     "Products"
                 ],
-                "summary": "Create a new product",
-                "description": "\nCreates a new product record.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n",
+                "summary": "Create a new product with translations and images",
+                "description": "Creates a new product record in **3** languages (en, fr, de) with images upload for each languages.",
                 "operationId": "createProduct",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
                         "multipart/form-data": {
                             "schema": {
                                 "required": [
-                                    "name",
                                     "price",
                                     "stock_quantity",
-                                    "product_details[places]",
-                                    "product_details[description]",
-                                    "product_details[date]",
-                                    "product_details[time]",
-                                    "product_details[location]",
-                                    "product_details[category]",
-                                    "product_details[image]"
+                                    "translations[en][name]",
+                                    "translations[fr][name]",
+                                    "translations[de][name]",
+                                    "translations[en][product_details][places]",
+                                    "translations[fr][product_details][places]",
+                                    "translations[de][product_details][places]",
+                                    "translations[en][product_details][description]",
+                                    "translations[fr][product_details][description]",
+                                    "translations[de][product_details][description]",
+                                    "translations[en][product_details][date]",
+                                    "translations[fr][product_details][date]",
+                                    "translations[de][product_details][date]",
+                                    "translations[en][product_details][time]",
+                                    "translations[fr][product_details][time]",
+                                    "translations[de][product_details][time]",
+                                    "translations[en][product_details][location]",
+                                    "translations[fr][product_details][location]",
+                                    "translations[de][product_details][location]",
+                                    "translations[en][product_details][category]",
+                                    "translations[fr][product_details][category]",
+                                    "translations[de][product_details][category]",
+                                    "translations[en][product_details][image]",
+                                    "translations[fr][product_details][image]",
+                                    "translations[de][product_details][image]"
                                 ],
                                 "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Sample Product"
-                                    },
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 49.99
+                                        "example": 100
                                     },
                                     "sale": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 39.99
+                                        "example": 0.1
                                     },
                                     "stock_quantity": {
                                         "type": "integer",
-                                        "example": 100
-                                    },
-                                    "product_details[places]": {
-                                        "type": "integer",
                                         "example": 50
                                     },
-                                    "product_details[description]": {
+                                    "translations[en][name]": {
                                         "type": "string",
-                                        "example": "A detailed description"
+                                        "example": "Opening Ceremony"
                                     },
-                                    "product_details[date]": {
+                                    "translations[en][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[en][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Experience the opening…"
+                                    },
+                                    "translations[en][product_details][date]": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2025-05-15"
+                                        "example": "2024-07-26"
                                     },
-                                    "product_details[time]": {
+                                    "translations[en][product_details][time]": {
                                         "type": "string",
-                                        "example": "14:00"
+                                        "example": "19:30"
                                     },
-                                    "product_details[location]": {
+                                    "translations[en][product_details][location]": {
                                         "type": "string",
-                                        "example": "Paris"
+                                        "example": "Stade de France"
                                     },
-                                    "product_details[category]": {
+                                    "translations[en][product_details][category]": {
                                         "type": "string",
-                                        "example": "Conference"
+                                        "example": "Ceremonies"
                                     },
-                                    "product_details[image]": {
+                                    "translations[en][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[fr][name]": {
+                                        "type": "string",
+                                        "example": "Cérémonie d’ouverture"
+                                    },
+                                    "translations[fr][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[fr][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Assistez à la cérémonie…"
+                                    },
+                                    "translations[fr][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[fr][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[fr][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[fr][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Cérémonies"
+                                    },
+                                    "translations[fr][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[de][name]": {
+                                        "type": "string",
+                                        "example": "Eröffnungszeremonie"
+                                    },
+                                    "translations[de][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[de][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Erleben Sie die Eröffnung…"
+                                    },
+                                    "translations[de][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[de][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[de][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[de][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Zeremonien"
+                                    },
+                                    "translations[de][product_details][image]": {
                                         "type": "file",
                                         "format": "binary"
                                     }
@@ -1178,6 +1433,9 @@
                 "description": "\nReturns a paginated list of all products (including out-of-stock), with optional filtering and sorting.\n\n- **Caching enabled** for better performance\n- **Authentication**: Bearer token (admin only)\n- **Same query parameters** as `/api/products`\n",
                 "operationId": "getProducts",
                 "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
                     {
                         "name": "name",
                         "in": "query",
@@ -1339,6 +1597,9 @@
                 "operationId": "getProductById",
                 "parameters": [
                     {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
                         "name": "product",
                         "in": "path",
                         "description": "ID of product to retrieve",
@@ -1365,6 +1626,9 @@
                             }
                         }
                     },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
                     },
@@ -1378,7 +1642,7 @@
                     "Products"
                 ],
                 "summary": "Update product details",
-                "description": "\nUpdates the details of an existing product.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- Valid payload per `StoreProduct` schema\n- The image file is optional and will be stored in the `images` disk.\n- The old image will be deleted if a new one is provided.\n- The product ID must exist in the database.\n",
+                "description": "\nUpdates the details of an existing product for all 3 languages.\n\n**Requirements**:\n- Bearer authentication (admin only)\n- **multipart/form-data** content type\n- The image file is optional\n- The old image will be deleted if a new one is provided.\n- The product ID must exist in the database.\n",
                 "operationId": "updateProduct",
                 "parameters": [
                     {
@@ -1398,61 +1662,144 @@
                         "multipart/form-data": {
                             "schema": {
                                 "required": [
-                                    "name",
                                     "price",
                                     "stock_quantity",
-                                    "product_details[places]",
-                                    "product_details[description]",
-                                    "product_details[date]",
-                                    "product_details[time]",
-                                    "product_details[location]",
-                                    "product_details[category]"
+                                    "translations[en][name]",
+                                    "translations[fr][name]",
+                                    "translations[de][name]",
+                                    "translations[en][product_details][places]",
+                                    "translations[fr][product_details][places]",
+                                    "translations[de][product_details][places]",
+                                    "translations[en][product_details][description]",
+                                    "translations[fr][product_details][description]",
+                                    "translations[de][product_details][description]",
+                                    "translations[en][product_details][date]",
+                                    "translations[fr][product_details][date]",
+                                    "translations[de][product_details][date]",
+                                    "translations[en][product_details][time]",
+                                    "translations[fr][product_details][time]",
+                                    "translations[de][product_details][time]",
+                                    "translations[en][product_details][location]",
+                                    "translations[fr][product_details][location]",
+                                    "translations[de][product_details][location]",
+                                    "translations[en][product_details][category]",
+                                    "translations[fr][product_details][category]",
+                                    "translations[de][product_details][category]",
+                                    "translations[en][product_details][image]",
+                                    "translations[fr][product_details][image]",
+                                    "translations[de][product_details][image]"
                                 ],
                                 "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "Sample Product"
-                                    },
                                     "price": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 49.99
+                                        "example": 100
                                     },
                                     "sale": {
                                         "type": "number",
                                         "format": "float",
-                                        "example": 39.99
+                                        "example": 0.1
                                     },
                                     "stock_quantity": {
                                         "type": "integer",
-                                        "example": 100
-                                    },
-                                    "product_details[places]": {
-                                        "type": "integer",
                                         "example": 50
                                     },
-                                    "product_details[description]": {
+                                    "translations[en][name]": {
                                         "type": "string",
-                                        "example": "A detailed description"
+                                        "example": "Opening Ceremony"
                                     },
-                                    "product_details[date]": {
+                                    "translations[en][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[en][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Experience the opening…"
+                                    },
+                                    "translations[en][product_details][date]": {
                                         "type": "string",
                                         "format": "date",
-                                        "example": "2025-05-15"
+                                        "example": "2024-07-26"
                                     },
-                                    "product_details[time]": {
+                                    "translations[en][product_details][time]": {
                                         "type": "string",
-                                        "example": "14:00"
+                                        "example": "19:30"
                                     },
-                                    "product_details[location]": {
+                                    "translations[en][product_details][location]": {
                                         "type": "string",
-                                        "example": "Paris"
+                                        "example": "Stade de France"
                                     },
-                                    "product_details[category]": {
+                                    "translations[en][product_details][category]": {
                                         "type": "string",
-                                        "example": "Conference"
+                                        "example": "Ceremonies"
                                     },
-                                    "product_details[image]": {
+                                    "translations[en][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[fr][name]": {
+                                        "type": "string",
+                                        "example": "Cérémonie d’ouverture"
+                                    },
+                                    "translations[fr][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[fr][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Assistez à la cérémonie…"
+                                    },
+                                    "translations[fr][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[fr][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[fr][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[fr][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Cérémonies"
+                                    },
+                                    "translations[fr][product_details][image]": {
+                                        "type": "file",
+                                        "format": "binary"
+                                    },
+                                    "translations[de][name]": {
+                                        "type": "string",
+                                        "example": "Eröffnungszeremonie"
+                                    },
+                                    "translations[de][product_details][places]": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "translations[de][product_details][description]": {
+                                        "type": "string",
+                                        "example": "Erleben Sie die Eröffnung…"
+                                    },
+                                    "translations[de][product_details][date]": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2024-07-26"
+                                    },
+                                    "translations[de][product_details][time]": {
+                                        "type": "string",
+                                        "example": "19:30"
+                                    },
+                                    "translations[de][product_details][location]": {
+                                        "type": "string",
+                                        "example": "Stade de France"
+                                    },
+                                    "translations[de][product_details][category]": {
+                                        "type": "string",
+                                        "example": "Zeremonien"
+                                    },
+                                    "translations[de][product_details][image]": {
                                         "type": "file",
                                         "format": "binary"
                                     }
@@ -1492,20 +1839,104 @@
                 ]
             }
         },
+        "/api/products/{product}/pricing": {
+            "patch": {
+                "tags": [
+                    "Products"
+                ],
+                "summary": "Update product pricing and stock (admin only)",
+                "description": "Updates the pricing and stock quantity of a product only for an administrator.",
+                "operationId": "updateProductPricing",
+                "parameters": [
+                    {
+                        "name": "product",
+                        "in": "path",
+                        "description": "ID du produit à mettre à jour",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64",
+                            "example": 42
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "price": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 59.99
+                                    },
+                                    "sale": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 0.15
+                                    },
+                                    "stock_quantity": {
+                                        "type": "integer",
+                                        "example": 120
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Product pricing updated successfully, no content"
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/tickets": {
             "get": {
                 "tags": [
                     "Tickets"
                 ],
                 "summary": "Retrieve a filtered, paginated list of all tickets (admin only)",
-                "description": "This endpoint retrieves a list of all tickets with optional filters and pagination. It is intended for admin users only.",
-                "operationId": "ddc3a5e66a83482e874c84e71ebc4505",
+                "description": "This endpoint retrieves a list of all tickets with optional filters, global search, and pagination. Admin only.",
+                "operationId": "getTickets",
                 "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Global search on ticket token or product name or ticket category",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     {
                         "name": "status",
                         "in": "query",
                         "description": "Filter by ticket status",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "enum": [
@@ -1520,7 +1951,6 @@
                         "name": "user_id",
                         "in": "query",
                         "description": "Filter by user ID",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
@@ -1530,17 +1960,33 @@
                         "name": "user_email",
                         "in": "query",
                         "description": "Filter by user email",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "email"
                         }
                     },
                     {
+                        "name": "product_id",
+                        "in": "query",
+                        "description": "Filter by product ID",
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "payment_uuid",
+                        "in": "query",
+                        "description": "Filter by payment UUID",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
                         "name": "created_from",
                         "in": "query",
                         "description": "Created on or after (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1550,7 +1996,6 @@
                         "name": "created_to",
                         "in": "query",
                         "description": "Created on or before (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1560,7 +2005,6 @@
                         "name": "updated_from",
                         "in": "query",
                         "description": "Updated on or after (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1570,7 +2014,6 @@
                         "name": "updated_to",
                         "in": "query",
                         "description": "Updated on or before (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1580,7 +2023,6 @@
                         "name": "used_from",
                         "in": "query",
                         "description": "Used on or after (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1590,7 +2032,6 @@
                         "name": "used_to",
                         "in": "query",
                         "description": "Used on or before (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1600,7 +2041,6 @@
                         "name": "refunded_from",
                         "in": "query",
                         "description": "Refunded on or after (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1610,7 +2050,6 @@
                         "name": "refunded_to",
                         "in": "query",
                         "description": "Refunded on or before (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1620,7 +2059,6 @@
                         "name": "cancelled_from",
                         "in": "query",
                         "description": "Cancelled on or after (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1630,7 +2068,6 @@
                         "name": "cancelled_to",
                         "in": "query",
                         "description": "Cancelled on or before (YYYY-MM-DD)",
-                        "required": false,
                         "schema": {
                             "type": "string",
                             "format": "date"
@@ -1640,12 +2077,20 @@
                         "name": "per_page",
                         "in": "query",
                         "description": "Items per page (1–100)",
-                        "required": false,
                         "schema": {
                             "type": "integer",
                             "default": 25,
                             "maximum": 100,
                             "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
                         }
                     }
                 ],
@@ -1695,9 +2140,6 @@
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
                     },
@@ -1743,6 +2185,16 @@
                                         "description": "Number of tickets to generate",
                                         "type": "integer",
                                         "example": 2
+                                    },
+                                    "locale": {
+                                        "description": "Language for invoice/tickets",
+                                        "type": "string",
+                                        "enum": [
+                                            "en",
+                                            "fr",
+                                            "de"
+                                        ],
+                                        "example": "fr"
                                     }
                                 },
                                 "type": "object"
@@ -1801,6 +2253,34 @@
                             "maximum": 100,
                             "minimum": 1
                         }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "event_date_from",
+                        "in": "query",
+                        "description": "Filter tickets for events on or after this date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "event_date_to",
+                        "in": "query",
+                        "description": "Filter tickets for events on or before this date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
                     }
                 ],
                 "responses": {
@@ -1813,7 +2293,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/TicketResource"
+                                                "$ref": "#/components/schemas/UserTicketResource"
                                             }
                                         },
                                         "meta": {
@@ -1844,9 +2324,6 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
@@ -2131,6 +2608,9 @@
                 "operationId": "scanTicket",
                 "parameters": [
                     {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
                         "name": "token",
                         "in": "path",
                         "description": "Unique ticket UUID token from QR code",
@@ -2284,14 +2764,202 @@
                 ]
             }
         },
+        "/api/admin/sales": {
+            "get": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Get ticket sales count per product (admin only)",
+                "description": "Returns a paginated list of products with the number of tickets sold for each product. Admin only.",
+                "operationId": "494f8029a85bf61ff898537a5df48e0b",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search by product name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sort by field",
+                        "schema": {
+                            "type": "string",
+                            "default": "sales_count",
+                            "enum": [
+                                "product_name",
+                                "sales_count"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Sort direction",
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated list of product sales",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ProductSalesResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "required": [
+                                                "current_page",
+                                                "last_page",
+                                                "per_page",
+                                                "total"
+                                            ],
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "example": 5
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "example": 15
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 73
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/users": {
             "get": {
                 "tags": [
                     "Users"
                 ],
                 "summary": "Retrieve all users (admin only)",
-                "description": "Returns a list of all users. Requires administrator privileges.",
+                "description": "Returns a paginated list of users, filterable by firstname, lastname, email and role.",
                 "operationId": "566aed8efb436ca506e0ef51a032ecd9",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "firstname",
+                        "in": "query",
+                        "description": "Recherche par prénom (like)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "lastname",
+                        "in": "query",
+                        "description": "Recherche par nom (like)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "description": "Recherche par email (exact)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "description": "Filtrer par rôle",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "admin",
+                                "employee",
+                                "user"
+                            ]
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Users retrieved successfully",
@@ -2356,6 +3024,48 @@
                                                         },
                                                         "type": "object"
                                                     }
+                                                },
+                                                "meta": {
+                                                    "properties": {
+                                                        "current_page": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "last_page": {
+                                                            "type": "integer",
+                                                            "example": 10
+                                                        },
+                                                        "per_page": {
+                                                            "type": "integer",
+                                                            "example": 15
+                                                        },
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "example": 150
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "links": {
+                                                    "properties": {
+                                                        "first": {
+                                                            "type": "string",
+                                                            "example": "…?page=1&per_page=15"
+                                                        },
+                                                        "last": {
+                                                            "type": "string",
+                                                            "example": "…?page=10&per_page=15"
+                                                        },
+                                                        "prev": {
+                                                            "type": "string|null",
+                                                            "example": "…?page=1&per_page=15"
+                                                        },
+                                                        "next": {
+                                                            "type": "string|null",
+                                                            "example": "…?page=2&per_page=15"
+                                                        }
+                                                    },
+                                                    "type": "object"
                                                 }
                                             },
                                             "type": "object"
@@ -2432,6 +3142,9 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -2503,6 +3216,10 @@
                                             "user"
                                         ],
                                         "example": "employee"
+                                    },
+                                    "verify_email": {
+                                        "type": "boolean",
+                                        "example": true
                                     }
                                 },
                                 "type": "object"
@@ -2513,6 +3230,9 @@
                 "responses": {
                     "204": {
                         "description": "User updated successfully, no content"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -2546,10 +3266,6 @@
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
                                         "user": {
                                             "properties": {
                                                 "firstname": {
@@ -2707,13 +3423,16 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "Pending email update retrieved"
+                                            "example": "Checked pending email update"
                                         }
                                     },
                                     "type": "object"
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
@@ -2783,6 +3502,9 @@
                     "201": {
                         "description": "Employee created successfully, no content"
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
                     },
@@ -2808,6 +3530,11 @@
                 "summary": "Register a new user",
                 "description": "\nThis endpoint allows a visitor to create a new user account with built-in protections:\n- **Strong password enforcement**: minimum 15 characters, mixed case, numbers & symbols\n- **Google reCAPTCHA** verification to block bots and automated abuse\n- **Throttling** (e.g. 5 requests/minute) to limit spam & brute-force attempts\n- **Email confirmation**: a verification link is sent after registration\n",
                 "operationId": "registerUser",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -2820,7 +3547,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "User created successfull. Verification Email sended.",
+                        "description": "User created successfully. Verification Email sent.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2859,6 +3586,11 @@
                 "summary": "Authenticate user",
                 "description": "\nThis endpoint allows a user to log in and receive an authentication token:\n\n- **Email & password** credentials are required\n- **Remember me** option for extended session duration (1 week)\n- **Two-factor authentication (2FA)** code if enabled\n- **Throttling** to limit brute-force attempts\n    ",
                 "operationId": "authLogin",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "description": "User login credentials",
                     "required": true,
@@ -2947,21 +3679,69 @@
                         }
                     },
                     "400": {
-                        "description": "Bad request (e.g. email not verified or missing/invalid 2FA code)",
+                        "description": "Bad request: email not verified or 2FA missing/invalid",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Two-factor authentication code is required"
+                                    "oneOf": [
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Email address not verified"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "email_not_verified"
+                                                },
+                                                "resend_verification_url": {
+                                                    "description": "URL to call to resend the verification email",
+                                                    "type": "string",
+                                                    "format": "url",
+                                                    "example": "https://api.example.com/api/auth/email/resend"
+                                                }
+                                            },
+                                            "type": "object"
                                         },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "twofa_required"
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Two-factor authentication code is required"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_required"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Invalid two-factor authentication code"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_invalid"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
@@ -3005,6 +3785,9 @@
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     },
                     "429": {
                         "$ref": "#/components/responses/TooManyRequests"
@@ -3153,6 +3936,11 @@
                 "summary": "Send password reset link",
                 "description": "\nSends an email containing a password reset link to the user.\n\n- Requires a valid email of an existing user.\n- Response does not reveal if the email is registered, to prevent enumeration.\n    ",
                 "operationId": "authForgotPassword",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -3273,7 +4061,7 @@
                                     "properties": {
                                         "message": {
                                             "type": "string",
-                                            "example": "Your password has been reset successfully."
+                                            "example": "Password has been reset successfully"
                                         }
                                     },
                                     "type": "object"
@@ -3455,6 +4243,11 @@
                 "summary": "Request email update",
                 "description": "\nSends a verification link to the new email address and notifies the old address.\nRequires authentication via Bearer token.\n",
                 "operationId": "authUpdateEmail",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "requestBody": {
                     "description": "New unique email address",
                     "required": true,
@@ -3493,26 +4286,6 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "Error when the provided email is the current email.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "error": {
-                                            "type": "string",
-                                            "example": "This email address is already your current address."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
                     },
@@ -3520,24 +4293,7 @@
                         "$ref": "#/components/responses/ValidationError"
                     },
                     "500": {
-                        "description": "Email update failure",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Unable to process email update"
-                                        },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "email_update_failed"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "$ref": "#/components/responses/InternalError"
                     }
                 },
                 "security": [
@@ -3580,27 +4336,55 @@
                         "description": "Two-factor authentication disabled successfully, no content"
                     },
                     "400": {
-                        "description": "Invalid or missing 2FA code",
+                        "description": "Invalid or missing 2FA code, or 2FA not enabled",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Invalid two-factor authentication code"
+                                    "oneOf": [
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Two-factor authentication is not enabled"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_not_enabled"
+                                                }
+                                            },
+                                            "type": "object"
                                         },
-                                        "code": {
-                                            "type": "string",
-                                            "example": "twofa_invalid_code"
+                                        {
+                                            "required": [
+                                                "message",
+                                                "code"
+                                            ],
+                                            "properties": {
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Invalid two-factor authentication code"
+                                                },
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "twofa_invalid_code"
+                                                }
+                                            },
+                                            "type": "object"
                                         }
-                                    },
-                                    "type": "object"
+                                    ]
                                 }
                             }
                         }
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -3805,6 +4589,11 @@
                 "summary": "Resend verification email",
                 "description": "Sends a new email verification link to the authenticated user. Requires a valid Bearer token.",
                 "operationId": "authResendVerificationEmail",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/AcceptLanguageHeader"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Verification email resent successfully",
@@ -3844,6 +4633,9 @@
                                 }
                             }
                         }
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/TooManyRequests"
                     },
                     "500": {
                         "$ref": "#/components/responses/InternalError"
@@ -4178,12 +4970,15 @@
                     "captcha_token": {
                         "type": "string",
                         "example": "03AGdBq24…"
+                    },
+                    "accept_terms": {
+                        "type": "boolean",
+                        "example": true
                     }
                 },
                 "type": "object"
             },
-            "StoreProduct": {
-                "title": "StoreProduct",
+            "StoreProductSingleLocale": {
                 "required": [
                     "name",
                     "price",
@@ -4193,7 +4988,7 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "example": "Sample Product"
+                        "example": "Billet concert"
                     },
                     "price": {
                         "type": "number",
@@ -4210,7 +5005,51 @@
                         "example": 100
                     },
                     "product_details": {
-                        "$ref": "#/components/schemas/ProductDetails"
+                        "$ref": "#/components/schemas/StoreProductDetailsSingleLocale"
+                    }
+                },
+                "type": "object"
+            },
+            "StoreProductDetailsSingleLocale": {
+                "required": [
+                    "places",
+                    "description",
+                    "date",
+                    "time",
+                    "location",
+                    "category",
+                    "image_url"
+                ],
+                "properties": {
+                    "places": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Description détaillée…"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-07-26"
+                    },
+                    "time": {
+                        "type": "string",
+                        "example": "19:30"
+                    },
+                    "location": {
+                        "type": "string",
+                        "example": "Stade de France"
+                    },
+                    "category": {
+                        "type": "string",
+                        "example": "Cérémonies"
+                    },
+                    "image_url": {
+                        "type": "string",
+                        "format": "url",
+                        "example": "https://…/image.jpg"
                     }
                 },
                 "type": "object"
@@ -4236,6 +5075,14 @@
                     "quantity": {
                         "type": "integer",
                         "example": 3
+                    },
+                    "in_stock": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "available_quantity": {
+                        "type": "integer",
+                        "example": 5
                     },
                     "unit_price": {
                         "type": "number",
@@ -4384,13 +5231,35 @@
                         "example": "https://example.com/invoice/12345"
                     },
                     "cart_snapshot": {
-                        "description": "Instantané du panier",
+                        "description": "Localized snapshot of the cart as seen by the admin",
                         "type": "array",
                         "items": {
+                            "required": [
+                                "product_id",
+                                "product_name",
+                                "ticket_type",
+                                "ticket_places",
+                                "quantity",
+                                "unit_price",
+                                "discount_rate",
+                                "discounted_price"
+                            ],
                             "properties": {
+                                "product_id": {
+                                    "type": "integer",
+                                    "example": 42
+                                },
+                                "product_name": {
+                                    "type": "string",
+                                    "example": "Billet concert"
+                                },
                                 "ticket_type": {
                                     "type": "string",
                                     "example": "adult"
+                                },
+                                "ticket_places": {
+                                    "type": "integer",
+                                    "example": 2
                                 },
                                 "quantity": {
                                     "type": "integer",
@@ -4400,6 +5269,16 @@
                                     "type": "number",
                                     "format": "float",
                                     "example": 50
+                                },
+                                "discount_rate": {
+                                    "type": "number",
+                                    "format": "float",
+                                    "example": 0.1
+                                },
+                                "discounted_price": {
+                                    "type": "number",
+                                    "format": "float",
+                                    "example": 45
                                 }
                             },
                             "type": "object"
@@ -4453,6 +5332,10 @@
                         "nullable": true
                     },
                     "user": {
+                        "required": [
+                            "id",
+                            "email"
+                        ],
                         "properties": {
                             "id": {
                                 "type": "integer",
@@ -4562,6 +5445,23 @@
                 },
                 "type": "object"
             },
+            "ProductSalesResource": {
+                "properties": {
+                    "product_id": {
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "product_name": {
+                        "type": "string",
+                        "example": "Concert VIP Ticket"
+                    },
+                    "sales_count": {
+                        "type": "integer",
+                        "example": 128
+                    }
+                },
+                "type": "object"
+            },
             "TicketResource": {
                 "title": "TicketResource",
                 "properties": {
@@ -4574,19 +5474,41 @@
                         "example": "550e8400-e29b-41d4-a716-446655440000"
                     },
                     "product_snapshot": {
+                        "required": [
+                            "product_id",
+                            "product_name",
+                            "ticket_type",
+                            "ticket_places",
+                            "quantity",
+                            "unit_price",
+                            "discount_rate",
+                            "discounted_price"
+                        ],
                         "properties": {
+                            "product_id": {
+                                "type": "integer",
+                                "example": 42
+                            },
                             "product_name": {
                                 "type": "string",
-                                "example": "Concert X"
+                                "example": "Billet concert"
                             },
                             "ticket_type": {
                                 "type": "string",
-                                "example": "VIP"
+                                "example": "adult"
+                            },
+                            "ticket_places": {
+                                "type": "integer",
+                                "example": 2
+                            },
+                            "quantity": {
+                                "type": "integer",
+                                "example": 2
                             },
                             "unit_price": {
                                 "type": "number",
                                 "format": "float",
-                                "example": 49.99
+                                "example": 50
                             },
                             "discount_rate": {
                                 "type": "number",
@@ -4596,7 +5518,7 @@
                             "discounted_price": {
                                 "type": "number",
                                 "format": "float",
-                                "example": 44.99
+                                "example": 45
                             }
                         },
                         "type": "object"
@@ -4631,20 +5553,62 @@
                     },
                     "qr_filename": {
                         "type": "string",
-                        "example": "uuid.png"
+                        "example": "qr_123e4567-e89b-12d3-a456-426614174000.png"
                     },
                     "pdf_filename": {
                         "type": "string",
-                        "example": "uuid.pdf"
+                        "example": "ticket_123e4567-e89b-12d3-a456-426614174000.pdf"
                     },
                     "user": {
-                        "$ref": "#/components/schemas/UserResource"
+                        "required": [
+                            "id",
+                            "firstname",
+                            "lastname",
+                            "email"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "firstname": {
+                                "type": "string",
+                                "example": "Jean"
+                            },
+                            "lastname": {
+                                "type": "string",
+                                "example": "Dupont"
+                            },
+                            "email": {
+                                "type": "string",
+                                "format": "email",
+                                "example": "jean.dupont@example.com"
+                            }
+                        },
+                        "type": "object"
                     },
                     "payment": {
-                        "$ref": "#/components/schemas/PaymentResource"
-                    },
-                    "product": {
-                        "$ref": "#/components/schemas/MinimalProduct"
+                        "required": [
+                            "id",
+                            "uuid",
+                            "status"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 42
+                            },
+                            "uuid": {
+                                "type": "string",
+                                "format": "uuid",
+                                "example": "550e8400-e29b-41d4-a716-446655440000"
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "paid"
+                            }
+                        },
+                        "type": "object"
                     },
                     "created_at": {
                         "type": "string",
@@ -4710,6 +5674,109 @@
                         "type": "string",
                         "format": "date-time",
                         "example": "2025-05-10T12:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "UserTicketResource": {
+                "title": "UserTicketResource",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "token": {
+                        "type": "string",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "payment_uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                    },
+                    "product_snapshot": {
+                        "required": [
+                            "product_id",
+                            "product_name",
+                            "ticket_type",
+                            "ticket_places",
+                            "quantity",
+                            "unit_price",
+                            "discount_rate",
+                            "discounted_price"
+                        ],
+                        "properties": {
+                            "product_id": {
+                                "type": "integer",
+                                "example": 42
+                            },
+                            "product_name": {
+                                "type": "string",
+                                "example": "Billet concert"
+                            },
+                            "ticket_type": {
+                                "type": "string",
+                                "example": "adult"
+                            },
+                            "ticket_places": {
+                                "type": "integer",
+                                "example": 2
+                            },
+                            "quantity": {
+                                "type": "integer",
+                                "example": 2
+                            },
+                            "unit_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 50
+                            },
+                            "discount_rate": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 0.1
+                            },
+                            "discounted_price": {
+                                "type": "number",
+                                "format": "float",
+                                "example": 45
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "issued",
+                            "used",
+                            "refunded",
+                            "cancelled"
+                        ],
+                        "example": "issued"
+                    },
+                    "used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-05-10T14:00:00Z",
+                        "nullable": true
+                    },
+                    "refunded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "cancelled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "qr_filename": {
+                        "type": "string",
+                        "example": "qr_…png"
+                    },
+                    "pdf_filename": {
+                        "type": "string",
+                        "example": "ticket_…pdf"
                     }
                 },
                 "type": "object"
@@ -4942,14 +6009,16 @@
                         "example": 1
                     },
                     "name": {
+                        "description": "Localized product name based on Accept-Language header",
                         "type": "string",
                         "example": "Billet concert"
                     },
                     "product_details": {
+                        "description": "Localized details object",
                         "type": "object",
                         "example": {
                             "places": 1,
-                            "description": "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024. Vivez une soirée exceptionnelle...",
+                            "description": "Assistez à un moment historique ...",
                             "date": "2024-07-26",
                             "time": "19h30 (accès recommandé dès 18h00)",
                             "location": "Stade de France, Saint-Denis",
@@ -4973,13 +6042,11 @@
                     },
                     "created_at": {
                         "type": "string",
-                        "format": "date-time",
-                        "example": "2023-01-01T00:00:00Z"
+                        "format": "date-time"
                     },
                     "updated_at": {
                         "type": "string",
-                        "format": "date-time",
-                        "example": "2023-04-01T12:00:00Z"
+                        "format": "date-time"
                     },
                     "tickets": {
                         "type": "array",
@@ -4992,6 +6059,87 @@
                         "items": {
                             "$ref": "#/components/schemas/CartItem"
                         }
+                    }
+                },
+                "type": "object"
+            },
+            "ProductTranslation": {
+                "required": [
+                    "id",
+                    "product_id",
+                    "locale",
+                    "name"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "product_id": {
+                        "description": "ID du produit parent",
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "locale": {
+                        "description": "Code de la langue de la traduction",
+                        "type": "string",
+                        "example": "fr"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Cérémonie d’ouverture officielle des JO"
+                    },
+                    "product_details": {
+                        "description": "Détails localisés du produit",
+                        "properties": {
+                            "places": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "description": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "example": [
+                                    "Assistez à un moment historique avec la cérémonie d’ouverture des Jeux Olympiques de Paris 2024.",
+                                    "Vivez une soirée exceptionnelle où le sport, la culture et l’émotion se rencontrent..."
+                                ]
+                            },
+                            "date": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2024-07-26"
+                            },
+                            "time": {
+                                "type": "string",
+                                "example": "19h30 (accès recommandé dès 18h00)"
+                            },
+                            "location": {
+                                "type": "string",
+                                "example": "Stade de France, Saint-Denis"
+                            },
+                            "category": {
+                                "type": "string",
+                                "example": "Cérémonies"
+                            },
+                            "image": {
+                                "type": "string",
+                                "format": "uri",
+                                "example": "https://picsum.photos/seed/1/600/400"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-04-22T20:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2025-04-22T20:00:00Z"
                     }
                 },
                 "type": "object"
@@ -5439,6 +6587,323 @@
             },
             "NoContent": {
                 "description": "Operation successful, no content"
+            },
+            "DatabaseError": {
+                "description": "Database error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Database error"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "database_error"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "TicketAlreadyProcessed": {
+                "description": "This ticket was already processed",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "status",
+                                "timestamp",
+                                "user",
+                                "event",
+                                "code",
+                                "message"
+                            ],
+                            "properties": {
+                                "status": {
+                                    "type": "string",
+                                    "example": "used"
+                                },
+                                "timestamp": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "example": "2024-07-26T19:30:00Z"
+                                },
+                                "user": {
+                                    "properties": {
+                                        "firstname": {
+                                            "type": "string",
+                                            "example": "Jean"
+                                        },
+                                        "lastname": {
+                                            "type": "string",
+                                            "example": "Dupont"
+                                        },
+                                        "email": {
+                                            "type": "string",
+                                            "format": "email",
+                                            "example": "jean.dupont@example.com"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "event": {
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "example": "Opening Ceremony"
+                                        },
+                                        "date": {
+                                            "type": "string",
+                                            "format": "date",
+                                            "example": "2024-07-26"
+                                        },
+                                        "time": {
+                                            "type": "string",
+                                            "example": "19h30 (accès recommandé dès 18h00)"
+                                        },
+                                        "location": {
+                                            "type": "string",
+                                            "example": "Stade de France, Saint-Denis"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "ticket_already_processed"
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "This ticket was already used on 2024-07-26T19:30:00Z"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "UserNotFound": {
+                "description": "User not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "User not found"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "user_not_found"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "InvalidVerificationLink": {
+                "description": "Invalid verification link",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Invalid verification link"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "invalid_verification_link"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "AlreadyVerified": {
+                "description": "Email is already verified",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Email is already verified"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "already_verified"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/already-verified"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "VerificationTokenMissing": {
+                "description": "Invalid or expired verification token",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Invalid or expired verification token"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "verification_token_missing"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "EmailUpdateNotFound": {
+                "description": "Email request not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "redirect_url"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Email request not found"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "email_not_found"
+                                },
+                                "redirect_url": {
+                                    "type": "string",
+                                    "format": "url",
+                                    "example": "https://frontend.app/verification-result/invalid"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "StockUnavailable": {
+                "description": "Some items in the cart exceed available stock",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "required": [
+                                "message",
+                                "code",
+                                "errors"
+                            ],
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "example": "Stock unavailable for one or more items in the cart"
+                                },
+                                "code": {
+                                    "type": "string",
+                                    "example": "stock_unavailable"
+                                },
+                                "errors": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "product_id": {
+                                                "type": "integer",
+                                                "example": 42
+                                            },
+                                            "product_name": {
+                                                "type": "string",
+                                                "example": "Billet concert"
+                                            },
+                                            "requested_quantity": {
+                                                "type": "integer",
+                                                "example": 5
+                                            },
+                                            "available_quantity": {
+                                                "type": "integer",
+                                                "example": 2
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "parameters": {
+            "AcceptLanguageHeader": {
+                "name": "Accept-Language",
+                "in": "header",
+                "description": "Language of the local response. Supported values : `en`, `fr`, `de`. Default `en`.",
+                "required": false,
+                "schema": {
+                    "type": "string",
+                    "default": "en",
+                    "enum": [
+                        "en",
+                        "fr",
+                        "de"
+                    ]
+                }
             }
         },
         "securitySchemes": {
@@ -5481,7 +6946,7 @@
         }
     ],
     "externalDocs": {
-        "description": "Full API documentation",
-        "url": "https://docs.paris2024.example.com"
+        "description": "Full Documentation",
+        "url": "https://api-jo2024.mkcodecreations.dev/"
     }
 }

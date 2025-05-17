@@ -32,6 +32,7 @@ class AuthControllerTest extends TestCase
             'password' => 'Str0ngP@ssword2025!',
             'password_confirmation' => 'Str0ngP@ssword2025!',
             'captcha_token' => 'token',
+            'accept_terms' => true,
         ];
 
         $validated = Arr::except($payload, ['password_confirmation']);

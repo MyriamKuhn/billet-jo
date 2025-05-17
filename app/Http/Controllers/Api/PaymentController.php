@@ -15,6 +15,7 @@ use App\Events\InvoiceRequested;
 use App\Http\Requests\RefundRequest;
 use Illuminate\Support\Facades\Storage;
 use App\Events\PaymentSucceeded;
+use App\Models\Product;
 
 class PaymentController extends Controller
 {
@@ -30,6 +31,8 @@ class PaymentController extends Controller
      *     operationId="getPayments",
      *     tags={"Payments"},
      *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *
      *     @OA\Parameter(
      *         name="q",
@@ -125,7 +128,9 @@ class PaymentController extends Controller
      *     ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
+     *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
      *
      * @param  PaymentIndexRequest  $request
@@ -147,6 +152,25 @@ class PaymentController extends Controller
             $perPage
         );
 
+        $payments = $paginator->getCollection();
+
+        $allIds = $payments
+                    ->flatMap(fn($payment) => collect($payment->cart_snapshot['items'] ?? [])->pluck('product_id'))
+                    ->unique()
+                    ->toArray();
+
+        $products = Product::with('translations')
+                        ->whereIn('id', $allIds)
+                        ->get()
+                        ->keyBy('id');
+
+        $payments->transform(function($payment) use ($products) {
+            $payment->setRelation('snapshot_products', $products);
+            return $payment;
+        });
+
+        $paginator->setCollection($payments);
+
         return PaymentResource::collection($paginator);
     }
 
@@ -160,6 +184,8 @@ class PaymentController extends Controller
      *     operationId="storePayment",
      *     tags={"Payments"},
      *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *
      *     @OA\RequestBody(
      *         required=true,
@@ -187,6 +213,7 @@ class PaymentController extends Controller
      *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *     @OA\Response(response=409, ref="#/components/responses/StockUnavailable"),
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=502, description="Payment gateway error", @OA\JsonContent(
      *         type="object",
@@ -255,7 +282,8 @@ class PaymentController extends Controller
      *             type="object",
      *             @OA\Property(property="error", type="string", example="Invalid signature")
      *         )
-     *     )
+     *     ),
+     *    @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      */
     public function webhook(Request $request)
@@ -285,9 +313,12 @@ class PaymentController extends Controller
                     // 1) Mark the payment as paid and return the Payment UUID
                     $payment = $this->payments->markAsPaidByUuid($uuid);
 
+                    $locale = $payment->cart_snapshot['locale'] ?? config('app.fallback_locale');
+                    app()->setLocale($locale);
+
                     // 2) Generate the invoice PDF and store it and the ticket
-                    event(new InvoiceRequested($payment));
-                    event(new PaymentSucceeded($payment));
+                    event(new InvoiceRequested($payment, $locale));
+                    event(new PaymentSucceeded($payment, $locale));
                 } else {
                     \Log::warning("Webhook received without payment_uuid on event {$event->type}", [
                         'object_id' => $object->id,
@@ -336,12 +367,7 @@ class PaymentController extends Controller
      *         )
      *     ),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
-     *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
-     *     @OA\Response(response=404, description="Payment not found or does not belong to user", @OA\JsonContent(
-     *         type="object",
-     *         @OA\Property(property="message", type="string", example="Resource not found"),
-     *         @OA\Property(property="code",    type="string", example="not_found")
-     *     )),
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      */
@@ -351,7 +377,7 @@ class PaymentController extends Controller
         return response()->json([
             'status' => $payment->status->value,
             'paid_at'=> optional($payment->paid_at)->toIso8601String(),
-        ]);
+        ], 200);
     }
 
     /**
@@ -402,11 +428,7 @@ class PaymentController extends Controller
      *     @OA\Response(response=400, ref="#/components/responses/BadRequest"),
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
-     *     @OA\Response(response=404, description="Payment not found", @OA\JsonContent(
-     *         type="object",
-     *         @OA\Property(property="message", type="string", example="Resource not found"),
-     *         @OA\Property(property="code",    type="string", example="not_found")
-     *     )),
+     *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=502, description="Payment gateway error", @OA\JsonContent(
      *         type="object",
@@ -430,8 +452,11 @@ class PaymentController extends Controller
             Storage::disk('invoices')->delete($oldFilename);
         }
 
+        $locale = $payment->cart_snapshot['locale'];
+        app()->setLocale($locale);
+
         // Re-dispatch InvoiceRequested to regenerate the PDF
-        event(new InvoiceRequested($payment));
+        event(new InvoiceRequested($payment, $locale));
 
         // Return JSON response
         return response()->json([

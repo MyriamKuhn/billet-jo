@@ -11,6 +11,9 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\Hash;
 use App\Exceptions\Auth\EmailUpdateNotFoundException;
+use App\Enums\UserRole;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 
 class UserServiceTest extends TestCase
 {
@@ -88,35 +91,30 @@ class UserServiceTest extends TestCase
     }
 
     public function testUpdateUserByAdminAppliesAllFieldsAndResetsTwofaSecret()
-    {
-        $admin  = User::factory()->create(['role'=>'admin']);
-        $target = User::factory()->create([
-            'firstname'=>'Old','lastname'=>'Name',
-            'email'=>'old@example.com','role'=>'user',
-            'is_active'=>true,'twofa_enabled'=>true,'twofa_secret'=>'secret'
+        {
+            // 1) Créer un admin et un utilisateur non vérifié
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
         ]);
 
-        $data = [
-            'firstname'=>'New','lastname'=>'Name2',
-            'email'=>'new@example.com','role'=>'employee',
-            'is_active'=>false,'twofa_enabled'=>false
-        ];
-        $out = $this->service->updateUserByAdmin($admin, $target, $data);
+        $user = User::factory()->unverified()->create();
+        $this->assertNull($user->email_verified_at);
 
-        $this->assertSame([
-            'firstname'     => 'New',
-            'lastname'      => 'Name2',
-            'email'         => 'new@example.com',
-            'is_active'     => false,
-            'twofa_enabled' => false,
-            // on s’attend à une instance d’enum, pas à une string
-            'role'          => $target->role,
-        ], $out);
+        // 2) Appel de l’endpoint avec verify_email = true
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->patchJson(route('users.update.admin', ['user' => $user->id]), [
+                'verify_email' => true,
+            ]);
 
-        $this->assertDatabaseHas('users', [
-            'id'            => $target->id,
-            'twofa_secret'  => null
-        ]);
+        // 3) On s’attend à un 204
+        $response->assertNoContent();
+
+        // 4) On recharge l’utilisateur et on vérifie que l’email est bien marqué comme vérifié
+        $freshUser = $user->fresh();
+        $this->assertNotNull($freshUser->email_verified_at);
+        $this->assertTrue($freshUser->hasVerifiedEmail());
     }
 
     public function testUpdateUserByAdminThrowsWhenNotAdmin()
@@ -182,5 +180,211 @@ class UserServiceTest extends TestCase
             'firstname'=>'A','lastname'=>'B',
             'email'=>'x@y.com','twofa_enabled'=>true
         ], $out);
+    }
+
+    public function testThrowsWhenActorNotAdmin(): void
+    {
+        $actor = User::factory()->create([
+            'role' => UserRole::User,
+        ]);
+
+        $this->expectException(AuthorizationException::class);
+        $this->service->listAllUsers($actor);
+    }
+
+    public function testReturnsAllUsersWithoutFilters(): void
+    {
+        $actor = User::factory()->create([
+            'role' => UserRole::Admin,
+        ]);
+
+        // Create additional users
+        $users = User::factory()->count(3)->create();
+
+        $paginator = $this->service->listAllUsers($actor);
+
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        // Includes actor + 3 others
+        $this->assertEquals(4, $paginator->total());
+    }
+
+    public function testFiltersByFirstname(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match1 = User::factory()->create(['firstname' => 'Alice']);
+        User::factory()->create(['firstname' => 'Bob']);
+        $match2 = User::factory()->create(['firstname' => 'Alicia']);
+
+        $filters = ['firstname' => 'Ali'];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $ids = collect($paginator->items())->pluck('id')->all();
+
+        sort($ids);
+        $this->assertEqualsCanonicalizing([
+            $match1->id,
+            $match2->id,
+        ], $ids);
+    }
+
+    public function testFiltersByLastname(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match1 = User::factory()->create(['lastname' => 'Smith']);
+        User::factory()->create(['lastname' => 'Jones']);
+        $match2 = User::factory()->create(['lastname' => 'Smithson']);
+
+        $filters = ['lastname' => 'Smith'];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $ids = collect($paginator->items())->pluck('id')->all();
+
+        sort($ids);
+        $this->assertEqualsCanonicalizing([
+            $match1->id,
+            $match2->id,
+        ], $ids);
+    }
+
+    public function testFiltersByEmail(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match = User::factory()->create(['email' => 'unique@example.com']);
+        User::factory()->create(['email' => 'other@example.com']);
+
+        $filters = ['email' => 'unique@example.com'];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $this->assertCount(1, $paginator->items());
+        $this->assertEquals($match->id, $paginator->items()[0]->id);
+    }
+
+    public function testFiltersByRole(): void
+    {
+        $actor = User::factory()->create(['role' => UserRole::Admin]);
+
+        $match1 = User::factory()->create(['role' => UserRole::User]);
+        User::factory()->create(['role' => UserRole::Employee]);
+        $match2 = User::factory()->create(['role' => UserRole::User]);
+
+        $filters = ['role' => UserRole::User->value];
+
+        $paginator = $this->service->listAllUsers($actor, $filters);
+        $ids = collect($paginator->items())->pluck('id')->all();
+
+        sort($ids);
+        $this->assertEqualsCanonicalizing([
+            $match1->id,
+            $match2->id,
+        ], $ids);
+    }
+
+    public function testNonAdminCannotUpdate()
+    {
+        $actor  = User::factory()->create(['role' => 'user']);
+        $target = User::factory()->create();
+
+        $this->expectException(AuthorizationException::class);
+
+        $this->service->updateUserByAdmin($actor, $target, [
+            'is_active' => false,
+        ]);
+    }
+
+    public function testToggleIsActiveFlag()
+    {
+        $admin  = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create(['is_active' => true]);
+
+        $result = $this->service->updateUserByAdmin($admin, $target, [
+            'is_active' => false,
+        ]);
+
+        $this->assertFalse($target->fresh()->is_active);
+        $this->assertArrayHasKey('is_active', $result);
+        $this->assertFalse($result['is_active']);
+    }
+
+    public function testTwofaDisableResetsSecretAndEnableKeepsIt()
+    {
+        $admin  = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create([
+            'twofa_enabled' => true,
+            'twofa_secret'  => Str::random(16),
+        ]);
+
+        // Désactivation de la 2FA
+        $this->service->updateUserByAdmin($admin, $target, [
+            'twofa_enabled' => false,
+        ]);
+        $fresh = $target->fresh();
+        $this->assertFalse($fresh->twofa_enabled);
+        $this->assertNull($fresh->twofa_secret);
+
+        // Réactivation de la 2FA (le secret reste null car non généré ici)
+        $this->service->updateUserByAdmin($admin, $target, [
+            'twofa_enabled' => true,
+        ]);
+        $fresh = $target->fresh();
+        $this->assertTrue($fresh->twofa_enabled);
+        $this->assertNull($fresh->twofa_secret);
+    }
+
+    public function testVerifyEmailSetsEmailVerifiedAt()
+    {
+        $admin  = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->unverified()->create();
+        $this->assertNull($target->email_verified_at);
+
+        $this->service->updateUserByAdmin($admin, $target, [
+            'verify_email' => true,
+        ]);
+
+        $fresh = $target->fresh();
+        $this->assertNotNull($fresh->email_verified_at);
+        $this->assertTrue($fresh->hasVerifiedEmail());
+    }
+
+    public function testUpdateFieldsFirstnameLastnameEmailRole()
+    {
+        $admin  = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create([
+            'firstname' => 'Old',
+            'lastname'  => 'Name',
+            'email'     => 'old@example.com',
+            'role'      => 'user',
+        ]);
+
+        $payload = [
+            'firstname' => 'Alice',
+            'lastname'  => 'Dupont',
+            'email'     => 'alice.dupont@example.com',
+            'role'      => 'employee',
+        ];
+
+        // Appel du service
+        $result = $this->service->updateUserByAdmin($admin, $target, $payload);
+
+        // On vérifie bien la persistance en BDD
+        $fresh = $target->fresh();
+        $this->assertEquals('Alice', $fresh->firstname);
+        $this->assertEquals('Dupont', $fresh->lastname);
+        $this->assertEquals('alice.dupont@example.com', $fresh->email);
+        $this->assertEquals('employee', $fresh->role->value);
+
+        // On vérifie le tableau retourné
+        foreach ($payload as $key => $value) {
+            $this->assertArrayHasKey($key, $result);
+
+            if ($key === 'role') {
+                // Ici on compare la valeur de l'enum, pas l'objet
+                $this->assertEquals($value, $result[$key]->value);
+            } else {
+                $this->assertEquals($value, $result[$key]);
+            }
+        }
     }
 }

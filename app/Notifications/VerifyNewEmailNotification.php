@@ -45,7 +45,7 @@ class VerifyNewEmailNotification extends Notification
         $url = $this->verificationUrl($notifiable);
 
         return (new MailMessage)
-            ->subject(__('mail.subject_email_update', ['app_name'=> env('APP_NAME')]))
+            ->subject(__('mail.subject_email_update', ['app_name'=> config('app.name')]))
             ->view('emails.newverify', [
                 'user' => $notifiable,
                 'url' => $url,

@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ app()->getLocale() }}">
 
 <head>
     <meta charset="utf-8">
-    <title>Invoice #{{ $payment->uuid }}</title>
+    <title>{{ __('invoice.invoice_title', ['invoice_number' =>  $payment->uuid]) }}</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
@@ -28,7 +28,7 @@
             margin-bottom: 20px;
         }
         .logo {
-            max-height: 60px;
+            max-height: 150px;
             margin-bottom: 10px;
         }
         h1 {
@@ -117,29 +117,29 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ public_path('images/jo_logo.png') }}" alt="Logo" class="logo">
-            <h1>Invoice #{{ $payment->uuid }}</h1>
-            <div class="date">Date: {{ $payment->created_at->format('F j, Y') }}</div>
+            <img src="{{ asset('images/jo_logo.png') }}" alt="Logo" class="logo">
+            <h1>{{ __('invoice.invoice_title', ['invoice_number' =>  $payment->uuid]) }}</h1>
+            <div class="date">{{ __('invoice.invoice_date', ['date' =>  $payment->created_at->locale(app()->getLocale())->isoFormat('LL')]) }}</div>
         </div>
 
         <div class="customer">
-            <p><strong>Customer:</strong> {{ $payment->user->firstname }} {{ $payment->user->lastname }}</p>
-            <p><strong>Email:</strong> {{ $payment->user->email }}</p>
+            <p><strong>{{ __('invoice.invoice_customer') }}</strong> {{ $payment->user->firstname }} {{ $payment->user->lastname }}</p>
+            <p><strong>{{ __('invoice.invoice_email') }}</strong> {{ $payment->user->email }}</p>
         </div>
 
         <div class="items">
-            <h2>Cart Contents</h2>
+            <h2>{{ __('invoice.invoice_content') }}</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Product</th>
-                        <th>Qty</th>
-                        <th class="right">Unit Price</th>
-                        <th class="right">Total</th>
+                        <th>{{ __('invoice.invoice_product') }}</th>
+                        <th>{{ __('invoice.invoice_quantity') }}</th>
+                        <th class="right">{{ __('invoice.invoice_unit_price') }}</th>
+                        <th class="right">{{ __('invoice.invoice_total_price') }}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($payment->cart_snapshot as $line)
+                    @foreach ($payment->cart_snapshot['items'] as $line)
                         <tr>
                             <td>{{ $line['product_name'] }}</td>
                             <td>{{ $line['quantity'] }}</td>
@@ -153,30 +153,30 @@
 
         <table class="totals">
             <tr>
-                <td><strong>Subtotal:</strong></td>
+                <td><strong>{{ __('invoice.invoice_subtotal') }}</strong></td>
                 <td class="right">{{ number_format($payment->amount, 2, '.', ' ') }} €</td>
             </tr>
 
             @if ($payment->refunded_amount > 0)
                 <tr>
-                    <td><strong>Refunded:</strong></td>
+                    <td><strong>{{ __('invoice.invoice_refunded') }}</strong></td>
                     <td class="right">- {{ number_format($payment->refunded_amount, 2, '.', ' ') }} €</td>
                 </tr>
                 <tr>
-                    <td><strong>Balance Due:</strong></td>
+                    <td><strong>{{ __('invoice.invoice_balance_due') }}</strong></td>
                     <td class="right">{{ number_format($payment->amount - $payment->refunded_amount, 2, '.', ' ') }} €</td>
                 </tr>
             @endif
 
             <tr>
-                <td><strong>Total Paid:</strong></td>
+                <td><strong>{{ __('invoice.invoice_total_paid') }}</strong></td>
                 <td class="right">{{ number_format($payment->amount - ($payment->refunded_amount ?? 0), 2, '.', ' ') }} €</td>
             </tr>
         </table>
 
         <div class="footer">
-            Thank you for your business – {{ config('app.name') }}<br>
-            <small>This invoice was generated automatically and is valid without signature.</small>
+            {{ __('invoice.invoice_thank_you', ['app_name' => config('app.name')]) }}<br>
+            <small>{{ __('invoice.invoice_generated', ['app_name' => config('app.name')]) }}</small>
         </div>
     </div>
 </body>

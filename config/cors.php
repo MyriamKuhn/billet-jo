@@ -23,7 +23,7 @@ return [
 
     'allowed_origins_patterns' => ['*'],
 
-    'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With'],
+    'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Guest-Cart-Id', 'X-XSRF-TOKEN', 'Accept-Language'],
 
     'exposed_headers' => [],
 

@@ -10,6 +10,8 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 
 class UserControllerTest extends TestCase
 {
@@ -28,63 +30,65 @@ class UserControllerTest extends TestCase
         // 1) Création d'un admin
         $userAdmin = User::factory()->create(['role' => 'admin']);
 
-        // 2) Création de 3 utilisateurs en base (ils auront un 'id')
-        $fakeUsers = User::factory()
-            ->count(3)
-            ->create();  // <-- create() persiste ET retourne une Collection de modèles
+        // 2) Création de 3 utilisateurs en base
+        $fakeUsers = User::factory()->count(3)->create();
 
-        // 3) Mock du service pour qu'il renvoie cette Collection de modèles
+        // 3) Construction d’un paginator autour de ces utilisateurs
+        $perPage      = 15;
+        $currentPage  = 1;
+        $total        = $fakeUsers->count();
+        $itemsForPage = $fakeUsers->forPage($currentPage, $perPage)->values();
+        $paginator = new LengthAwarePaginator(
+            $itemsForPage,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path'     => Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
+        );
+
+        // 4) Mock du service pour renvoyer ce paginator
         $this->mock(UserService::class)
             ->shouldReceive('listAllUsers')
-            ->with($userAdmin)
+            ->withArgs(fn($actor, $filters, $pp) =>
+                $actor->is($userAdmin)
+                && $filters === []
+                && $pp === $perPage
+            )
             ->once()
-            ->andReturn($fakeUsers);
+            ->andReturn($paginator);
 
-        // 4) Authentification via Sanctum
+        // 5) Authentification via Sanctum
         Sanctum::actingAs($userAdmin, ['*']);
 
-        // 5) Appel de l'endpoint
+        // 6) Appel de l'endpoint
         $response = $this->getJson('/api/users');
-        $response->assertOk();
 
-        // 6) Décodage du JSON et assertions explicites
-        $data = $response->json();
+        // 7) Assertions sur le statut et la structure
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => ['users' => [
+                    '*' => [
+                        'id','firstname','lastname','email',
+                        'created_at','updated_at','role',
+                        'twofa_enabled','email_verified_at','is_active',
+                    ]
+                ]],
+                'meta' => ['current_page','last_page','per_page','total'],
+                'links'=> ['first','last','prev','next'],
+            ])
+            ->assertJsonPath('meta.per_page', $perPage)
+            ->assertJsonCount(3, 'data.users');
 
-        // Structure globale
-        $this->assertArrayHasKey('data', $data);
-        $this->assertArrayHasKey('users', $data['data']);
-
-        // On doit avoir exactement 3 users
-        $this->assertCount(3, $data['data']['users']);
-
-        // Vérifions le premier user
-        $first = $data['data']['users'][0];
-        $this->assertIsArray($first);
-
-        // Clés attendues
-        $expectedKeys = [
-            'id',
-            'firstname',
-            'lastname',
-            'email',
-            'created_at',
-            'updated_at',
-            'role',
-            'twofa_enabled',
-            'email_verified_at',
-            'is_active',
-        ];
-        foreach ($expectedKeys as $key) {
-            $this->assertArrayHasKey($key, $first, "La clé '$key' est manquante dans le premier user");
-        }
-
-        // (Optionnel) Vérifier que les valeurs correspondent
-        foreach ($fakeUsers->toArray() as $index => $expectedUser) {
-            $actualUser = $data['data']['users'][$index];
-            $this->assertEquals($expectedUser['id'],            $actualUser['id']);
-            $this->assertEquals($expectedUser['firstname'],     $actualUser['firstname']);
-            $this->assertEquals($expectedUser['lastname'],      $actualUser['lastname']);
-            $this->assertEquals($expectedUser['email'],         $actualUser['email']);
+        // 8) Vérification des données retournées
+        $returned = $response->json('data.users');
+        foreach ($fakeUsers->toArray() as $i => $userData) {
+            $this->assertEquals($userData['id'],        $returned[$i]['id']);
+            $this->assertEquals($userData['firstname'], $returned[$i]['firstname']);
+            $this->assertEquals($userData['lastname'],  $returned[$i]['lastname']);
+            $this->assertEquals($userData['email'],     $returned[$i]['email']);
         }
     }
 
