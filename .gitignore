@@ -1,56 +1,24 @@
-# Node & vendor
+/.phpunit.cache
 /node_modules
-/vendor
-
-# Laravel environment
-.env
-.env.*
-/.env.env.example
-/.php_cs.cache
-.phpactor.json
-.phpunit.result.cache
-
-# Laravel storage & cache
 /public/build
 /public/hot
 /public/storage
 /storage/*.key
 /storage/pail
-/storage/app/*
-/storage/framework/cache/*
-/storage/framework/sessions/*
-/storage/framework/testing/*
-/storage/framework/views/*
-/storage/logs/*
-/bootstrap/cache/*.php
-
-# Tests & docs
-/tests/*
-phpunit.xml
-/README.md
-.editorconfig
-
-#Database
-/database/*
-database
-
-# IDEs & tools
+/vendor
+.env
+.env.backup
+.env.production
+.env.testing
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/auth.json
 /.fleet
 /.idea
 /.nova
 /.vscode
 /.zed
-
-# GitHub workflows
-/.github/
-
-# Homestead (not needed)
-/Homestead.json
-/Homestead.yaml
-
-# Logs & errors
-npm-debug.log
-yarn-error.log
-
-# Auth tokens
-/auth.json
