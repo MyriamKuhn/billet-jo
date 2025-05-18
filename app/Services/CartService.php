@@ -14,6 +14,7 @@ use Throwable;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use App\Exceptions\StockUnavailableException;
 use App\Models\Product;
+use Illuminate\Support\Facades\Request;
 
 class CartService
 {
@@ -214,12 +215,18 @@ class CartService
      */
     protected function guestKey(): string
     {
-        // Retrieve or generate a unique ID for this guest session
-        $guestId = Session::get('guest_cart_id');
-        if (! $guestId) {
-            $guestId = (string) Str::uuid();
-            Session::put('guest_cart_id', $guestId);
+        $headerId = Request::header('X-Guest-Cart-Id');
+        if ($headerId && \Ramsey\Uuid\Uuid::isValid($headerId)) {
+            $guestId = $headerId;
+        } else {
+            // Retrieve or generate a unique ID for this guest session
+            $guestId = Session::get('guest_cart_id');
+            if (! $guestId) {
+                $guestId = (string) Str::uuid();
+            }
         }
+
+        Session::put('guest_cart_id', $guestId);
 
         // Return the Redis key namespace for guest carts
         return "cart:guest:{$guestId}";
