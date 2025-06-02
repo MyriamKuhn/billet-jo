@@ -644,4 +644,28 @@ class CartServiceTest extends TestCase
             throw $e;
         }
     }
+
+    public function testGuestKeyUsesHeaderWhenValidUuidProvided()
+    {
+        // 1) Vider la session pour simuler un nouvel invité
+        Session::flush();
+
+        // 2) Générer un UUID valide comme si le frontend l’avait envoyé
+        $uuid = \Ramsey\Uuid\Uuid::uuid4()->toString();
+
+        // 3) Injecter cet en-tête dans la requête courante
+        //    On récupère l’instance de Request via le container Laravel
+        $this->app['request']->headers->set('X-Guest-Cart-Id', $uuid);
+
+        // 4) Appel à guestKey() via reflection
+        $rm = new \ReflectionMethod($this->service, 'guestKey');
+        $rm->setAccessible(true);
+        $key = $rm->invoke($this->service);
+
+        // 5) Vérifier que guest_cart_id dans la session vaut bien l’UUID fourni
+        $this->assertSame($uuid, Session::get('guest_cart_id'));
+
+        // 6) Vérifier que la clé retournée commence par "cart:guest:{$uuid}"
+        $this->assertStringStartsWith("cart:guest:{$uuid}", $key);
+    }
 }

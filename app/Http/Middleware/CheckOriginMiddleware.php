@@ -24,7 +24,7 @@ class CheckOriginMiddleware
 
         $origin = $request->headers->get('Origin');
 
-        if (!in_array($origin, $allowedOrigin)) {
+        if (! $origin || ! in_array($origin, $allowedOrigin)) {
             return response()->json(['error' => 'Unauthorized origin'], 403);
         }
 
