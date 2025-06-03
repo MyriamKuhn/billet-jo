@@ -220,34 +220,39 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      */
     public function updateItem(Product $product, UpdateCartItemRequest $request): JsonResponse
     {
-        $newQty = $request->input('quantity');
+        $newQty   = $request->input('quantity');
         $productId = $product->id;
 
+        // Check if Bearer token is provided
         $user = $request->user('sanctum');
 
         if ($user) {
-            Auth::guard('sanctum')->setUser($user);
-        }
+            // ── Connected User ────────────────────────────────────────
+            $cart = $this->cartService->getUserCart($user);
+            $cart->load('cartItems');
+            $existingItem = $cart->cartItems->firstWhere('product_id', $productId);
+            $currentQty   = $existingItem ? $existingItem->quantity : 0;
 
-        // Retrieve the current cart
-        $currentCart = $this->cartService->getCurrentCart();
-        if (is_array($currentCart)) {
-            // guest
-            $currentQty = (int) ($currentCart[$productId] ?? 0);
+            $delta = $newQty - $currentQty;
+
+            if ($delta > 0) {
+                $this->cartService->addItemForUser($user, $productId, $delta);
+            } elseif ($delta < 0) {
+                $this->cartService->removeItemForUser($user, $productId, abs($delta));
+            }
         } else {
-            // user
-            $item = $currentCart->cartItems()->where('product_id', $productId)->first();
-            $currentQty = $item ? $item->quantity : 0;
-        }
+            // ── Guest ────────────────────────────────────────────────────────
+            $guestItems = $this->cartService->getGuestCart();
+            $currentQty = (int) ($guestItems[$productId] ?? 0);
 
-        $delta = $newQty - $currentQty;
+            $delta = $newQty - $currentQty;
 
-        if ($delta > 0) {
-            $this->cartService->addItem($productId, $delta);
-        } elseif ($delta < 0) {
-            $this->cartService->removeItem($productId, abs($delta));
+            if ($delta > 0) {
+                $this->cartService->addItemForGuest($productId, $delta);
+            } elseif ($delta < 0) {
+                $this->cartService->removeItemForGuest($productId, abs($delta));
+            }
         }
-        // if $delta === 0, nothing to do
 
         return response()->json(null, 204);
     }
@@ -276,11 +281,10 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      *
      * @return JsonResponse
      */
-    public function clearCart(): JsonResponse
+    public function clearCart(Request $request): JsonResponse
     {
-        // The user must be authenticated to clear the cart
-        $this->cartService->clearCart();
-
+        $user = $request->user('sanctum'); // toujours présent, car middleware auth:sanctum
+        $this->cartService->clearCartForUser($user);
         return response()->json(null, 204);
     }
 }
