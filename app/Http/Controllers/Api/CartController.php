@@ -11,6 +11,7 @@ use App\Http\Resources\CartResource;
 use App\Http\Requests\UpdateCartItemRequest;
 use App\Models\Product;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
@@ -221,6 +222,12 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
     {
         $newQty = $request->input('quantity');
         $productId = $product->id;
+
+        $user = $request->user('sanctum');
+
+        if ($user) {
+            Auth::guard('sanctum')->setUser($user);
+        }
 
         // Retrieve the current cart
         $currentCart = $this->cartService->getCurrentCart();
