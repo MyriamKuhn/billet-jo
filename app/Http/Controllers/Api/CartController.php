@@ -102,18 +102,13 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
      */
     public function show(Request $request): JsonResponse
     {
-        $cart = $this->cartService->getCurrentCart();
+        $user = $request->user('sanctum');
 
-        if ($cart instanceof Cart) {
-            // Authenticated
+        if ($user) {
+            $cart = $this->cartService->getUserCart($user);
             $cart->load([
                 'cartItems.product' => fn($q) => $q->select([
-                    'id',
-                    'stock_quantity',
-                    'name',
-                    'price',
-                    'sale',
-                    'product_details',
+                    'id','stock_quantity','name','price','sale','product_details'
                 ]),
             ]);
 
@@ -123,12 +118,12 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
         }
 
         // Guest
-        $itemsMap = $cart;
-        $products = Product::whereIn('id', array_keys($itemsMap))
+        $guestItemsMap = $this->cartService->getGuestCart();
+        $products = Product::whereIn('id', array_keys($guestItemsMap))
             ->get(['id','stock_quantity','name','price','sale','product_details']);
 
-        $guestItems = $products->map(function(Product $product) use ($itemsMap) {
-            $qty          = $itemsMap[$product->id];
+        $guestItems = $products->map(function(Product $product) use ($guestItemsMap) {
+            $qty = $guestItemsMap[$product->id];
             $available    = $product->stock_quantity >= $qty;
             $original     = $product->price;
             $discountRate = $product->sale ?? 0.0;
