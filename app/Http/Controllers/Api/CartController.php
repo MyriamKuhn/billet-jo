@@ -106,7 +106,16 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
 
         if ($cart instanceof Cart) {
             // Authenticated
-            $cart->load(['cartItems.product' => fn($q) => $q->select(['id','stock_quantity','name','product_details'])]);
+            $cart->load([
+                'cartItems.product' => fn($q) => $q->select([
+                    'id',
+                    'stock_quantity',
+                    'name',
+                    'price',
+                    'sale',
+                    'product_details',
+                ]),
+            ]);
 
             return response()->json([
                 'data' => (new CartResource($cart))->resolve()
@@ -134,8 +143,8 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
                 'available_quantity' => $product->stock_quantity,
                 'unit_price'         => $unitPrice,
                 'total_price'        => $totalPrice,
-                'original_price'     => $discountRate > 0 ? $original : null,
-                'discount_rate'      => $discountRate > 0 ? $discountRate : null,
+                'original_price'     => $original,
+                'discount_rate'      => $discountRate,
                 'product'            => [
                     'name'     => $product->name,
                     'image'    => $product->product_details['image']    ?? null,
