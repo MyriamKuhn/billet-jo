@@ -47,17 +47,20 @@ class EmailVerificationService
     /**
      * Resend the email verification link.
      *
-     * @param  User  $user
+     * @param  string  $email
      * @return array{message:string}
      * @throws HttpResponseException  If the email is already verified
      */
-    public function resend(User $user): array
+    public function resend(string $email): array
     {
+        $user = User::where('email', $email)->first();
+
+        if (! $user) {
+            throw new UserNotFoundException();
+        }
+
         if ($user->hasVerifiedEmail()) {
-            throw new HttpResponseException(response()->json([
-                'message' => 'Email already verified',
-                'code'    => 'already_verified',
-            ], 409));
+            throw new AlreadyVerifiedException();
         }
 
         $user->sendEmailVerificationNotification();

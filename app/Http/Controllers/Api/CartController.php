@@ -11,6 +11,7 @@ use App\Http\Resources\CartResource;
 use App\Http\Requests\UpdateCartItemRequest;
 use App\Models\Product;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
@@ -102,18 +103,13 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
      */
     public function show(Request $request): JsonResponse
     {
-        $cart = $this->cartService->getCurrentCart();
+        $user = $request->user('sanctum');
 
-        if ($cart instanceof Cart) {
-            // Authenticated
+        if ($user) {
+            $cart = $this->cartService->getUserCart($user);
             $cart->load([
                 'cartItems.product' => fn($q) => $q->select([
-                    'id',
-                    'stock_quantity',
-                    'name',
-                    'price',
-                    'sale',
-                    'product_details',
+                    'id','stock_quantity','name','price','sale','product_details'
                 ]),
             ]);
 
@@ -123,12 +119,12 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
         }
 
         // Guest
-        $itemsMap = $cart;
-        $products = Product::whereIn('id', array_keys($itemsMap))
+        $guestItemsMap = $this->cartService->getGuestCart();
+        $products = Product::whereIn('id', array_keys($guestItemsMap))
             ->get(['id','stock_quantity','name','price','sale','product_details']);
 
-        $guestItems = $products->map(function(Product $product) use ($itemsMap) {
-            $qty          = $itemsMap[$product->id];
+        $guestItems = $products->map(function(Product $product) use ($guestItemsMap) {
+            $qty = $guestItemsMap[$product->id];
             $available    = $product->stock_quantity >= $qty;
             $original     = $product->price;
             $discountRate = $product->sale ?? 0.0;
@@ -224,28 +220,39 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      */
     public function updateItem(Product $product, UpdateCartItemRequest $request): JsonResponse
     {
-        $newQty = $request->input('quantity');
+        $newQty   = $request->input('quantity');
         $productId = $product->id;
 
-        // Retrieve the current cart
-        $currentCart = $this->cartService->getCurrentCart();
-        if (is_array($currentCart)) {
-            // guest
-            $currentQty = (int) ($currentCart[$productId] ?? 0);
+        // Check if Bearer token is provided
+        $user = $request->user('sanctum');
+
+        if ($user) {
+            // ── Connected User ────────────────────────────────────────
+            $cart = $this->cartService->getUserCart($user);
+            $cart->load('cartItems');
+            $existingItem = $cart->cartItems->firstWhere('product_id', $productId);
+            $currentQty   = $existingItem ? $existingItem->quantity : 0;
+
+            $delta = $newQty - $currentQty;
+
+            if ($delta > 0) {
+                $this->cartService->addItemForUser($user, $productId, $delta);
+            } elseif ($delta < 0) {
+                $this->cartService->removeItemForUser($user, $productId, abs($delta));
+            }
         } else {
-            // user
-            $item = $currentCart->cartItems()->where('product_id', $productId)->first();
-            $currentQty = $item ? $item->quantity : 0;
-        }
+            // ── Guest ────────────────────────────────────────────────────────
+            $guestItems = $this->cartService->getGuestCart();
+            $currentQty = (int) ($guestItems[$productId] ?? 0);
 
-        $delta = $newQty - $currentQty;
+            $delta = $newQty - $currentQty;
 
-        if ($delta > 0) {
-            $this->cartService->addItem($productId, $delta);
-        } elseif ($delta < 0) {
-            $this->cartService->removeItem($productId, abs($delta));
+            if ($delta > 0) {
+                $this->cartService->addItemForGuest($productId, $delta);
+            } elseif ($delta < 0) {
+                $this->cartService->removeItemForGuest($productId, abs($delta));
+            }
         }
-        // if $delta === 0, nothing to do
 
         return response()->json(null, 204);
     }
@@ -274,11 +281,10 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      *
      * @return JsonResponse
      */
-    public function clearCart(): JsonResponse
+    public function clearCart(Request $request): JsonResponse
     {
-        // The user must be authenticated to clear the cart
-        $this->cartService->clearCart();
-
+        $user = $request->user('sanctum'); // toujours présent, car middleware auth:sanctum
+        $this->cartService->clearCartForUser($user);
         return response()->json(null, 204);
     }
 }
