@@ -167,12 +167,18 @@ Validates the email verification link.
      * @OA\Post(
      *     path="/api/auth/email/resend",
      *     summary="Resend verification email",
-     *     description="Sends a new email verification link to the authenticated user. Requires a valid Bearer token.",
+     *     description="Sends a new email verification link to an not authenticated user.",
      *     operationId="authResendVerificationEmail",
      *     tags={"Authentication"},
-     *     security={{"bearerAuth": {}}},
      *
      *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="email", type="string", format="email", example="user@example.com")
+     *         )
+     *     ),
      *
      *     @OA\Response(
      *         response=200,
@@ -182,22 +188,20 @@ Validates the email verification link.
      *         )
      *     ),
      *
-     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
-     *     @OA\Response(
-     *         response=409,
-     *         description="Email already verified",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Email already verified"),
-     *             @OA\Property(property="code",    type="string", example="already_verified")
-     *         )
-     *     ),
+     *     @OA\Response(response=404, ref="#/components/responses/UserNotFound"),
+     *     @OA\Response(response=409, ref="#/components/responses/AlreadyVerified"),
+     *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      */
     public function resend(Request $request): JsonResponse
     {
-        $result = $this->verificationService->resend(auth()->user());
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        $result = $this->verificationService->resend($data['email']);
 
         return response()->json($result, 200);
     }

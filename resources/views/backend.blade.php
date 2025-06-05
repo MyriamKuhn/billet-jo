@@ -226,9 +226,9 @@
             Redirects to front URLs: <pre><code>/verification-result/success</code><br><code>/verification-result/invalid</code><br><code>/verification-result/already-verified</code><br><code>/verification-result/error</code></pre></p>
             <ul>
                 <li><strong>If verification link fails:</strong> prompt user to login. Upon login, a new verification email is sent automatically in their locale.</li>
-                <li><strong>Manual resend:</strong><code>POST /api/auth/email/resend</code> (Auth required via Bearer token).</li>
+                <li><strong>Manual resend:</strong><code>POST /api/auth/email/resend</code> (Email is required in the body of the request).</li>
             </ul>
-            <p class="note">⚠️ By problems with verification, please contact administration with your registered email.</p>
+            <p class="note">⚠️ By problems with verification, please contact administration with the registered email, the admin can verify it.</p>
             <a href="{{ asset('images/verify_example.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('images/verify_example.png') }}" alt="Email Verification Example">
             </a>
@@ -241,13 +241,14 @@
                 <li>On success: <pre><code>HTTP 200 { "message": "Logged in successfully", "token": "...", "user": { … }, "twofa_enabled": true|false }</code></pre></li>
             </ul>
             After login, guest cart merges into user’s cart.
+            <p class="note">⚠️ The Bearer token is valid 12 hours or 7 days when remember me is active.</p>
 
             <h3>4.3 Enable/Disable 2FA</h3>
             <ul>
                 <li><strong>Enable:</strong> <code>POST /api/auth/2fa/enable</code> (Auth) → { "qr_code_url", "secret" } (display QR + key)</li>
                 <li><strong>Disable:</strong> <code>POST /api/auth/2fa/disable</code> (Auth) { "code" } is required</li>
             </ul>
-            <p class="note">⚠️ 2FA is optional but recommended. For help disabling it, please contact administration with your registered email.</p>
+            <p class="note">⚠️ 2FA is optional but recommended. For help disabling it, please contact administration with your registered email. We use Google 2FA.</p>
 
             <h3>4.4 Password reset</h3>
             <ul>

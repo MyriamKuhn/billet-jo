@@ -55,7 +55,7 @@ Route::prefix('auth')->group(function () {
 
     // This route is used to resend the verification email to the user
     Route::post('/email/resend', [VerificationController::class, 'resend'])
-        ->middleware('auth:sanctum', 'throttle:5,1')
+        ->middleware('throttle:5,1')
         ->name('auth.email.resend');
 
     // This route is used to verify the new email address of the user after changing it
