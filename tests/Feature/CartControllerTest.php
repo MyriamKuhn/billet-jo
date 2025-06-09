@@ -42,7 +42,7 @@ class CartControllerTest extends TestCase
         // 2) Stub du service pour forcer le retour guest
         $mockService = \Mockery::mock(CartService::class);
         $mockService
-            ->shouldReceive('getCurrentCart')
+            ->shouldReceive('getGuestCart')
             ->once()
             ->andReturn($itemsMap);
         $this->app->instance(CartService::class, $mockService);
@@ -87,19 +87,20 @@ class CartControllerTest extends TestCase
                 ],
             ])
             // Contenu exact
-            ->assertJson([
+            ->assertExactJson([
                 'meta' => ['guest_cart_id' => $guestCartId],
                 'data' => [
                     'cart_items' => [
                         [
+                            'id'                 => null,
                             'product_id'         => $product->id,
                             'quantity'           => 2,
                             'in_stock'           => true,
                             'available_quantity' => 10,
                             'unit_price'         => 12.50,
-                            'total_price'        => 25.00,
-                            'original_price'     => null,
-                            'discount_rate'      => null,
+                            'total_price'        => 25,
+                            'original_price'     => '12.50',
+                            'discount_rate'      => '0.00',
                             'product'            => [
                                 'name'     => $product->name,
                                 'image'    => 'img.png',
@@ -291,11 +292,11 @@ class CartControllerTest extends TestCase
 
     public function testShowAsGuestMapsItemsCorrectlyWithoutDiscount()
     {
-        // 1) On monte localement un mock de CartService
-        $mock = Mockery::mock(CartService::class);
+        // 1) Mock CartService and bind into the container
+        $mock = \Mockery::mock(CartService::class);
         $this->app->instance(CartService::class, $mock);
 
-        // 2) Crée un produit sans remise, stock OK
+        // 2) Create a product with no discount
         $product = Product::factory()->create([
             'price'           => 20.00,
             'sale'            => null,
@@ -308,31 +309,41 @@ class CartControllerTest extends TestCase
             ],
         ]);
 
-        // 3) On définit le comportement du mock
-        $mock->shouldReceive('getCurrentCart')
+        // 3) Expect getGuestCart() (not getCurrentCart)
+        $mock->shouldReceive('getGuestCart')
             ->once()
             ->andReturn([ $product->id => 3 ]);
 
-        // 4) On appelle l’endpoint
-        $response = $this->getJson('/api/cart');
+        // 4) Start a session with a guest_cart_id
+        Session::start();
+        session(['guest_cart_id' => $this->faker->uuid]);
 
-        // 5) Assertions sur la structure et les calculs
+        // 5) Call the endpoint
+        $response = $this->withSession([
+            '_token' => csrf_token(),
+        ])->getJson('/api/cart');
+
+        // 6) Assertions
         $response->assertStatus(200)
                 ->assertJsonCount(1, 'data.cart_items');
 
         $item = $response->json('data.cart_items.0');
 
-        $this->assertEquals($product->id,       $item['product_id']);
-        $this->assertEquals(3,                  $item['quantity']);
+        $this->assertEquals($product->id, $item['product_id']);
+        $this->assertEquals(3,            $item['quantity']);
         $this->assertTrue($item['in_stock']);
-        $this->assertEquals(10,                 $item['available_quantity']);
-        $this->assertEquals(20.00,              $item['unit_price']);
-        $this->assertEquals(60.00,              $item['total_price']);
-        $this->assertNull($item['original_price']);
-        $this->assertNull($item['discount_rate']);
-        $this->assertEquals('Hall C',           $item['product']['location']);
-        $this->assertEquals('https://example.com/img.jpg', $item['product']['image']);
+        $this->assertEquals(10,           $item['available_quantity']);
+        $this->assertEquals(20.00,        $item['unit_price']);
+        $this->assertEquals(60.00,        $item['total_price']);
+        $this->assertEquals(20.00, $item['original_price']);
+        $this->assertEquals(0.0,   $item['discount_rate']);
+        $this->assertEquals('Hall C',     $item['product']['location']);
+        $this->assertEquals(
+            'https://example.com/img.jpg',
+            $item['product']['image']
+        );
     }
+
 
     public function testShowAsGuestMapsItemsCorrectlyWithDiscountAndOutOfStock()
     {
@@ -354,7 +365,7 @@ class CartControllerTest extends TestCase
         ]);
 
         // 3) On définit le comportement du mock
-        $mock->shouldReceive('getCurrentCart')
+        $mock->shouldReceive('getGuestCart')
             ->once()
             ->andReturn([ $product->id => 5 ]);
 

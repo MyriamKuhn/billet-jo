@@ -12,6 +12,8 @@ use App\Exceptions\Auth\UserNotFoundException;
 use App\Exceptions\Auth\InvalidVerificationLinkException;
 use App\Exceptions\Auth\AlreadyVerifiedException;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Mockery;
 
 class EmailVerificationServiceTest extends TestCase
@@ -23,7 +25,7 @@ class EmailVerificationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new EmailVerificationService();
+        $this->service = app(EmailVerificationService::class);
     }
 
     public function testVerifyThrowsUserNotFoundException()
@@ -70,40 +72,53 @@ class EmailVerificationServiceTest extends TestCase
         Event::assertDispatched(Verified::class, fn($e) => $e->user->id === $user->id);
     }
 
-    public function testResendThrowsHttpResponseExceptionWhenAlreadyVerified()
+    public function testResendThrowsAlreadyVerifiedExceptionWhenAlreadyVerified()
     {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('hasVerifiedEmail')->once()->andReturnTrue();
-        $user->shouldNotReceive('sendEmailVerificationNotification');
+        // 1) Create a real user and mark as verified
+        $user = User::factory()->create([
+            'email_verified_at' => now(),
+        ]);
 
-        $this->expectException(HttpResponseException::class);
+        // 2) Expect the AlreadyVerifiedException
+        $this->expectException(AlreadyVerifiedException::class);
 
-        try {
-            $this->service->resend($user);
-        } catch (HttpResponseException $e) {
-            $response = $e->getResponse();
-            $this->assertSame(409, $response->getStatusCode());
-
-            $payload = $response->getData(true);
-            $this->assertSame('Email already verified', $payload['message']);
-            $this->assertSame('already_verified',       $payload['code']);
-
-            throw $e;
-        }
+        // 3) Call with the email string
+        $this->service->resend($user->email);
     }
 
     public function testResendSendsNotificationAndReturnsMessageWhenNotVerified()
     {
-        $user = Mockery::mock(User::class);
-        $user->shouldReceive('hasVerifiedEmail')->once()->andReturnFalse();
-        $user->shouldReceive('sendEmailVerificationNotification')->once();
+        // 1) Create a *real* user who is still un-verified.
+        $user = User::factory()->create([
+            'email_verified_at' => null,
+        ]);
 
-        $result = $this->service->resend($user);
+        // 2) Fake notifications now (so nothing actually goes out).
+        Notification::fake();
 
-        $this->assertSame(
-            ['message' => 'Verification email resent'],
-            $result
+        // 3) Call your service by passing in the user’s email address.
+        $result = $this->service->resend($user->email);
+
+        // 4) It still returns the “message” array.
+        $this->assertSame(['message' => 'Verification email resent'], $result);
+
+        // 5) And *this* time, Laravel’s VerifyEmail notification was queued/sent.
+        Notification::assertSentTo(
+            $user,
+            \App\Notifications\VerifyEmailNotification::class,
+            function ($notification, $channels) {
+                // Optional: you can inspect $notification->toMail($user) or $channels.
+                return true;
+            }
         );
+    }
+
+    public function testResendThrowsUserNotFoundExceptionWhenEmailDoesNotExist()
+    {
+        Notification::fake(); // on intercepte tout envoi
+        $this->expectException(UserNotFoundException::class);
+
+        $this->service->resend('does-not-exist@example.com');
     }
 
     protected function tearDown(): void

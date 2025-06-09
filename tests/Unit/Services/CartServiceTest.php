@@ -114,13 +114,24 @@ class CartServiceTest extends TestCase
         $this->assertSame([], $cart);
     }
 
-    public function testAddItemThrowsOnInvalidQuantity()
+    public function testAddItemForGuestThrowsOnInvalidQuantity()
     {
         $this->expectException(\Symfony\Component\HttpKernel\Exception\BadRequestHttpException::class);
-        $this->service->addItem(1, 0);
+        $this->service->addItemForGuest(1, 0);
     }
 
-    public function testAddItemToUserCartCreatesAndIncrementsInDatabase()
+    public function testAddItemForUserThrowsOnInvalidQuantity()
+    {
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\BadRequestHttpException::class);
+
+        // 1) Create (or mock) a User
+        $user = User::factory()->make();
+
+        // 2) Call with qty = 0
+        $this->service->addItemForUser($user, /* productId */ 1, /* qty */ 0);
+    }
+
+    public function testAddItemForUserCartCreatesAndIncrementsInDatabase()
     {
         // 0) Stub Redis pour ne pas toucher à Redis
         Redis::shouldReceive('hincrby')->never();
@@ -140,64 +151,140 @@ class CartServiceTest extends TestCase
         $this->assertDatabaseCount('cart_items', 0);
 
         // 4) Premier appel : ajoute 3 unités de ce produit
-        $this->service->addItem($product->id, 3);
+        $this->service->addItemForUser($user, $product->id, 3);
         $this->assertDatabaseHas('cart_items', [
             'product_id' => $product->id,
             'quantity'   => 3,
         ]);
 
         // 5) Deuxième appel : incrémente de 2 → total 5
-        $this->service->addItem($product->id, 2);
+        $this->service->addItemForUser($user, $product->id, 2);
         $this->assertDatabaseHas('cart_items', [
             'product_id' => $product->id,
             'quantity'   => 5,
         ]);
     }
 
-    public function atestAddItemToUserCartLogsAndRethrowsQueryExceptionViaFkViolation()
+    public function testAddItemForGuestCartCreatesAndIncrementsInRedis()
     {
-        // 1) Stub Redis pour qu'on ne passe pas par la branche guest
+        // 0) Spy on Redis so we can assert calls
+        Redis::spy();
+
+        // 0b) No errors should be logged in this scenario
+        $this->logger->shouldNotReceive('error');
+
+        // 1) Start an empty session
+        Session::start();
+        $this->assertNull(session('guest_cart_id'));
+
+        // 2) Pick any product ID
+        $productId = 123;
+
+        // 3) First call: add 3 units
+        $this->service->addItemForGuest($productId, 3);
+
+        // 4) Second call: add 2 more units
+        $this->service->addItemForGuest($productId, 2);
+
+        // 5) Session must now have a guest_cart_id
+        $guestId = session('guest_cart_id');
+        $this->assertNotNull($guestId, 'A guest_cart_id should have been generated and stored');
+
+        $expectedKey = "cart:guest:{$guestId}";
+
+        // 6) hincrby should have been called twice: once with 3, once with 2
+        Redis::shouldHaveReceived('hincrby')
+            ->twice()
+            ->withArgs(function($key, $id, $qty) use ($expectedKey, $productId) {
+                return $key === $expectedKey
+                    && $id === $productId
+                    && in_array($qty, [3, 2], true);
+            });
+
+        // 7) expire should also have been set twice
+        Redis::shouldHaveReceived('expire')
+            ->twice()
+            ->with($expectedKey, Mockery::type('int'));
+    }
+
+    public function testAddItemForUserCartLogsAndRethrowsQueryExceptionViaFkViolation()
+    {
+        // 1) Stub Redis so we never hit the guest branch
         Redis::shouldReceive('hincrby')->never();
         Redis::shouldReceive('expire')->never();
 
-        // 2) On crée et authentifie un utilisateur
+        // 2) Create & authenticate a User
         $user = User::factory()->create();
         $this->actingAs($user, 'web');
 
-        // 3) On attend qu'il y ait un appel au logger->error()
+        // 3) Expect exactly one error logged
         $this->logger->shouldReceive('error')->once();
 
-        // 4) FK violation : pas de produit #999 en base → QueryException
-        $this->expectException(QueryException::class);
+        // 4) Expect a QueryException (FK violation) when we point at product_id 999
+        $this->expectException(\Illuminate\Database\QueryException::class);
 
-        // 5) On appelle addItem avec un product_id invalide
-        $this->service->addItem(999, 1);
+        // 5) CORRECTED: call addItemForUser(), not addItem()
+        $this->service->addItemForUser($user, 999, 1);
+    }
+
+    public function testAddItemForGuestLogsAndSwallowsRedisConnectionException()
+    {
+        // 1) Create a product so assertStockAvailable passes
+        $product = Product::factory()->create(['stock_quantity' => 10]);
+
+        // 2) Prepare a fake Predis connection to satisfy the constructor
+        $fakeConnection = \Mockery::mock(\Predis\Connection\NodeConnectionInterface::class);
+
+        // 3) Stub Redis::hincrby to throw a RedisConnectionException
+        Redis::shouldReceive('hincrby')
+            ->once()
+            ->andThrow(new \Predis\Connection\ConnectionException($fakeConnection, 'boom'));
+        // and never call expire if hincrby fails
+        Redis::shouldReceive('expire')->never();
+
+        // 4) Expect exactly one error logged with that exception in context
+        $this->logger->shouldReceive('error')
+            ->once()
+            ->withArgs(function ($message, $context) {
+                return str_contains($message, 'Error adding item to guest cart')
+                    && $context['exception'] instanceof \Predis\Connection\ConnectionException;
+            });
+
+        // 5) Actually call the method under test
+        Session::start();
+        // adding quantity >=1 should trigger hincrby, which we’ve stubbed to throw
+        $this->service->addItemForGuest($product->id, 3);
+
+        // 6) After swallowing, guest_cart_id must still be in session
+        $this->assertNotNull(Session::get('guest_cart_id'));
     }
 
     public function testAddItemToGuestIncrementsRedisAndSetsTtl()
     {
-        // 1) On efface toute session pour repartir à zéro
+        // 1) Start with a totally fresh session
         Session::flush();
 
-        // 2) On stubbe Redis : hincrby et expire doivent être appelés une fois
+        // 2) Stub Redis: hincrby and expire must each be called exactly once
         Redis::shouldReceive('hincrby')
             ->once()
             ->with(Mockery::type('string'), 5, 4);
+
         Redis::shouldReceive('expire')
             ->once()
             ->with(Mockery::type('string'), $this->getProtectedTtl());
 
-        // 3) Exécution : addItem() démarrera la session et appellera nos stubs
-        $this->service->addItem(5, 4);
+        // 3) Call the guest‐cart variant (not addItem)
+        $this->service->addItemForGuest(5, 4);
 
-        // 4) On vérifie que la session contient bien le guest_cart_id
+        // 4) Now the session should contain a guest_cart_id
         $guestId = Session::get('guest_cart_id');
         $this->assertNotNull($guestId, 'La session doit contenir guest_cart_id');
 
-        // 5) On reconstruit la clé attendue et on vérifie sa forme
+        // 5) And the key we passed in to Redis calls should look like "cart:guest:{uuid}"
         $key = "cart:guest:{$guestId}";
         $this->assertStringContainsString($guestId, $key);
     }
+
 
     public function testAddItemToGuestSwallowRedisExceptionsAndLogsError()
     {
@@ -221,7 +308,7 @@ class CartServiceTest extends TestCase
             );
 
         // 4) Appel : ne doit pas remonter l’exception
-        $this->service->addItem(7, 2);
+        $this->service->addItemForGuest(7, 2);
 
         // 5) Simple assertion pour lever le test au vert
         $this->assertTrue(true);
@@ -304,14 +391,14 @@ class CartServiceTest extends TestCase
 
     public function testRemoveItemFromUserDeletesOrDecrements()
     {
-        // 1) On créé le produit referencé
+        // 1) Make sure we have a product
         $product = Product::factory()->create(['id' => 30]);
 
-        // 2) Crée un utilisateur et l’authentifie
+        // 2) Create & authenticate a user
         $user = User::factory()->create();
         $this->actingAs($user, 'web');
 
-        // 3) Crée le cart + l’item initial
+        // 3) Create the cart & initial item
         $cart = Cart::factory()->create(['user_id' => $user->id]);
         CartItem::factory()->create([
             'cart_id'    => $cart->id,
@@ -319,15 +406,15 @@ class CartServiceTest extends TestCase
             'quantity'   => 5,
         ]);
 
-        // 4) Décrément partiel de 2 → reste 3
-        $this->service->removeItem($product->id, 2);
+        // 4) Partial decrement of 2 → should leave quantity = 3
+        $this->service->removeItemForUser($user, $product->id, 2);
         $this->assertDatabaseHas('cart_items', [
             'product_id' => $product->id,
             'quantity'   => 3,
         ]);
 
-        // 5) Suppression totale (reste 3 ≤ 3) → plus d’item
-        $this->service->removeItem($product->id, 3);
+        // 5) Then remove all remaining 3 → item should be gone
+        $this->service->removeItemForUser($user, $product->id, 3);
         $this->assertDatabaseMissing('cart_items', [
             'product_id' => $product->id,
         ]);
@@ -335,79 +422,97 @@ class CartServiceTest extends TestCase
 
     public function testRemoveItemFromUserLogsAndRethrowsDatabaseExceptions()
     {
-        // 1) Prépare un faux logger et s’attend à un appel à error()
-        $logger = Mockery::mock(LoggerInterface::class);
+        // 1) Prepare a fake logger and expect exactly one error()
+        $logger = Mockery::mock(\Psr\Log\LoggerInterface::class);
         $logger->shouldReceive('error')
             ->once()
             ->with(
                 'Error removing item from user cart.',
-                Mockery::on(fn($arg) => isset($arg['exception']) && $arg['exception'] instanceof QueryException)
+                Mockery::on(fn($arg) => isset($arg['exception']) && $arg['exception'] instanceof \Illuminate\Database\QueryException)
             );
 
-        // 2) Crée une sous‐classe anonyme de QueryException (sans constructeur obligatoire)
-        $fakeException = new class extends QueryException {
+        // 2) Create a dummy QueryException subclass (so we can throw it without args)
+        $fakeException = new class extends \Illuminate\Database\QueryException {
             public function __construct() {}
         };
 
-        // 3) Stub de l'item dont delete() jette notre exception
+        // 3) Stub the cartItem model so delete() throws our exception
         $fakeItem = Mockery::mock();
         $fakeItem->shouldReceive('delete')
                 ->once()
                 ->andThrow($fakeException);
 
-        // 4) Stub de la relation cartItems()->where()->first()
+        // 4) Stub the relation: cartItems()->where()->first() returns our fake item
         $fakeRelation = Mockery::mock();
         $fakeRelation->shouldReceive('where')->andReturnSelf();
         $fakeRelation->shouldReceive('first')->andReturn($fakeItem);
 
-        // 5) Stub d’un vrai App\Models\Cart dont cartItems() renvoie la relation
-        $fakeCart = Mockery::mock(Cart::class);
+        // 5) Stub a Cart model whose cartItems() returns that relation
+        $fakeCart = Mockery::mock(\App\Models\Cart::class);
         $fakeCart->shouldReceive('cartItems')->andReturn($fakeRelation);
 
-        // 6) Partial‐mock de CartService avec notre logger, pour surcharger getUserCart()
-        $service = Mockery::mock(CartService::class, [$logger])
+        // 6) Partial‐mock CartService with our logger, override getUserCart()
+        $service = Mockery::mock(\App\Services\CartService::class, [$logger])
                         ->makePartial()
                         ->shouldAllowMockingProtectedMethods();
         $service->shouldReceive('getUserCart')
                 ->once()
                 ->andReturn($fakeCart);
 
-        // 7) Authentifie un user
-        $user = User::factory()->create();
+        // 7) Authenticate a user
+        $user = \App\Models\User::factory()->create();
         $this->be($user, 'web');
 
-        // 8) On s’attend à réception d’un QueryException
-        $this->expectException(QueryException::class);
+        // 8) Expect our fake exception to bubble up
+        $this->expectException(\Illuminate\Database\QueryException::class);
 
-        // 9) Exécution : le delete() jette, on loggue, puis on rethrow
-        $service->removeItem(123, null);
+        // 9) Execute: delete() will throw, service should log and rethrow
+        $service->removeItemForUser($user, 123, null);
     }
 
     public function testRemoveItemFromGuestHdelAndDecrementsAndSwallowError()
     {
+        // 0) Ensure a fresh session so guestKey() generates a UUID
         Session::flush();
 
-        // 1) Generate guest_cart_id in session
+        // 1) Trigger guestKey() (via getGuestCart) to populate session→guest_cart_id
         $this->service->getGuestCart();
         $guestId = Session::get('guest_cart_id');
         $key     = "cart:guest:{$guestId}";
 
-        // 2) Partial removal (qty = 2)
-        Redis::shouldReceive('hget')->once()->with($key, '40')->andReturn('5');
-        Redis::shouldReceive('hincrby')->once()->with($key, '40', -2);
-        Redis::shouldReceive('expire')->once()->with($key, $this->getProtectedTtl());
+        // ── Partial removal (qty = 2) ────────────────────────────
+        // Stub the Redis calls for decrement
+        Redis::shouldReceive('hget')
+            ->once()
+            ->with($key, '40')
+            ->andReturn('5');
+        Redis::shouldReceive('hincrby')
+            ->once()
+            ->with($key, '40', -2);
+        Redis::shouldReceive('expire')
+            ->once()
+            ->with($key, $this->getProtectedTtl());
 
-        $this->service->removeItem(40, 2);
+        // Call the guest removal method
+        $this->service->removeItemForGuest(40, 2);
 
-        // 3) Full removal (qty = null)
-        Redis::shouldReceive('hdel')->once()->with($key, '40');
-        Redis::shouldReceive('expire')->once()->with($key, $this->getProtectedTtl());
+        // ── Full removal (qty = null) ─────────────────────────────
+        Redis::shouldReceive('hdel')
+            ->once()
+            ->with($key, '40');
+        Redis::shouldReceive('expire')
+            ->once()
+            ->with($key, $this->getProtectedTtl());
 
-        $this->service->removeItem(40, null);
+        $this->service->removeItemForGuest(40, null);
 
-        // 4) Error on hdel
+        // ── Simulate a Redis error on hdel ───────────────────────
         $redisEx = Mockery::mock(\Predis\Connection\ConnectionException::class);
-        Redis::shouldReceive('hdel')->once()->with($key, '40')->andThrow($redisEx);
+        Redis::shouldReceive('hdel')
+            ->once()
+            ->with($key, '40')
+            ->andThrow($redisEx);
+        // Expect a warning log
         $this->logger->shouldReceive('warning')
             ->once()
             ->with(
@@ -415,35 +520,41 @@ class CartServiceTest extends TestCase
                 Mockery::on(fn($arg) => isset($arg['exception']) && $arg['exception'] === $redisEx)
             );
 
-        $this->service->removeItem(40, null);
+        // Should swallow the exception
+        $this->service->removeItemForGuest(40, null);
 
-        // ——— PHPUnit needs at least one assertion ———
+        // PHPUnit needs at least one assertion
         $this->assertTrue(true);
     }
 
     public function testClearCartDeletesAllItemsForAuthenticatedUser()
     {
-        // 1) Crée un user et l’authentifie
+        // 1) Create a user and authenticate
         $user = User::factory()->create();
         $this->actingAs($user, 'web');
 
-        // 2) Crée son cart et quelques items
+        // 2) Create that user’s cart and add some items
         $cart = Cart::factory()->create(['user_id' => $user->id]);
         CartItem::factory()->count(3)->create(['cart_id' => $cart->id]);
 
-        // 3) Appelle clearCart() en mode “réel”
-        app()->instance(LoggerInterface::class, Mockery::spy(LoggerInterface::class));
+        // 3) Swap in a spy logger so we don’t log real errors
+        app()->instance(
+            LoggerInterface::class,
+            Mockery::spy(LoggerInterface::class)
+        );
+
+        // 4) Resolve the service and call the correct method
+        /** @var \App\Services\CartService $service */
         $service = app(CartService::class);
+        $service->clearCartForUser($user);
 
-        $service->clearCart();
-
-        // 4) On doit avoir supprimé tous les cart_items
+        // 5) Assert that all cart_items have been deleted
         $this->assertDatabaseCount('cart_items', 0);
     }
 
     public function testClearCartLogsAndRethrowsOnDatabaseError()
     {
-        // 1) Faux logger, on attend exactement un appel à error()
+        // 1) Fake logger, expect exactly one call to error()
         $logger = Mockery::mock(LoggerInterface::class);
         $logger->shouldReceive('error')
             ->once()
@@ -452,39 +563,39 @@ class CartServiceTest extends TestCase
                 Mockery::on(fn($arg) => isset($arg['exception']) && $arg['exception'] instanceof QueryException)
             );
 
-        // 2) Sous‐classe anonyme de QueryException pour bypasser le constructeur
+        // 2) Anonymous subclass of QueryException to bypass constructor
         $fakeException = new class extends QueryException {
             public function __construct() {}
         };
 
-        // 3) Stub de la relation cartItems() dont delete() jette l’exception
+        // 3) Stub the relation returned by cartItems() so that delete() throws
         $fakeRelation = Mockery::mock();
         $fakeRelation
             ->shouldReceive('delete')
             ->once()
             ->andThrow($fakeException);
 
-        // 4) Stub d’un Cart moqué
+        // 4) Stub a Cart model whose cartItems() returns our fake relation
         $fakeCart = Mockery::mock(Cart::class);
         $fakeCart->shouldReceive('cartItems')->andReturn($fakeRelation);
 
-        // 5) Partial‐mock de CartService pour surcharger getUserCart()
+        // 5) Partial‐mock CartService to override getUserCart()
         $service = Mockery::mock(CartService::class, [$logger])
-                        ->makePartial()
-                        ->shouldAllowMockingProtectedMethods();
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
         $service->shouldReceive('getUserCart')
-                ->once()
-                ->andReturn($fakeCart);
+            ->once()
+            ->andReturn($fakeCart);
 
-        // 6) Authentifie un user
+        // 6) Authenticate a user
         $user = User::factory()->create();
         $this->be($user, 'web');
 
-        // 7) On s’attend à la propagation de la QueryException
+        // 7) Expect the QueryException to bubble up
         $this->expectException(QueryException::class);
 
-        // 8) Exécution : doit logguer puis rethrow
-        $service->clearCart();
+        // 8) Call the real method
+        $service->clearCartForUser($user);
     }
 
     /**
@@ -499,31 +610,31 @@ class CartServiceTest extends TestCase
 
     public function testAddItemToUserCartLogsAndRethrowsQueryExceptionOnDbError()
     {
-        // 0) Stub Redis pour qu'on reste en "user"
+        // 0) Stub Redis so we stay in the “user” branch
         Redis::shouldReceive('hincrby')->never();
         Redis::shouldReceive('expire')->never();
 
-        // 1) Prépare un faux logger et attend un appel à error()
+        // 1) Prepare a fake logger and expect exactly one call to error()
         $logger = Mockery::mock(LoggerInterface::class);
         $logger->shouldReceive('error')
             ->once()
             ->with(
                 'Error adding item to user cart.',
-                Mockery::on(fn($arg) => $arg['exception'] instanceof QueryException)
+                Mockery::on(fn($arg) => isset($arg['exception']) && $arg['exception'] instanceof QueryException)
             );
 
-        // 2) Binde ce logger dans le container pour que notre service l'utilise
+        // 2) Bind our fake logger into the container so CartService picks it up
         $this->app->instance(LoggerInterface::class, $logger);
 
-        // 3) Crée et authentifie un utilisateur
+        // 3) Create and authenticate a user
         $user = User::factory()->create();
         $this->actingAs($user, 'web');
 
-        // 4) On s'attend à un QueryException dû à la FK (product inexistant)
+        // 4) Expect a QueryException due to foreign-key violation (nonexistent product)
         $this->expectException(QueryException::class);
 
-        // 5) Invocation : violation de FK → catch + log → rethrow
-        app(CartService::class)->addItem(9999, 1);
+        // 5) Invoke the real service method: addItemForUser()
+        app(CartService::class)->addItemForUser($user, 9999, 1);
     }
 
     public function testRemoveItemFromUserReturnsSilentlyIfItemNotFound()
@@ -549,8 +660,8 @@ class CartServiceTest extends TestCase
                 ->getMock()
         );
 
-        // 5) Appel : l’item n’étant pas trouvé, removeItem() doit retourner sans exception
-        app(CartService::class)->removeItem(123, null);
+        // 5) Appel : l’item n’étant pas trouvé, removeItemForUser() doit retourner sans exception
+        app(CartService::class)->removeItemForUser($user, 123, null);
 
         // 6) Vérification triviale pour que PHPUnit compte le test
         $this->assertTrue(true);
