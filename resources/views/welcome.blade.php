@@ -70,7 +70,8 @@
         <a href="{{ url('/docs/backend') }}" class="btn">Backend Docs</a>
         <a href="{{ url('/docs/frontend') }}" class="btn">Frontend Docs</a>
         <a href="{{ url('/docs/architecture') }}" class="btn">Architecture Docs</a>
-        <a href="https://github.com/MyriamKuhn/billet-jo/blob/main/README.md" class="btn" target="_blank" rel="noopener noreferrer">README</a>
+        <a href="https://github.com/MyriamKuhn/billet-jo/blob/main/README.md" class="btn" target="_blank" rel="noopener noreferrer">README BACKEND</a>
+        <a href="https://github.com/MyriamKuhn/billetterie-jo/blob/main/README.md" class="btn" target="_blank" rel="noopener noreferrer">README FRONTEND</a>
     </div>
     <footer>
         <p>&copy; 2024 Myriam Kühn. All rights reserved.</p>

@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Backend API endpoints overview for front-end developers: products, cart, auth, payments, invoices, tickets, admin.">
-    <meta name="author" content="Your Name">
+    <meta name="author" content="Myriam Kühn">
     <meta name="keywords" content="API documentation, backend, invoices, tickets, payments">
     <link rel="icon" href="{{ asset('images/favicon32x32.png') }}" sizes="32x32" type="image/png">
     <link rel="icon" href="{{ asset('images/favicon16x16.png') }}" sizes="16x16" type="image/png">
@@ -139,6 +139,13 @@
             max-width: 300px;
             margin-bottom: 1rem;
             cursor: zoom-in;
+        }
+
+        a, a:visited {
+            color: #00bcd4; text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>

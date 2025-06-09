@@ -7,6 +7,8 @@ use App\Listeners\GenerateTicketsForPayment;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use App\Events\InvoiceRequested;
 use App\Listeners\GenerateInvoicePdf;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,8 @@ class EventServiceProvider extends ServiceProvider
     public function boot(): void
     {
         parent::boot();
-        //
+
+        // “Un-hook” the framework’s default Registered → SendEmailVerificationNotification
+        $this->app['events']->forget(Registered::class, [SendEmailVerificationNotification::class, 'handle']);
     }
 }
