@@ -234,7 +234,7 @@ class AuthService
 
         // 3. Send the verification email with raw token
         Notification::route('mail', $newEmail)
-            ->notify(new VerifyNewEmailNotification($rawToken));
+            ->notify(new VerifyNewEmailNotification($user, $rawToken));
 
         // 4. Send the notification to the old email
         $user->notify(new EmailUpdatedNotification(
