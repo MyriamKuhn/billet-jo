@@ -64,7 +64,7 @@ Route::prefix('auth')->group(function () {
         ->name('auth.email.change.verify');
 
     // This route is used to revoke the email change request
-    Route::get('/email/change/cancel/{token}/{old_email}', [VerificationController::class, 'cancelChange'])
+    Route::get('/auth/email/change/cancel/{token}', [VerificationController::class, 'cancelChange'])
         ->middleware('signed')
         ->name('auth.email.change.cancel');
 

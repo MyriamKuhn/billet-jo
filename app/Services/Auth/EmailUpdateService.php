@@ -53,13 +53,11 @@ class EmailUpdateService
      *
      * @throws EmailUpdateNotFoundException
      */
-    public function cancelEmailUpdate(string $rawToken, string $oldEmail): User
+    public function cancelEmailUpdate(string $rawToken): User
     {
         $hashed = EmailHelper::hashToken($rawToken);
 
-        $emailUpdate = EmailUpdate::where('token', $hashed)
-            ->where('old_email', $oldEmail)
-            ->first();
+        $emailUpdate = EmailUpdate::where('token', $hashed)->first();
 
         if (! $emailUpdate) {
             throw new EmailUpdateNotFoundException();
