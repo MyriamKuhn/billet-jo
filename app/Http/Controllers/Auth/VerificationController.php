@@ -328,7 +328,7 @@ Validates the token for a pending email change.
      * Cancel a pending email change and restore the old address.
      *
      * @OA\Get(
-     *     path="/api/auth/email/change/cancel/{token}/{old_email}",
+     *     path="/api/auth/email/change/cancel/{token}",
      *     summary="Cancel email change request",
      *     description="
 Validates the token for a pending email change and restores the old email during 48 hours.
@@ -344,13 +344,6 @@ Validates the token for a pending email change and restores the old email during
     *         description="Raw token from the email update link",
     *         required=true,
     *         @OA\Schema(type="string", example="03AGdBq26…")
-    *     ),
-    *     @OA\Parameter(
-    *         name="old_email",
-    *         in="path",
-    *         description="Previous email address before the update",
-    *         required=true,
-    *         @OA\Schema(type="string", format="email", example="old.user@example.com")
     *     ),
     *     @OA\Parameter(
     *         name="expires",
@@ -385,6 +378,15 @@ Validates the token for a pending email change and restores the old email during
     *         )
     *     ),
     *     @OA\Response(
+    *         response=400,
+    *         description="Invalid or expired link",
+    *         @OA\JsonContent(
+    *             @OA\Property(property="message",      type="string", example="Invalid or expired link"),
+    *             @OA\Property(property="code",         type="string", example="invalid_signature"),
+    *             @OA\Property(property="redirect_url", type="string", example="https://frontend.example.com/verification-result/invalid")
+    *         )
+    *     ),
+    *     @OA\Response(
     *         response=404,
     *         description="Email update request not found or already processed",
     *         @OA\JsonContent(
@@ -404,13 +406,13 @@ Validates the token for a pending email change and restores the old email during
     *     )
     * )
     */
-    public function cancelChange(Request $request, string $token, string $oldEmail): RedirectResponse|JsonResponse
+    public function cancelChange(Request $request, string $token): RedirectResponse|JsonResponse
     {
         $base = config('app.frontend_url') . '/verification-result';
 
         if (app()->environment('production')) {
             try {
-                $user = $this->emailUpdateService->cancelEmailUpdate($token, $oldEmail);
+                $user = $this->emailUpdateService->cancelEmailUpdate($token);
                 // recreate the cart for the user
                 $this->cartService->getUserCart($user);
                 $segment = 'success';
@@ -420,7 +422,6 @@ Validates the token for a pending email change and restores the old email during
                 Log::error('Error canceling email update', [
                     'exception' => $e,
                     'token'     => $token,
-                    'old_email' => $oldEmail,
                 ]);
                 $segment = 'error';
             }
@@ -429,7 +430,7 @@ Validates the token for a pending email change and restores the old email during
         }
 
         // Dev/API → JSON
-        $this->emailUpdateService->cancelEmailUpdate($token, $oldEmail);
+        $this->emailUpdateService->cancelEmailUpdate($token);
 
         return response()->json([
             'message'      => 'Email update canceled',
