@@ -38,6 +38,8 @@ class EmailUpdateService
         $user->email_verified_at = now();
         $user->save();
 
+        $user->tokens()->delete();
+
         // Record validated email update
         $emailUpdate->touch();
 
@@ -67,8 +69,9 @@ class EmailUpdateService
         $user = User::findOrFail($emailUpdate->user_id);
         // Restore old email and mark as verified
         $user->email = $emailUpdate->old_email;
-        $user->email_verified_at = now();
         $user->save();
+
+        $user->tokens()->delete();
 
         // Remove the pending update
         $emailUpdate->delete();
