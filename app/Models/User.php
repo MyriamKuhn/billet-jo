@@ -21,7 +21,6 @@ use App\Notifications\VerifyEmailNotification;
  *     @OA\Property(property="email", type="string", example="john.doe@example.com"),
  *     @OA\Property(property="role", type="string", enum={"admin", "employee", "user"}, example="admin"),
  *     @OA\Property(property="twofa_enabled", type="boolean", example=true),
- *     @OA\Property(property="twofa_secret", type="string", example="abcd1234"),
  *     @OA\Property(property="is_active", type="boolean", example=true),
  *     @OA\Property(property="email_verified_at", type="string", format="date-time", example="2023-04-01T12:00:00Z"),
  *     @OA\Property(property="created_at", type="string", format="date-time", example="2023-01-01T00:00:00Z"),
@@ -37,7 +36,7 @@ use App\Notifications\VerifyEmailNotification;
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens,HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -50,8 +49,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'firstname',
         'lastname',
         'role',
-        'twofa_secret',
-        'twofa_enabled',
         'is_active',
         'email_verified_at',
     ];
@@ -65,6 +62,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'password_hash',
         'remember_token',
         'twofa_secret',
+        'twofa_recovery_codes',
+        'twofa_secret_temp',
     ];
 
     /**
@@ -76,6 +75,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'twofa_enabled' => 'boolean',
         'is_active' => 'boolean',
         'email_verified_at' => 'datetime',
+        'twofa_recovery_codes' => 'array',
+        'twofa_temp_expires_at'=> 'datetime',
     ];
 
     /**

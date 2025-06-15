@@ -28,6 +28,11 @@ Route::prefix('auth')->group(function () {
         ->middleware('auth:sanctum')
         ->name('auth.2fa.enable');
 
+    // This route is used to confirm the two-factor authentication for the user
+    Route::post('/2fa/confirm', [AuthController::class, 'confirmTwoFactor'])
+        ->middleware('auth:sanctum')
+        ->name('auth.2fa.confirm');
+
     // This route is used to disable the two-factor authentication for the user
     Route::post('/2fa/disable', [AuthController::class, 'disableTwoFactor'])
         ->middleware('auth:sanctum')

@@ -33,6 +33,9 @@ class UserFactory extends Factory
             'role' => 'user',
             'twofa_secret' => null,
             'twofa_enabled' => false,
+            'twofa_recovery_codes' => null,
+            'twofa_secret_temp' => null,
+            'twofa_temp_expires_at' => null,
             'is_active' => true,
         ];
     }

@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
         $admin = User::create([
             'email' => 'admin@yopmail.com',
             'email_verified_at' => now(),
-            'password_hash' => Hash::make('adminpass'),
+            'password_hash' => Hash::make('Manuel10101982*'),
             'firstname' => 'Alice',
             'lastname' => 'Admin',
             'role' => 'admin',
@@ -38,7 +38,7 @@ class UserSeeder extends Seeder
         $employee = User::create([
             'email' => 'employee@yopmail.com',
             'email_verified_at' => now(),
-            'password_hash' => Hash::make('employeepass'),
+            'password_hash' => Hash::make('Manuel10101982*'),
             'firstname' => 'Bob',
             'lastname' => 'Employee',
             'role' => 'employee',
@@ -56,7 +56,7 @@ class UserSeeder extends Seeder
         $user = User::create([
             'email' => 'user@yopmail.com',
             'email_verified_at' => now(),
-            'password_hash' => Hash::make('userpass'),
+            'password_hash' => Hash::make('Manuel10101982*'),
             'firstname' => 'Charlie',
             'lastname' => 'User',
             'role' => 'user',

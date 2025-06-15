@@ -9,6 +9,7 @@ use Illuminate\Auth\AuthenticationException;
 use App\Models\EmailUpdate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class UserService
 {
@@ -110,21 +111,46 @@ class UserService
 
         // Appliquer les changements
         if (array_key_exists('is_active', $data)) {
-            $target->is_active = $data['is_active'];
+            $target->is_active = (bool) $data['is_active'];
         }
 
+        // Gestion de la 2FA
         if (array_key_exists('twofa_enabled', $data)) {
-            // Si on désactive 2FA, on réinitialise le secret
-            $target->twofa_enabled = $data['twofa_enabled'];
-            if (! $data['twofa_enabled']) {
-                $target->twofa_secret = null;
+            $wantEnable = (bool) $data['twofa_enabled'];
+            if (! $wantEnable && $target->twofa_enabled) {
+                // ADMIN FORCE DISABLE 2FA
+                // Nettoyer tous les champs 2FA
+                $target->twofa_enabled = false;
+                $target->twofa_secret  = null;
+                $target->twofa_recovery_codes = null;
+                // S’il existe des champs temporaires
+                if (isset($target->twofa_secret_temp)) {
+                    $target->twofa_secret_temp = null;
+                }
+                if (isset($target->twofa_temp_expires_at)) {
+                    $target->twofa_temp_expires_at = null;
+                }
+                // Vous pouvez journaliser :
+                // \Log::info("2FA disabled by admin for user {$target->id}");
+            } elseif ($wantEnable) {
+                // ADMIN ESSAIE D’ACTIVER 2FA
+                // Décider de la politique : ici, on interdit l’activation directe
+                // On peut soit ignorer silencieusement, soit lever une exception.
+                throw new HttpResponseException(response()->json([
+                    'message' => 'Cannot enable two-factor authentication directly; user must enable it via their own account.',
+                    'code'    => 'twofa_enable_not_allowed_admin',
+                ], 400));
             }
         }
 
+        // Vérification de l’email
         if (array_key_exists('verify_email', $data) && $data['verify_email']) {
-            $target->markEmailAsVerified();
+            if (! $target->hasVerifiedEmail()) {
+                $target->markEmailAsVerified();
+            }
         }
 
+        // Autres champs modifiables par admin
         foreach (['firstname','lastname','email','role'] as $field) {
             if (array_key_exists($field, $data)) {
                 $target->$field = $data[$field];

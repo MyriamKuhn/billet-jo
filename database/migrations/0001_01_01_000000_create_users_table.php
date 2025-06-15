@@ -22,6 +22,9 @@ return new class extends Migration
             $table->enum('role', ['admin', 'employee', 'user']);
             $table->string('twofa_secret', 255)->nullable();
             $table->boolean('twofa_enabled')->default(false);
+            $table->json('twofa_recovery_codes')->nullable();
+            $table->string('twofa_secret_temp', 255)->nullable();
+            $table->timestamp('twofa_temp_expires_at')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
