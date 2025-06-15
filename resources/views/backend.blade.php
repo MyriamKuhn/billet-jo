@@ -252,8 +252,9 @@
 
             <h3>4.3 Enable/Disable 2FA</h3>
             <ul>
-                <li><strong>Enable:</strong> <code>POST /api/auth/2fa/enable</code> (Auth) → { "qr_code_url", "secret" } (display QR + key)</li>
-                <li><strong>Disable:</strong> <code>POST /api/auth/2fa/disable</code> (Auth) { "code" } is required</li>
+                <li><strong>Enable:</strong> <code>POST /api/auth/2fa/enable</code> (Auth) → { "qr_code_url", "secret", "expires_at" } (display QR + key + expire date (+10 minutes))</li>
+                <li><strong>Confirm:</strong> <code>POST /api/auth/2fa/confirm</code> (Auth) → { "recovery_codes" } (recovery codes)</li>
+                <li><strong>Disable:</strong> <code>POST /api/auth/2fa/disable</code> (Auth) { "code" } is required (this can be application code or a recovery code</li>
             </ul>
             <p class="note">⚠️ 2FA is optional but recommended. For help disabling it, please contact administration with your registered email. We use Google 2FA.</p>
 
@@ -276,11 +277,11 @@
                 <li><strong>Change Email:</strong> <code>PATCH /api/auth/email</code> triggers change emails needs to be verified:</li>
                 <ul>
                     <li>
-                        <strong>New email:</strong> <code>GET /api/auth/email/change/verify?token=...&old_email=...</code><br>Link valid for 1h<br>
+                        <strong>New email:</strong> <code>GET /api/auth/email/change/verify?token=...&old_email=...</code><br>Link valid for 1h and logout the user<br>
                         Redirects to front URLs: <pre><code>/verification-result/success</code><br><code>/verification-result/invalid</code><br><code>/verification-result/already-verified</code><br><code>/verification-result/error</code></pre></p>
                     </li>
                     <li>
-                        <strong>Old email:</strong> <code>GET /api/auth/email/cancel/{token}/{old_email}</code><br>Is used to revoke the email change, link valid 48h<br>
+                        <strong>Old email:</strong> <code>GET /api/auth/email/cancel/{token}/{old_email}</code><br>Is used to revoke the email change, link valid 48h and logout the user<br>
                         Redirects to front URLs: <pre><code>/verification-result/success</code><br><code>/verification-result/invalid</code><br><code>/verification-result/already-verified</code><br><code>/verification-result/error</code></pre></p>
                     </li>
                 </ul>

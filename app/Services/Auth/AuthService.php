@@ -13,10 +13,17 @@ use App\Models\EmailUpdate;
 use App\Helpers\EmailHelper;
 use App\Services\CartService;
 use Psr\Log\LoggerInterface;
+use App\Services\Auth\TwoFactorService;
 
 class AuthService
 {
-    public function __construct(private Google2FA $google2fa, private PasswordBroker $passwordBroker, private CartService $cartService, private LoggerInterface $logger) {}
+    public function __construct(
+        private Google2FA $google2fa,
+        private PasswordBroker $passwordBroker,
+        private CartService $cartService,
+        private LoggerInterface $logger,
+        private TwoFactorService $twoFactorService
+    ) {}
 
     /**
      * @param  array  $data
@@ -62,7 +69,8 @@ class AuthService
                     'code'    => 'twofa_required',
                 ], 400));
             }
-            if (! $this->google2fa->verifyKey($user->twofa_secret, $data['twofa_code'])) {
+
+            if (! $this->twoFactorService->verifyOtp($user, $data['twofa_code'])) {
                 throw new HttpResponseException(response()->json([
                     'message' => 'Invalid two-factor authentication code',
                     'code'    => 'twofa_invalid',
@@ -244,35 +252,5 @@ class AuthService
         ));
 
         return ['message' => 'Email change request sent'];
-    }
-
-    /**
-     * Disable 2FA for the given user after verifying the code.
-     *
-     * @param  User    $user
-     * @param  string  $code
-     * @return void
-     *
-     * @throws HttpResponseException  On invalid code or if 2FA not enabled
-     */
-    public function disableTwoFactor(User $user, string $code): void
-    {
-        if (!$user->twofa_enabled) {
-            throw new HttpResponseException(response()->json([
-                'message' => 'Two-factor authentication is not enabled',
-                'code'    => 'twofa_not_enabled',
-            ], 400));
-        }
-
-        if (!$this->google2fa->verifyKey($user->twofa_secret, $code)) {
-            throw new HttpResponseException(response()->json([
-                'message' => 'Invalid two-factor authentication code',
-                'code'    => 'twofa_invalid_code',
-            ], 400));
-        }
-
-        $user->twofa_enabled = false;
-        $user->twofa_secret  = null;
-        $user->save();
     }
 }
