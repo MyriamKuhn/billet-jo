@@ -72,12 +72,14 @@ class VerificationControllerTest extends TestCase
         /** @noinspection PhpParamsInspection */
         $this->mock(EmailVerificationService::class)
             ->shouldReceive('resend')
-            ->withArgs(fn($u) => $u->id === $user->id)
+            ->with($user->email)
             ->once()
             ->andReturn($data);
 
         Sanctum::actingAs($user, ['*']);
-        $this->postJson('/api/auth/email/resend')
+        $this->postJson('/api/auth/email/resend', [
+            'email' => $user->email,
+        ])
             ->assertOk()
             ->assertJson($data);
     }

@@ -38,6 +38,8 @@ class EmailUpdateService
         $user->email_verified_at = now();
         $user->save();
 
+        $user->tokens()->delete();
+
         // Record validated email update
         $emailUpdate->touch();
 
@@ -53,13 +55,11 @@ class EmailUpdateService
      *
      * @throws EmailUpdateNotFoundException
      */
-    public function cancelEmailUpdate(string $rawToken, string $oldEmail): User
+    public function cancelEmailUpdate(string $rawToken): User
     {
         $hashed = EmailHelper::hashToken($rawToken);
 
-        $emailUpdate = EmailUpdate::where('token', $hashed)
-            ->where('old_email', $oldEmail)
-            ->first();
+        $emailUpdate = EmailUpdate::where('token', $hashed)->first();
 
         if (! $emailUpdate) {
             throw new EmailUpdateNotFoundException();
@@ -69,8 +69,9 @@ class EmailUpdateService
         $user = User::findOrFail($emailUpdate->user_id);
         // Restore old email and mark as verified
         $user->email = $emailUpdate->old_email;
-        $user->email_verified_at = now();
         $user->save();
+
+        $user->tokens()->delete();
 
         // Remove the pending update
         $emailUpdate->delete();

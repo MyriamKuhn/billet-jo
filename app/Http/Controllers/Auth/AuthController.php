@@ -14,6 +14,7 @@ use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\UpdatePasswordRequest;
 use App\Http\Requests\Auth\UpdateEmailRequest;
 use App\Http\Requests\Auth\DisableTwoFactorRequest;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
@@ -179,12 +180,9 @@ This endpoint allows a user to log in and receive an authentication token:
      *
      * @OA\Post(
      *     path="/api/auth/2fa/enable",
-     *     summary="Enable two-factor authentication",
-     *     description="
-Generates a new secret key for two-factor authentication and returns an OTP-Auth URL.
-Requires the user to be authenticated via Bearer token.
-",
-     *     operationId="authEnableTwoFactor",
+     *     summary="Prepare two-factor authentication",
+     *     description="Generates a new temporary secret key for 2FA, stores it for confirmation, and returns an OTP-Auth URL. User must confirm via OTP to finalize activation. Expires in 10 minutes.",
+     *     operationId="authPrepareTwoFactor",
      *     tags={"Authentication"},
      *     security={{"bearerAuth": {}}},
      *
@@ -193,7 +191,8 @@ Requires the user to be authenticated via Bearer token.
      *         description="Two-factor authentication enabled successfully",
      *         @OA\JsonContent(
      *             @OA\Property(property="secret", type="string", description="Generated secret key for 2FA", example="JBSWY3DPEHPK3PXP"),
-     *             @OA\Property(property="qrCodeUrl", type="string", description="URL to generate QR code for 2FA", example="otpauth://totp/Example%3Auser%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example")
+     *             @OA\Property(property="qrCodeUrl", type="string", description="URL to generate QR code for 2FA", example="otpauth://totp/Example%3Auser%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"),
+     *             @OA\Property(property="expires_at", type="string", format="date-time", description="Expiration time for the 2FA setup", example="2023-10-01T12:00:00Z")
      *         )
      *     ),
      *
@@ -214,8 +213,62 @@ Requires the user to be authenticated via Bearer token.
      */
     public function enableTwoFactor(): JsonResponse
     {
-        $result = $this->twoFactorService->enable(auth()->user());
+        $result = $this->twoFactorService->prepareEnable(auth()->user());
 
+        return response()->json($result, 200);
+    }
+
+    /**
+     * Confirm two-factor authentication setup.
+     *
+     * @OA\Post(
+     *     path="/api/auth/2fa/confirm",
+     *     summary="Confirm two-factor authentication",
+     *     description="Validates the OTP code from the temporary secret and activates 2FA, then returns recovery codes.",
+     *     operationId="authConfirmTwoFactor",
+     *     tags={"Authentication"},
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="otp", type="string", example="123456"),
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="2FA activated successfully",
+     *         @OA\JsonContent(
+     *             @OA\Property(
+     *                 property="recovery_codes",
+     *                 type="array",
+     *                 @OA\Items(type="string", example="ABCD1234EF")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Invalid OTP or no setup in progress",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="No 2FA setup in progress or expired"),
+     *             @OA\Property(property="code",    type="string", example="twofa_no_setup_in_progress_or_expired")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
+     *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
+     * )
+     */
+    public function confirmTwoFactor(Request $request): JsonResponse
+    {
+        // Valider la requête : OTP code nécessaire
+        $request->validate([
+            'otp' => 'required|string', // selon votre format, ex. 6-digit code
+        ]);
+
+        $user = auth()->user();
+        $result = $this->twoFactorService->confirmEnable($user, $request->input('otp'));
+
+        // $result contient typiquement les recovery codes en clair
         return response()->json($result, 200);
     }
 
@@ -535,7 +588,7 @@ Requires authentication via Bearer token.
      *         required=true,
      *         @OA\JsonContent(
      *             required={"twofa_code"},
-     *             @OA\Property(property="twofa_code", type="string", example="123456", description="Current 2FA code from the authenticator app")
+     *             @OA\Property(property="twofa_code", type="string", example="123456", description="Current 2FA code from the authenticator app (OTP) or one of the recovery codes")
      *         )
      *     ),
      *
@@ -568,7 +621,7 @@ Requires authentication via Bearer token.
      */
     public function disableTwoFactor(DisableTwoFactorRequest $request): JsonResponse
     {
-        $this->authService->disableTwoFactor(
+        $this->twoFactorService->disableTwoFactor(
             auth()->user(),
             $request->input('twofa_code')
         );

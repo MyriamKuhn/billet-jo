@@ -69,8 +69,7 @@ class EmailUpdatedNotification extends Notification
             'auth.email.change.cancel', // Route to cancel the update
             now()->addHours(48), // URL will be valid for 48 hours
             [
-                'token' => $this->rawToken,
-                'old_email' => $this->oldEmail
+                'token' => $this->rawToken
                 ],
         );
     }

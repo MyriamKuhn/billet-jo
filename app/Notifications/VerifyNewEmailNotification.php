@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
+use App\Models\User;
 
 class VerifyNewEmailNotification extends Notification
 {
@@ -17,13 +18,15 @@ class VerifyNewEmailNotification extends Notification
      *
      * @var string
      */
+    protected $user;
     protected $token;
 
     /**
      * Create a new notification instance.
      */
-    public function __construct(string $token)
+    public function __construct(User $user, string $token)
     {
+        $this->user = $user;
         $this->token = $token;
     }
 
@@ -47,7 +50,7 @@ class VerifyNewEmailNotification extends Notification
         return (new MailMessage)
             ->subject(__('mail.subject_email_update', ['app_name'=> config('app.name')]))
             ->view('emails.newverify', [
-                'user' => $notifiable,
+                'user' => $this->user,
                 'url' => $url,
             ]);
     }

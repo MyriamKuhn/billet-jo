@@ -23,6 +23,7 @@ use Stripe\Exception\ApiErrorException;
 use App\Exceptions\TicketAlreadyProcessedException;
 use App\Enums\TicketStatus;
 use App\Exceptions\StockUnavailableException;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -229,6 +230,16 @@ return Application::configure(basePath: dirname(__DIR__))
                     'code'    => 'payment_gateway_error',
                 ], 502);
             }
+        });
+        $exceptions->render(function (InvalidSignatureException $e, Request $request) use ($base) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message'      => 'Invalid or expired link',
+                    'code'         => 'invalid_signature',
+                    'redirect_url' => "$base/invalid",
+                ], 400);
+            }
+            return redirect()->away("$base/invalid");
         });
         $exceptions->render(function (\Throwable $e, Request $request) {
             if ($request->is('api/*')) {

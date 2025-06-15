@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
         content="Backend API endpoints overview for front-end developers: products, cart, auth, payments, invoices, tickets, admin.">
-    <meta name="author" content="Your Name">
+    <meta name="author" content="Myriam Kühn">
     <meta name="keywords" content="API documentation, backend, invoices, tickets, payments">
     <link rel="icon" href="{{ asset('images/favicon32x32.png') }}" sizes="32x32" type="image/png">
     <link rel="icon" href="{{ asset('images/favicon16x16.png') }}" sizes="16x16" type="image/png">
@@ -140,6 +140,13 @@
             margin-bottom: 1rem;
             cursor: zoom-in;
         }
+
+        a, a:visited {
+            color: #00bcd4; text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -245,8 +252,9 @@
 
             <h3>4.3 Enable/Disable 2FA</h3>
             <ul>
-                <li><strong>Enable:</strong> <code>POST /api/auth/2fa/enable</code> (Auth) → { "qr_code_url", "secret" } (display QR + key)</li>
-                <li><strong>Disable:</strong> <code>POST /api/auth/2fa/disable</code> (Auth) { "code" } is required</li>
+                <li><strong>Enable:</strong> <code>POST /api/auth/2fa/enable</code> (Auth) → { "qr_code_url", "secret", "expires_at" } (display QR + key + expire date (+10 minutes))</li>
+                <li><strong>Confirm:</strong> <code>POST /api/auth/2fa/confirm</code> (Auth) → { "recovery_codes" } (recovery codes)</li>
+                <li><strong>Disable:</strong> <code>POST /api/auth/2fa/disable</code> (Auth) { "code" } is required (this can be application code or a recovery code</li>
             </ul>
             <p class="note">⚠️ 2FA is optional but recommended. For help disabling it, please contact administration with your registered email. We use Google 2FA.</p>
 
@@ -269,11 +277,11 @@
                 <li><strong>Change Email:</strong> <code>PATCH /api/auth/email</code> triggers change emails needs to be verified:</li>
                 <ul>
                     <li>
-                        <strong>New email:</strong> <code>GET /api/auth/email/change/verify?token=...&old_email=...</code><br>Link valid for 1h<br>
+                        <strong>New email:</strong> <code>GET /api/auth/email/change/verify?token=...&old_email=...</code><br>Link valid for 1h and logout the user<br>
                         Redirects to front URLs: <pre><code>/verification-result/success</code><br><code>/verification-result/invalid</code><br><code>/verification-result/already-verified</code><br><code>/verification-result/error</code></pre></p>
                     </li>
                     <li>
-                        <strong>Old email:</strong> <code>GET /api/auth/email/cancel/{token}/{old_email}</code><br>Is used to revoke the email change, link valid 48h<br>
+                        <strong>Old email:</strong> <code>GET /api/auth/email/cancel/{token}/{old_email}</code><br>Is used to revoke the email change, link valid 48h and logout the user<br>
                         Redirects to front URLs: <pre><code>/verification-result/success</code><br><code>/verification-result/invalid</code><br><code>/verification-result/already-verified</code><br><code>/verification-result/error</code></pre></p>
                     </li>
                 </ul>

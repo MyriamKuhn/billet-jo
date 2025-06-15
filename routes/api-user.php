@@ -28,6 +28,11 @@ Route::prefix('auth')->group(function () {
         ->middleware('auth:sanctum')
         ->name('auth.2fa.enable');
 
+    // This route is used to confirm the two-factor authentication for the user
+    Route::post('/2fa/confirm', [AuthController::class, 'confirmTwoFactor'])
+        ->middleware('auth:sanctum')
+        ->name('auth.2fa.confirm');
+
     // This route is used to disable the two-factor authentication for the user
     Route::post('/2fa/disable', [AuthController::class, 'disableTwoFactor'])
         ->middleware('auth:sanctum')
@@ -64,7 +69,7 @@ Route::prefix('auth')->group(function () {
         ->name('auth.email.change.verify');
 
     // This route is used to revoke the email change request
-    Route::get('/email/change/cancel/{token}/{old_email}', [VerificationController::class, 'cancelChange'])
+    Route::get('/auth/email/change/cancel/{token}', [VerificationController::class, 'cancelChange'])
         ->middleware('signed')
         ->name('auth.email.change.cancel');
 
