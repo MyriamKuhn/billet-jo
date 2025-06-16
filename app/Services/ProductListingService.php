@@ -30,7 +30,7 @@ class ProductListingService
 
         return Cache::store('redis')->remember(
             $cacheKey,
-            now()->addMinutes(60),
+            now()->addSeconds(30),
             fn() => $this->buildQuery($filters, $onlyAvailableStock, $locale)->paginate($perPage)
         );
     }
