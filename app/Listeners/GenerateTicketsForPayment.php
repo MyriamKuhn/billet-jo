@@ -23,7 +23,13 @@ class GenerateTicketsForPayment
      */
     public function handle(PaymentSucceeded $event): void
     {
-        // Give the payment UUID to the ticket service to generate tickets
-        $this->tickets->generateForPaymentUuid($event->payment->uuid, $event->locale);
+        $payment = $event->payment;
+        // Si des tickets sont déjà en base pour ce paiement, on ne régénère pas
+        if ($payment->tickets()->exists()) {
+            \Log::info("Tickets already generated for payment {$payment->uuid}, skipping.");
+            return;
+        }
+        // Sinon, on génère
+        $this->tickets->generateForPaymentUuid($payment->uuid, $event->locale);
     }
 }
