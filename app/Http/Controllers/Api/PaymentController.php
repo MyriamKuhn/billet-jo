@@ -305,7 +305,6 @@ class PaymentController extends Controller
         $object = $event->data->object;
 
         switch ($event->type) {
-            case 'checkout.session.completed':
             case 'payment_intent.succeeded':
                 $uuid = $object->metadata['payment_uuid'] ?? null;
 

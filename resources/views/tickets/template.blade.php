@@ -65,19 +65,12 @@
         @php
             $snap = $item->product_snapshot;
             $details = $item->product->product_details;
-
-            use Carbon\Carbon;
-            // Fusionne date et time pour avoir un seul DateTime
-            $dateTime = Carbon::parse($details['date'].' '.$details['time'])
-                            ->locale(app()->getLocale());
-
-            $timePattern = __('ticket.time_format');
         @endphp
         <div class="section">
             <h3>{{ __('ticket.event_details') }}</h3>
             <p><strong>{{ __('ticket.event_category') }}</strong> {{ $snap['ticket_type'] }}</p>
-            <p><strong>{{ __('ticket.event_date') }}</strong> {{ $dateTime->isoFormat('LL') }}</p>
-            <p><strong>{{ __('ticket.event_time') }}</strong> {{ $dateTime->isoFormat($timePattern) }}</p>
+            <p><strong>{{ __('ticket.event_date') }}</strong> {{ $details['date'] }}</p>
+            <p><strong>{{ __('ticket.event_time') }}</strong> {{ $details['time'] }}</p>
             <p><strong>{{ __('ticket.event_location') }}</strong> {{ $details['location'] }}</p>
             <p><strong>{{ __('ticket.event_places') }}</strong> {{ $snap['ticket_places'] }}</p>
         </div>
