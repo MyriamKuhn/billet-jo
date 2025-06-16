@@ -36,7 +36,7 @@ class TicketsGenerated extends Mailable
      */
     public function build()
     {
-        $clientUrl = rtrim(config('app.frontend_url'), '/') . '/client/tickets';
+        $clientUrl = rtrim(config('app.frontend_url'), '/') . '/user/tickets';
 
         $mail = $this
             ->subject(__('mail.tickets_generated_subject', ['app_name'=> config('app.name')]))
