@@ -117,7 +117,17 @@
 <body>
     <div class="container">
         <div class="header">
-            <img src="{{ asset('images/jo_logo.png') }}" alt="Logo" class="logo">
+            @php
+                $logoPath = public_path('images/jo_logo.png');
+                $logoDataUri = null;
+                if (file_exists($logoPath)) {
+                    $type = pathinfo($logoPath, PATHINFO_EXTENSION);
+                    $data = file_get_contents($logoPath);
+                    $base64 = base64_encode($data);
+                    $logoDataUri = "data:image/{$type};base64,{$base64}";
+                }
+            @endphp
+            <img src="{{ $logoDataUri }}" alt="Logo" class="logo">
             <h1>{{ __('invoice.invoice_title', ['invoice_number' =>  $payment->uuid]) }}</h1>
             <div class="date">{{ __('invoice.invoice_date', ['date' =>  $payment->created_at->locale(app()->getLocale())->isoFormat('LL')]) }}</div>
         </div>

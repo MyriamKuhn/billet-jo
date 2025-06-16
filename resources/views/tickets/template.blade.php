@@ -50,7 +50,17 @@
     <div class="container">
         {{-- Header --}}
         <div class="header">
-            <img src="{{ asset('images/jo_logo.png') }}" alt="Logo" class="logo">
+            @php
+                $logoPath = public_path('images/jo_logo.png');
+                $logoDataUri = null;
+                if (file_exists($logoPath)) {
+                    $type = pathinfo($logoPath, PATHINFO_EXTENSION);
+                    $data = file_get_contents($logoPath);
+                    $base64 = base64_encode($data);
+                    $logoDataUri = "data:image/{$type};base64,{$base64}";
+                }
+            @endphp
+            <img src="{{ $logoDataUri }}" alt="Logo" class="logo">
             <div class="event-title">{{ $item->product_snapshot['product_name'] }}</div>
         </div>
 
@@ -65,11 +75,14 @@
         @php
             $snap = $item->product_snapshot;
             $details = $item->product->product_details;
+
+            use Carbon\Carbon;
+            $date = Carbon::parse($details['date'])->locale(app()->getLocale());
         @endphp
         <div class="section">
             <h3>{{ __('ticket.event_details') }}</h3>
             <p><strong>{{ __('ticket.event_category') }}</strong> {{ $snap['ticket_type'] }}</p>
-            <p><strong>{{ __('ticket.event_date') }}</strong> {{ $details['date'] }}</p>
+            <p><strong>{{ __('ticket.event_date') }}</strong> {{ $date->isoFormat('LL') }}</p>
             <p><strong>{{ __('ticket.event_time') }}</strong> {{ $details['time'] }}</p>
             <p><strong>{{ __('ticket.event_location') }}</strong> {{ $details['location'] }}</p>
             <p><strong>{{ __('ticket.event_places') }}</strong> {{ $snap['ticket_places'] }}</p>
