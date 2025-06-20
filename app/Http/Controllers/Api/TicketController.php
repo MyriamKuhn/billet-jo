@@ -202,10 +202,10 @@ class TicketController extends Controller
      *   security={{"bearerAuth":{}}},
      *
      *   @OA\Parameter(
-     *     name="q",
+     *     name="status",
      *     in="query",
-     *     description="Search by product name",
-     *     @OA\Schema(type="string")
+     *     description="Filter by ticket status",
+     *     @OA\Schema(type="string", enum={"issued","used","refunded","cancelled"})
      *   ),
      *   @OA\Parameter(
      *     name="per_page",
