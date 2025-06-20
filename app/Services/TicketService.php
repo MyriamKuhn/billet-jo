@@ -103,34 +103,41 @@ class TicketService
         $query = Ticket::with(['payment','product'])
                     ->where('user_id', $userId);
 
-        // Recherche par nom de produit dans le JSON snapshot
-        if (!empty($filters['q'])) {
-            $q = $filters['q'];
-            // MySQL/Postgres JSON search :
-            $query->where('product_snapshot->product_name', 'like', "%{$q}%");
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
         }
 
         // Filtre par date d'événement
-        if (! empty($filters['event_date_from'])) {
-            $query->whereDate(
-                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(product_snapshot, '$.date'))"),
-                '>=',
-                $filters['event_date_from']
-            );
-        }
-        if (! empty($filters['event_date_to'])) {
-            $query->whereDate(
-                DB::raw("JSON_UNQUOTE(JSON_EXTRACT(product_snapshot, '$.date'))"),
-                '<=',
-                $filters['event_date_to']
-            );
+        if (!empty($filters['event_date_from']) || !empty($filters['event_date_to'])) {
+            $query->whereHas('product', function($qProd) use ($filters) {
+                if (!empty($filters['event_date_from'])) {
+                    $dateFrom = $filters['event_date_from'];
+                    $qProd->whereDate(
+                        DB::raw("JSON_UNQUOTE(JSON_EXTRACT(product_details, '$.date'))"),
+                        '>=',
+                        $dateFrom
+                    );
+                }
+                if (!empty($filters['event_date_to'])) {
+                    $dateTo = $filters['event_date_to'];
+                    $qProd->whereDate(
+                        DB::raw("JSON_UNQUOTE(JSON_EXTRACT(product_details, '$.date'))"),
+                        '<=',
+                        $dateTo
+                    );
+                }
+            });
         }
 
-        $perPage = $filters['per_page'] ?? 25;
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
 
-        return $query->orderByDesc('created_at')
-                    ->paginate($perPage)
-                    ->appends($filters);
+        $query->orderByDesc('created_at');
+
+        $perPage = isset($filters['per_page']) ? (int)$filters['per_page'] : 25;
+
+        return $query->paginate($perPage)->appends($filters);
     }
 
     public function generateForPaymentUuid(string $paymentUuid, string $locale): void
