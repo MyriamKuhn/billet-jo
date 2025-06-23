@@ -2236,11 +2236,17 @@
                 "operationId": "2e85d5643b621da67b3fa4533813a2c3",
                 "parameters": [
                     {
-                        "name": "q",
+                        "name": "status",
                         "in": "query",
-                        "description": "Search by product name",
+                        "description": "Filter by ticket status",
                         "schema": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                                "issued",
+                                "used",
+                                "refunded",
+                                "cancelled"
+                            ]
                         }
                     },
                     {
@@ -3803,9 +3809,9 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Enable two-factor authentication",
-                "description": "\nGenerates a new secret key for two-factor authentication and returns an OTP-Auth URL.\nRequires the user to be authenticated via Bearer token.\n",
-                "operationId": "authEnableTwoFactor",
+                "summary": "Prepare two-factor authentication",
+                "description": "Generates a new temporary secret key for 2FA, stores it for confirmation, and returns an OTP-Auth URL. User must confirm via OTP to finalize activation. Expires in 10 minutes.",
+                "operationId": "authPrepareTwoFactor",
                 "responses": {
                     "200": {
                         "description": "Two-factor authentication enabled successfully",
@@ -3822,6 +3828,12 @@
                                             "description": "URL to generate QR code for 2FA",
                                             "type": "string",
                                             "example": "otpauth://totp/Example%3Auser%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=Example"
+                                        },
+                                        "expires_at": {
+                                            "description": "Expiration time for the 2FA setup",
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "example": "2023-10-01T12:00:00Z"
                                         }
                                     },
                                     "type": "object"
@@ -3842,6 +3854,87 @@
                                         "code": {
                                             "type": "string",
                                             "example": "twofa_already_enabled"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/2fa/confirm": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Confirm two-factor authentication",
+                "description": "Validates the OTP code from the temporary secret and activates 2FA, then returns recovery codes.",
+                "operationId": "authConfirmTwoFactor",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "otp": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "2FA activated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "recovery_codes": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "example": "ABCD1234EF"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid OTP or no setup in progress",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No 2FA setup in progress or expired"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "twofa_no_setup_in_progress_or_expired"
                                         }
                                     },
                                     "type": "object"
@@ -4321,7 +4414,7 @@
                                 ],
                                 "properties": {
                                     "twofa_code": {
-                                        "description": "Current 2FA code from the authenticator app",
+                                        "description": "Current 2FA code from the authenticator app (OTP) or one of the recovery codes",
                                         "type": "string",
                                         "example": "123456"
                                     }
@@ -4794,7 +4887,7 @@
                 }
             }
         },
-        "/api/auth/email/change/cancel/{token}/{old_email}": {
+        "/api/auth/email/change/cancel/{token}": {
             "get": {
                 "tags": [
                     "Authentication"
@@ -4811,17 +4904,6 @@
                         "schema": {
                             "type": "string",
                             "example": "03AGdBq26…"
-                        }
-                    },
-                    {
-                        "name": "old_email",
-                        "in": "path",
-                        "description": "Previous email address before the update",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "email",
-                            "example": "old.user@example.com"
                         }
                     },
                     {
@@ -4874,6 +4956,30 @@
                                 "schema": {
                                     "type": "string",
                                     "example": "https://frontend.example.com/verification-result/success"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired link",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Invalid or expired link"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "example": "invalid_signature"
+                                        },
+                                        "redirect_url": {
+                                            "type": "string",
+                                            "example": "https://frontend.example.com/verification-result/invalid"
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -6278,10 +6384,6 @@
                     "twofa_enabled": {
                         "type": "boolean",
                         "example": true
-                    },
-                    "twofa_secret": {
-                        "type": "string",
-                        "example": "abcd1234"
                     },
                     "is_active": {
                         "type": "boolean",

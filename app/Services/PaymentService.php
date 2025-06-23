@@ -256,6 +256,12 @@ class PaymentService
                 'status'  => PaymentStatus::Paid,
                 'paid_at' => now(),
             ]);
+            $payment->refresh();
+            // Ajout dynamique d’une propriété pour usage immédiat
+            $payment->wasJustPaid = true;
+        } else {
+            // Déjà payé précédemment
+            $payment->wasJustPaid = false;
         }
         return $payment;
     }

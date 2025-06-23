@@ -305,7 +305,6 @@ class PaymentController extends Controller
         $object = $event->data->object;
 
         switch ($event->type) {
-            case 'checkout.session.completed':
             case 'payment_intent.succeeded':
                 $uuid = $object->metadata['payment_uuid'] ?? null;
 
@@ -313,12 +312,17 @@ class PaymentController extends Controller
                     // 1) Mark the payment as paid and return the Payment UUID
                     $payment = $this->payments->markAsPaidByUuid($uuid);
 
-                    $locale = $payment->cart_snapshot['locale'] ?? config('app.fallback_locale');
-                    app()->setLocale($locale);
+                    // Si on vient juste de passer au statut Paid, on génère invoice & tickets
+                    if (!empty($payment->wasJustPaid)) {
+                        $locale = $payment->cart_snapshot['locale'] ?? config('app.fallback_locale');
+                        app()->setLocale($locale);
 
                     // 2) Generate the invoice PDF and store it and the ticket
                     event(new InvoiceRequested($payment, $locale));
                     event(new PaymentSucceeded($payment, $locale));
+                    } else {
+                        \Log::info("Payment {$uuid} already marked as paid, skipping invoice generation.");
+                    }
                 } else {
                     \Log::warning("Webhook received without payment_uuid on event {$event->type}", [
                         'object_id' => $object->id,

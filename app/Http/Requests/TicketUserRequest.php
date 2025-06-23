@@ -22,7 +22,7 @@ class TicketUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'q'         => ['sometimes','string'],
+            'status'    => ['sometimes', 'string', 'in:issued,used,refunded,cancelled'],
             'per_page'  => ['sometimes','integer','min:1','max:100'],
             'page'      => ['sometimes','integer','min:1'],
             'event_date_from'  => ['sometimes','date'],
@@ -38,7 +38,7 @@ class TicketUserRequest extends FormRequest
     public function validatedFilters(): array
     {
         return collect($this->validated())
-            ->only(['q','per_page','page','event_date_from','event_date_to'])
+            ->only(['status','per_page','page','event_date_from','event_date_to'])
             ->toArray();
     }
 }
