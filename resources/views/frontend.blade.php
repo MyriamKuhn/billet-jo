@@ -251,7 +251,84 @@
         <!-- USER SECTION -->
         <div class="section" id="user">
             <h2 data-icon="🔐">3. User</h2>
-            <p>Coming soon...</p>
+            <h3>3.1 Sign In (with optional “Remember me” and 2FA via Google Authenticator)</h3>
+            <p>As a registered user, you can log in to access your profile, manage your orders, and complete purchases.</p>
+            <p>Click the “Login” button in the navigation bar or on the login page. By checking “Remember me”, you will stay logged in for 7 days.</p>
+            <p>Enter your registered email and password. If two-factor authentication (2FA) is enabled, enter the code from your authenticator app.</p>
+            <p>Once logged in, you can access your profile, your tickets, your invoices, and continue shopping.</p>
+            <a href="{{ asset('/images/menu_login.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_login.png') }}" alt="Login example">
+            </a>
+            <a href="{{ asset('/images/menu_2fa.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_2fa.png') }}" alt="2FA example">
+            </a>
+
+            <h3>3.2 User Dashboard</h3>
+            <p>After logging in, you will be redirected to your dashboard.</p>
+            <p>Here you can view and update your personal information.</p>
+            <p>You can change your first and last name.</p>
+            <p class="note">Orders placed before you update your name will still be addressed to the previous name.</p>
+            <p>You can also update your email address.</p>
+            <p class="note">
+                If you change your email, you’ll receive a verification link (valid for 1 hour) and a cancellation link (valid for 48 hours) in case you did not request the change.
+            </p>
+            <p>Finally, you can change your password by providing your current password and choosing a new one.</p>
+            <p class="note">
+                Your new password must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.
+            </p>
+            <p>
+                You can enable two-factor authentication here. Scan the QR code with your authenticator app (or enter the code manually). After enabling, you’ll receive recovery codes—please save them somewhere safe. You can use these codes to disable 2FA if you ever lose access to your authenticator app.
+            </p>
+            <p class="note">
+                If you lose both your recovery codes and your authenticator app, you’ll need to contact support to disable two-factor authentication.
+            </p>
+            <a href="{{ asset('/images/user_dashboard.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/user_dashboard.png') }}" alt="User Dashboard example">
+            </a>
+
+            <h3>3.3 My Orders</h3>
+            <p>In the “My Orders” section, you can view all your past and current orders.</p>
+            <p>Each order displays the date, total amount, and status (e.g., Pending, Completed).</p>
+            <p>Click the icon to download the invoice for that order.</p>
+            <p class="note">You can only view orders placed with this account. You may filter orders by status, date, or reference number.</p>
+            <a href="{{ asset('/images/orders.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/orders.png') }}" alt="Orders List example">
+            </a>
+
+            <h3>3.4 My Tickets</h3>
+            <p>In the “My Tickets” section, you can view all tickets you’ve purchased.</p>
+            <p>Each ticket shows a QR code for event entry, the ticket reference, event name, date, time, location, seat information, and status.</p>
+            <p>You can also download the ticket and its corresponding invoice.</p>
+            <p class="note">You can only view tickets purchased with this account. You may filter tickets by status and date.</p>
+            <a href="{{ asset('/images/tickets.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/tickets.png') }}" alt="Tickets List example">
+            </a>
+
+            <h3>3.5 Checkout</h3>
+            <p>As a logged-in user, you can complete purchases. Go to your cart, accept the General Terms and Conditions of Sale, and click “Checkout”.</p>
+            <p>On the checkout page, enter your card information (Stripe test mode) and your ZIP code.</p>
+            <p>After providing your payment details, click “Pay” to finalize the purchase. Once complete, you’ll receive your tickets by email and can access both tickets and invoices in your dashboard.</p>
+            <p class="note">
+                For card payments you need a valid card number, expiration date, and CVC. The ZIP code is used for verification.
+                For testing, you can use:
+                <ul>
+                <li><strong>Success:</strong> 4242 4242 4242 4242, exp. 12/35, CVC 253, ZIP 25365</li>
+                <li><strong>Decline:</strong> 4000 0000 0000 0002, exp. 12/35, CVC 253, ZIP 25365</li>
+                </ul>
+                See <a href="https://docs.stripe.com/testing">Stripe’s testing documentation</a> for more test cards.
+            </p>
+            <p class="note">After successful payment, you will receive a confirmation email with your tickets and invoice attached.</p>
+            <p class="note">The amount of available tickets is updated in real-time. If an offer is sold out, you will not be able to add it to your cart.</p>
+            <a href="{{ asset('/images/card_payment.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/card_payment.png') }}" alt="Card payment example">
+            </a>
+
+            <h3>3.6 Logout</h3>
+            <p>To log out, click the “Logout” button in the navigation bar.</p>
+            <p>You will be redirected to the homepage and any “Remember me” session will be cleared. To access protected areas again, you’ll need to log in.</p>
+            <a href="{{ asset('/images/user_menu.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/user_menu.png') }}" alt="User menu example">
+            </a>
         </div>
 
         <!-- ADMIN SECTION -->
