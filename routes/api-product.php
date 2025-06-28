@@ -30,7 +30,7 @@ Route::prefix('products')->group(function () {
         ->middleware('auth:sanctum');
 
     // This route is used to update the stock quantity, the sale, and the price of a product only for admin.
-    Route::put('/{product}/pricing', [ProductController::class, 'updatePricing'])
+    Route::patch('/{product}/pricing', [ProductController::class, 'updatePricing'])
         ->name('products.update.pricing')
         ->middleware('auth:sanctum');
 
