@@ -49,9 +49,7 @@ class StoreProductRequest extends FormRequest
      */
     public function rules(): array
     {
-        $imageRules = $this->isMethod('post')
-        ? ['required','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048']
-        : ['nullable','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048'];
+        $imageRules = ['nullable','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048'];
 
         return [
             // Global rules
