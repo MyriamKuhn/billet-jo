@@ -333,7 +333,7 @@ Returns a paginated list of all products (including out-of-stock), with optional
     /**
      * Update an existing product (admin only).
      *
-     * @OA\Patch(
+     * @OA\Post(
      *     path="/api/products/{product}",
      *     operationId="updateProduct",
      *     tags={"Products"},
