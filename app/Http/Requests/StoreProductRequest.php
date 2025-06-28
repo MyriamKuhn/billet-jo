@@ -43,6 +43,40 @@ class StoreProductRequest extends FormRequest
     }
 
     /**
+     * Prépare les données avant validation :
+     * force `places` en int pour chaque locale.
+     */
+    protected function prepareForValidation(): void
+    {
+        $input = $this->all();
+
+        if (isset($input['price'])) {
+            $input['price'] = (float) $input['price'];
+        }
+        if (isset($input['sale'])) {
+            $input['sale'] = $input['sale'] === '' ? null : (float) $input['sale'];
+        }
+        if (isset($input['stock_quantity'])) {
+            $input['stock_quantity'] = (int) $input['stock_quantity'];
+        }
+
+        if (isset($input['translations']) && is_array($input['translations'])) {
+            foreach (['fr','en','de'] as $loc) {
+                if (
+                    isset($input['translations'][$loc]['product_details'])
+                    && isset($input['translations'][$loc]['product_details']['places'])
+                ) {
+                    $input['translations'][$loc]['product_details']['places'] =
+                        (int) $input['translations'][$loc]['product_details']['places'];
+                }
+            }
+        }
+
+        // Merge des données modifiées dans la requête
+        $this->replace($input);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>

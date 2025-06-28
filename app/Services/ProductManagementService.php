@@ -14,13 +14,18 @@ class ProductManagementService
      */
     public function create(array $data): Product
     {
+        $price = $data['price'];
+        $sale  = $data['sale'] ?? null;
+        $stock = $data['stock_quantity'];
+
         // 1) Create the master product
+        $en = $data['translations']['en'];
         $product = Product::create([
-            'name'            => $data['translations']['en']['name'],
-            'price'           => $data['translations']['en']['price'],
-            'sale'            => $data['translations']['en']['sale']  ?? null,
-            'stock_quantity'  => $data['translations']['en']['stock_quantity'],
-            'product_details' => $data['translations']['en']['product_details'],
+            'name'            => $en['name'],
+            'price'           => $price,
+            'sale'            => $sale,
+            'stock_quantity'  => $stock,
+            'product_details' => $en['product_details'],
         ]);
 
         // 2) Loop on each locale to create the translations
@@ -45,15 +50,19 @@ class ProductManagementService
      */
     public function update(Product $product, array $data): Product
     {
+        $price  = $data['price'];
+    	$sale   = $data['sale'] ?? null;
+    	$stock  = $data['stock_quantity'];
+
         // 1) Update the master product
         $en = $data['translations']['en'];
         $product->update([
-            'name'            => $en['name'],
-            'price'           => $en['price'],
-            'sale'            => $en['sale']         ?? null,
-            'stock_quantity'  => $en['stock_quantity'],
-            'product_details' => $en['product_details'],
-        ]);
+			'name'            => $en['name'],
+			'price'           => $price,
+			'sale'            => $sale,
+			'stock_quantity'  => $stock,
+			'product_details' => $en['product_details'],
+		]);
 
         // 2) Loop on each locale to update the translations
         foreach (['fr','de'] as $locale) {
