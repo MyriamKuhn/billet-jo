@@ -25,7 +25,7 @@ Route::prefix('products')->group(function () {
         ->name('products.show');
 
     // This route is used to update an existing product only for admin.
-    Route::patch('/{product}', [ProductController::class, 'update'])
+    Route::post('/{product}', [ProductController::class, 'update'])
         ->name('products.update')
         ->middleware('auth:sanctum');
 
