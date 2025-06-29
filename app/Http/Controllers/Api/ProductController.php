@@ -263,7 +263,7 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *         @OA\Property(property="price",          type="number",  format="float", example=100.00),
      *         @OA\Property(property="sale",           type="number",  format="float", example=0.10),
      *         @OA\Property(property="stock_quantity", type="integer", example=50),
-     *         @OA\Property(property="image",          type="file", format="binary", description="Single image file applied to all translations")
+     *         @OA\Property(property="image",          type="file", format="binary", description="Single image file applied to all translations"),
      *
      *         @OA\Property(property="translations[en][name]",           type="string",  example="Opening Ceremony"),
      *         @OA\Property(property="translations[en][product_details][places]",      type="integer", example=1),
@@ -388,7 +388,7 @@ Updates the details of an existing product for all 3 languages.
      *         @OA\Property(property="price",          type="number",  format="float", example=100.00),
      *         @OA\Property(property="sale",           type="number",  format="float", example=0.10),
      *         @OA\Property(property="stock_quantity", type="integer", example=50),
-     *         @OA\Property(property="image",          type="file", format="binary", description="Single image file applied to all translations")
+     *         @OA\Property(property="image",          type="file", format="binary", description="Single image file applied to all translations"),
      *
      *         @OA\Property(property="translations[en][name]",           type="string",  example="Opening Ceremony"),
      *         @OA\Property(property="translations[en][product_details][places]",      type="integer", example=1),
