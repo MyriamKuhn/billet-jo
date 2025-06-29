@@ -51,8 +51,8 @@ class ProductManagementService
     public function update(Product $product, array $data): Product
     {
         $price  = $data['price'];
-    	$sale   = $data['sale'] ?? null;
-    	$stock  = $data['stock_quantity'];
+        $sale   = $data['sale'] ?? null;
+        $stock  = $data['stock_quantity'];
 
         // 1) Update the master product
         $en = $data['translations']['en'];
