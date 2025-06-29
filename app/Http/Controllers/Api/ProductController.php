@@ -435,6 +435,14 @@ Updates the details of an existing product for all 3 languages.
         // 1) Récupère les données validées
         $data = $request->validated();
 
+        $oldFilename = data_get($product->product_details, 'image');
+
+        if (! $request->hasFile('image')) {
+            foreach (['en','fr','de'] as $locale) {
+                $data['translations'][$locale]['product_details']['image'] = $oldFilename;
+            }
+        }
+
         // 2) Si on a uploadé une image…
         if ($request->hasFile('image')) {
             /** @var \Illuminate\Http\UploadedFile $image */
@@ -452,12 +460,6 @@ Updates the details of an existing product for all 3 languages.
             // Injecte ce même nom dans toutes les traductions
             foreach (['en', 'fr', 'de'] as $locale) {
                 $data['translations'][$locale]['product_details']['image'] = $filename;
-            }
-        } else {
-            foreach (['en','fr','de'] as $locale) {
-                unset(
-                    $data['translations'][$locale]['product_details']['image']
-                );
             }
         }
 
