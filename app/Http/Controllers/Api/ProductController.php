@@ -441,32 +441,33 @@ Updates the details of an existing product for all 3 languages.
      */
     public function update(StoreProductRequest $request, Product $product): JsonResponse
     {
+        // 1) Récupère les données validées
         $data = $request->validated();
 
-        // For eauch locale, process the image file if it exists
-        foreach (['en','fr','de'] as $locale) {
-            if ($file = $request->file("translations.{$locale}.product_details.image")) {
-                // delete the old image if it exists
-                $old = $product
-                    ->translations()
-                    ->where('locale', $locale)
-                    ->first()?->product_details['image']
-                    ?? null;
+        // 2) Si on a uploadé une image…
+        if ($request->hasFile('image')) {
+            /** @var \Illuminate\Http\UploadedFile $image */
+            $image    = $request->file('image');
+            $oldImage = data_get($product->product_details, 'image');
 
-                if ($old) {
-                    Storage::disk('images')->delete($old);
-                }
-                // store the new image in the 'images' disk
-                $path = $file->store('', 'images');
-                // replace the data with the new image name
-                $data['translations'][$locale]['product_details']['image']
-                    = basename($path);
+            // Supprime l’ancienne si elle existe
+            if ($oldImage) {
+                Storage::disk('images')->delete($oldImage);
+            }
+
+            // Stocke la nouvelle et récupère le nom
+            $filename = $image->store('', 'images');
+
+            // Injecte ce même nom dans toutes les traductions
+            foreach (['en', 'fr', 'de'] as $locale) {
+                $data['translations'][$locale]['product_details']['image'] = $filename;
             }
         }
 
-        // Product update
-        $this->productService->update($product, $data);
+        // 3) Toujours déléguer la mise à jour du produit (avec ou sans nouvelle image)
+        $updated = $this->productService->update($product, $data);
 
+        // 4) Répond en 204 (No Content)
         return response()->json(null, 204);
     }
 

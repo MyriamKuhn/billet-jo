@@ -73,7 +73,7 @@ class StoreProductRequest extends FormRequest
         }
 
         // Merge des données modifiées dans la requête
-        $this->replace($input);
+        $this->merge($input);
     }
 
     /**
@@ -90,6 +90,7 @@ class StoreProductRequest extends FormRequest
             'price'          => ['required', 'numeric', 'min:0'],
             'sale'           => ['nullable', 'numeric', 'min:0'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
+            'image'          => $imageRules,
 
             // Translations rules
             'translations'        => ['required','array','size:3'],
@@ -106,8 +107,7 @@ class StoreProductRequest extends FormRequest
             'translations.*.product_details.date'               => ['required','date_format:Y-m-d'],
             'translations.*.product_details.time'               => ['required','string'],
             'translations.*.product_details.location'           => ['required','string'],
-            'translations.*.product_details.category'           => ['required','string'],
-            'translations.*.product_details.image'              => $imageRules,
+            'translations.*.product_details.category'           => ['required','string']
         ];
     }
 }
