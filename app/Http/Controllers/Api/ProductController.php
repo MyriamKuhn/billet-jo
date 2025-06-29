@@ -453,6 +453,12 @@ Updates the details of an existing product for all 3 languages.
             foreach (['en', 'fr', 'de'] as $locale) {
                 $data['translations'][$locale]['product_details']['image'] = $filename;
             }
+        } else {
+            foreach (['en','fr','de'] as $locale) {
+                unset(
+                    $data['translations'][$locale]['product_details']['image']
+                );
+            }
         }
 
         // 3) Toujours déléguer la mise à jour du produit (avec ou sans nouvelle image)
