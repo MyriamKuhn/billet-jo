@@ -27,10 +27,10 @@ class UserController extends Controller
      *
      *     @OA\Parameter(name="page", in="query", description="Page number", @OA\Schema(type="integer", default=1)),
      *     @OA\Parameter(name="per_page", in="query", description="Items per page", @OA\Schema(type="integer", default=15)),
-     *     @OA\Parameter(name="firstname", in="query", description="Recherche par prénom (like)", @OA\Schema(type="string")),
-     *     @OA\Parameter(name="lastname",  in="query", description="Recherche par nom (like)",    @OA\Schema(type="string")),
-     *     @OA\Parameter(name="email",     in="query", description="Recherche par email (exact)",  @OA\Schema(type="string")),
-     *     @OA\Parameter(name="role",      in="query", description="Filtrer par rôle",            @OA\Schema(type="string", enum={"admin","employee","user"})),
+     *     @OA\Parameter(name="firstname", in="query", description="Search by firstname (like)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="lastname",  in="query", description="Search by name (like)",    @OA\Schema(type="string")),
+     *     @OA\Parameter(name="email",     in="query", description="Search by email (exact)",  @OA\Schema(type="string")),
+     *     @OA\Parameter(name="role",      in="query", description="Filter by roles",            @OA\Schema(type="string", enum={"admin","employee","user"})),
      *
      *     @OA\Response(
      *         response=200,

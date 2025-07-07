@@ -335,10 +335,10 @@
         <div class="section" id="admin">
             <h2 data-icon="🛠️">4. Admin</h2>
             <h3>4.1 Sign In (with optional “Remember me” and 2FA via Google Authenticator)</h3>
-            <p>As an admin, you can log in to access your profile, manage the users, tickets, orders, payments, employees, and complete see reports.</p>
-            <p>Click the “Login” button in the navigation bar or on the login page. By checking “Remember me”, you will stay logged in for 7 days.</p>
-            <p>Enter your registered email and password. If two-factor authentication (2FA) is enabled, enter the code from your authenticator app.</p>
-            <p>Once logged in, you can access your profile, and the management interfaces.</p>
+            <p>As an administrator, you can sign in to access your profile, manage users, tickets, orders, payments, employees, and view reports.</p>
+            <p>Click the “Login” button in the navigation bar or on the login page. If you check “Remember me,” your session will persist for 7 days.</p>
+            <p>Enter your registered email address and password. If two-factor authentication (2FA) is enabled, enter the code from your authenticator app.</p>
+            <p>Once signed in, you’ll have access to your profile and all administrative interfaces.</p>
             <a href="{{ asset('/images/menu_login.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/menu_login.png') }}" alt="Login example">
             </a>
@@ -347,75 +347,103 @@
             </a>
 
             <h3>4.2 Admin Dashboard</h3>
-            <p>After logging in, you will be redirected to your dashboard.</p>
-            <p>Here you can view and update your personal information.</p>
-            <p>You can change your first and last name.</p>
-            <p class="note">Only one admin account exists actually.</p>
-            <p>You can also update your email address.</p>
-            <p class="note">
-                If you change your email, you’ll receive a verification link (valid for 1 hour) and a cancellation link (valid for 48 hours) in case you did not request the change.
-            </p>
-            <p>Finally, you can change your password by providing your current password and choosing a new one.</p>
-            <p class="note">
-                Your new password must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.
-            </p>
-            <p>
-                You can enable two-factor authentication here. Scan the QR code with your authenticator app (or enter the code manually). After enabling, you’ll receive recovery codes—please save them somewhere safe. You can use these codes to disable 2FA if you ever lose access to your authenticator app.
-            </p>
-            <p class="note">
-                If you lose both your recovery codes and your authenticator app, you’ll need to contact support to disable two-factor authentication.
-            </p>
+            <p>After logging in, you’ll be redirected to the Admin Dashboard.</p>
+            <p>On this page, you can:</p>
+            <ul>
+                <li>View and update your first and last name.</li>
+                <li>Change your email address.</li>
+                <li>Reset your password—enter your current password, then choose a new one.</li>
+            </ul>
+            <p class="note">There is currently only one administrator account.</p>
+            <p class="note">When you update your email, you will receive a verification link (valid for 1 hour) and a cancellation link (valid for 48 hours) in case you did not request the change.</p>
+            <p class="note">Your new password must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.</p>
+            <p>You can also enable two-factor authentication by scanning the displayed QR code with your authenticator app (or by entering the code manually). After activation, you will receive recovery codes—store them securely. These codes let you disable 2FA if you lose access to your authenticator app.</p>
+            <p class="note">If you lose both your recovery codes and your authenticator app, contact developper to disable two-factor authentication.</p>
             <a href="{{ asset('/images/admin_dashboard.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/admin_dashboard.png') }}" alt="User Dashboard example">
             </a>
 
-            <h3>4.3 Manage users</h3>
+            <h3>4.3 Manage customers</h3>
+            <p>Each user record shows their name, email, registration date, last update date, and status (active/inactive, 2FA enabled/disabled, email verified or not).</p>
+            <p>You can edit a user’s first name, last name, and email address.</p>
+            <p class="note">Changing a customer’s email as an admin does not trigger a verification email.</p>
+            <p>You can toggle a user’s active status.</p>
+            <p class="note">An inactive user cannot sign in.</p>
+            <p>You can disable 2FA for an user but cannot enable it on their behalf.</p>
+            <p>You can manually mark a user’s email as verified if they experienced delivery issues.</p>
+            <p>Click the “See Details” button next to a user to view their full name, current email, and any pending email changes.</p>
+            <a href="{{ asset('/images/customers.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/customers.png') }}" alt="Customers List example">
+            </a>
 
             <h3>4.4 Manage tickets</h3>
-            <p>In the “Manage Tickets” section, you can view all existing tickets including some without stock.</p>
-            <p>You can update the available quantity, change the price or the sale percents.</p>
-            <p>You can also create new tickets by clicking the “Create Ticket” button.</p>
+            <p>Under “Manage Tickets,” you can see all tickets, including those with zero stock.</p>
+            <p>You can update the available quantity, adjust the price, or modify the sale percentage.</p>
+            <p>You can create a new ticket by clicking “Create Ticket.”</p>
             <a href="{{ asset('/images/tickets_admin.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/tickets_admin.png') }}" alt="Tickets List example">
             </a>
             <h4>Create Ticket</h4>
-            <p>To create a new ticket, click the “Create Ticket” button.</p>
-            <p>You have to fill all the fields in all 3 languages such as name, description, price, and available quantity.</p>
-            <p>And you have to add an image, the image must be in JPG, JPEG, PNG, GIF, or SVG format and not exceed 2 MB.</p>
-            <p>Once you have filled in all the necessary information, click "Save Changes" to save the ticket.</p>
+            <p>Click the “Create Ticket” button.</p>
+            <p>Complete all required fields in all supported languages: name, description, price, and available quantity.</p>
+            <p>Upload an image (JPG, JPEG, PNG, GIF, or SVG; max 2 MB).</p>
+            <p>When finished, click “Save Changes” to add the ticket.</p>
             <a href="{{ asset('/images/tickets_create.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/tickets_create.png') }}" alt="Create Ticket example">
             </a>
-            <h4>Change Price, sale or quantity</h4>
-            <p>You can update easily in the list each price, sale or quantity in stock.</p>
-            <p>Update the fields you want to change and click "Save Changes" to apply.</p>
-            <p class="note">Some changes can take few time before they appears on the site.</p>
+            <h4>Modify Price, Sale, or Quantity</h4>
+            <p>In the ticket list, edit the price, sale percentage, or quantity directly.</p>
+            <p>Click “Save Changes” to apply your updates.</p>
+            <p class="note">Updates may take a few moments to appear on the live site.</p>
             <h4>Update Ticket Details</h4>
-            <p>To update a ticket, click the "Update Details" button next to the ticket you want to modify.</p>
-            <p>You can change all details in one ticket, take care to change it in all languages if needed.</p>
-            <p>You have not to add a new image, if you wont change it.</p>
-            <p>Click on the "Save Changes" to apply your changes.</p>
-            <p class="note">All fields needs to be filled and the image must be in JPG, JPEG, PNG, GIF, or SVG format and not exceed 2 MB. Some changes can take few time before they appears on the site.</p>
+            <p>Click “Update Details” next to the ticket you wish to modify.</p>
+            <p>You can change any field, and you do not need to re-upload the image if it remains the same.</p>
+            <p>Click “Save Changes” to commit your edits.</p>
+            <p class="note">All fields are required. The image must meet the same format and size constraints.</p>
             <a href="{{ asset('/images/tickets_update.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/tickets_update.png') }}" alt="Update Ticket example">
             </a>
             <h4>Duplicate Ticket</h4>
-            <p>To duplicate a ticket, click the "Duplicate Ticket" button next to the ticket you want to copy.</p>
-            <p>This will create a new ticket with the same details, which you can then modify as needed.</p>
-            <p class="note">This is useful for creating similar tickets without having to fill in all the details again.</p>
+            <p>Click “Duplicate Ticket” next to the ticket you want to copy.</p>
+            <p>A new ticket with the same details will be created for you to modify.</p>
+            <p class="note">This speeds up creating similar tickets.</p>
             <a href="{{ asset('/images/tickets_duplicate.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/tickets_duplicate.png') }}" alt="Duplicate Ticket example">
             </a>
-            <p class="note">All fields needs to be filled and the image must be in JPG, JPEG, PNG, GIF, or SVG format and not exceed 2 MB. Some changes can take few time before they appears on the site.</p>
             <h4>Delete Ticket</h4>
-            <p>It is not possible to delete a ticket, but you can set the available quantity to 0.</p>
-            <p>This will remove the ticket from the site and prevent it from being purchased.</p>
+            <p>You cannot delete a ticket directly; set its available quantity to 0 instead.</p>
+            <p>The ticket will no longer appear on the site or be purchasable.</p>
 
             <h3>4.5 Manage orders</h3>
 
             <h3>4.6 Manage payments</h3>
 
             <h3>4.7 Manage employees</h3>
+            <p>In the “Manage Employees” section, you can view all registered employees.</p>
+            <p>Each employee record shows their first name, last name, email address, registration date, last update date, and status (active/inactive, 2FA enabled/disabled, email verified or not).</p>
+            <p>You can edit an employee’s first name, last name, and email address.</p>
+            <p class="note">Changing an employee’s email as an administrator does not trigger a verification email.</p>
+            <p>You can also toggle an employee’s active status.</p>
+            <p class="note">If an employee is deactivated, they cannot sign in.</p>
+            <p>You can disable 2FA for an employee, but you cannot enable it on their behalf.</p>
+            <p>Finally, you can manually mark an employee’s email as verified if they experienced delivery issues.</p>
+            <p>Click the “See Details” button next to an employee to view their full name, current email, and any pending email change.</p>
+            <a href="{{ asset('/images/employees.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employees.png') }}" alt="Employees List example">
+            </a>
+            <h4>Create Employee</h4>
+            <p>Click the “Create Employee” button to add a new employee.</p>
+            <ul>
+                <li>Enter the employee’s first name and last name.</li>
+                <li>Provide a valid email address.</li>
+                <li>Choose a secure password and confirm it.</li>
+            </ul>
+            <p>Once all fields are completed, click “Create Employee” to save.</p>
+            <p class="note">Passwords must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.
+            Newly created employees are automatically activated and their email is marked as verified.</p>
+            <a href="{{ asset('/images/employees_create.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employees_create.png') }}" alt="Create Employee example">
+            </a>
 
             <h3>4.8 Reports</h3>
 
