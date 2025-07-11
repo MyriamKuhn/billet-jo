@@ -279,7 +279,9 @@ class TicketService
             'status'        => PaymentStatus::Paid->value,
             'payment_method'=> 'free',
             'amount'        => 0.0,
-            'cart_snapshot' => [$itemData],
+            'cart_snapshot' => [
+                'items' => [ $itemData ]
+            ],
             'invoice_link'  => $invoiceFilename,
         ]);
 
