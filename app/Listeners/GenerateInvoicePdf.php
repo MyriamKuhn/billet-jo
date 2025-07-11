@@ -24,9 +24,13 @@ class GenerateInvoicePdf
         $payment = $event->payment;
 
         app()->setLocale($event->locale);
+
+        $items = $payment->cart_snapshot['items'] ?? [];
+
         // Generate the PDF
         $pdf = Pdf::loadView('invoices.template', [
             'payment' => $payment,
+            'items'   => $items,
         ]);
 
         // Store the PDF in the 'invoices' disk
