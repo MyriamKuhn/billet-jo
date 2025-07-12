@@ -288,7 +288,7 @@
 
             <h3>3.3 My Orders</h3>
             <p>In the “My Orders” section, you can view all your past and current orders.</p>
-            <p>Each order displays the date, total amount, and status (e.g., Pending, Completed).</p>
+            <p>Each order displays the date, total amount, and status (e.g., paid, pending).</p>
             <p>Click the icon to download the invoice for that order.</p>
             <p class="note">You can only view orders placed with this account. You may filter orders by status, date, or reference number.</p>
             <a href="{{ asset('/images/orders.png') }}" target="_blank" rel="noopener">
@@ -297,7 +297,7 @@
 
             <h3>3.4 My Tickets</h3>
             <p>In the “My Tickets” section, you can view all tickets you’ve purchased.</p>
-            <p>Each ticket shows a QR code for event entry, the ticket reference, event name, date, time, location, seat information, and status.</p>
+            <p>Each ticket shows a QR code for event entry, the ticket reference, event name (always in the ordered language), date, time, location, seat information, and status.</p>
             <p>You can also download the ticket and its corresponding invoice.</p>
             <p class="note">You can only view tickets purchased with this account. You may filter tickets by status and date.</p>
             <a href="{{ asset('/images/tickets.png') }}" target="_blank" rel="noopener">
@@ -345,6 +345,7 @@
             <a href="{{ asset('/images/menu_2fa.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/menu_2fa.png') }}" alt="2FA example">
             </a>
+            <p class="note">Admins cannot order tickets; they don’t have access to the cart or the checkout page.</p>
 
             <h3>4.2 Admin Dashboard</h3>
             <p>After logging in, you’ll be redirected to the Admin Dashboard.</p>
@@ -415,6 +416,39 @@
             <p>The ticket will no longer appear on the site or be purchasable.</p>
 
             <h3>4.5 Manage orders</h3>
+            <p>In the “Manage Orders” section, you can view all orders.</p>
+            <p>Each order displays the QR code, ticket ID, payment status, ticket name (always showed in users language), date, time and location, the paid price, the purchase date, and—if applicable—the used, refunded or cancelled date, as well as the status (e.g., used, issued).</p>
+            <p>You can filter orders by status or by customer using the customer dropdown.</p>
+            <p>You can download the ticket and the invoice for paid tickets.</p>
+            <p>You can also change the status of any order if needed.</p>
+            <p class="note">Statuses:<br>
+                <strong>Issued</strong> (for unused tickets)<br>
+                <strong>Used</strong> (when the ticket has been used)<br>
+                <strong>Refunded</strong> (when the ticket has been refunded by an admin)<br>
+                <strong>Cancelled</strong> (when the ticket has been cancelled by an admin)
+            </p>
+            <a href="{{ asset('/images/orders_admin.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/orders_admin.png') }}" alt="Orders List example">
+            </a>
+            <h4>Create Free Tickets</h4>
+            <p>Click the “Create Free Ticket” button to add a new free ticket.</p>
+            <p>Enter the customer ID, ticket ID, quantity, and select the user’s language so that the ticket and invoice are sent in the correct language.</p>
+            <p>Once all fields are completed, click “Create Free Ticket” to save.</p>
+            <p class="note">
+                Free tickets are not paid, so no payment information is required.
+                The customer will receive the ticket by email, and it will appear in their account panel.
+                The admin can preview the ticket to confirm the information before creating it.
+                It is not possible to create a free ticket for an admin or an employee.
+            </p>
+            <a href="{{ asset('/images/orders_create_free.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/orders_create_free.png') }}" alt="Create Free Ticket example">
+            </a>
+            <p class="note">
+                You can find the customer ID in the “Manage Customers” section and the ticket ID in the “Manage Tickets” section.
+            </p>
+            <p class="note">
+                The number following “#” is the customer’s ID, and the number following “ID” is the ticket’s ID.
+            </p>
 
             <h3>4.6 Manage payments</h3>
 
