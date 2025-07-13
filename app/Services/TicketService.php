@@ -146,6 +146,7 @@ class TicketService
                         ->where('uuid', $paymentUuid)
                         ->firstOrFail();
 
+        /** @var \App\Models\User $user */
         $user = $payment->user;
         $createdTickets = [];
 
@@ -293,7 +294,39 @@ class TicketService
     }
 
     /**
-     * Scan a ticket and validate it.
+     * Get ticket information by QR code token.
+     *
+     * @param  string $token
+     * @return array
+     */
+    public function getInfoByQrToken(string $token): array
+    {
+        $qrFilename = "qr_{$token}.png";
+
+        $ticket = Ticket::with(['user','product'])
+                        ->where('qr_filename', $qrFilename)
+                        ->firstOrFail();
+
+        return [
+            'token'  => $ticket->token,
+            'status' => $ticket->status,
+            'user'   => [
+                'firstname' => $ticket->user->firstname,
+                'lastname'  => $ticket->user->lastname,
+                'email'     => $ticket->user->email,
+            ],
+            'event'  => [
+                'name'     => $ticket->product->name,
+                'date'     => $ticket->product->product_details['date'] ?? null,
+                'time'     => $ticket->product->product_details['time'] ?? null,
+                'location' => $ticket->product->product_details['location'] ?? null,
+                'places'   => $ticket->product->product_details['places'] ?? null,
+            ],
+        ];
+    }
+
+    /**
+     * Validate a ticket by scanning the QR code token.
      *
      * @param  string $token
      * @return array
@@ -314,17 +347,8 @@ class TicketService
         ]);
 
         return [
-            'user' => [
-                'firstname' => $ticket->user->firstname,
-                'lastname'  => $ticket->user->lastname,
-                'email'     => $ticket->user->email,
-            ],
-            'event' => [
-                'name'     => $ticket->product->name,
-                'date'     => $ticket->product->product_details['date'] ?? null,
-                'time'     => $ticket->product->product_details['time'] ?? null,
-                'location' => $ticket->product->product_details['location'] ?? null,
-            ],
+            'status'  => $ticket->status,
+            'used_at' => $ticket->used_at,
         ];
     }
 

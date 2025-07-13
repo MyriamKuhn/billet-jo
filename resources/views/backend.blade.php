@@ -399,8 +399,10 @@ const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
             <p><code>POST /api/users/employees</code></p>
 
             <h3>7.5 Ticket scanning for employees</h3>
+            <p><code>GET /api/tickets/scan/{token}</code></p>
+            <p class="note">After scanning the QR code, the employee calls this endpoint to retrieve the ticket details (customer info, event info, ticket token and current status). The <code>{token}</code> parameter must be the UUID encoded in the QR code.</p>
             <p><code>POST /api/tickets/scan/{token}</code></p>
-            <p class="note">⚠️ After scanning the ticket is validated and mark as <code>used</code>.</p>
+            <p class="note">⚠️ To validate the ticket and mark it as <code>used</code>, the employee must send the <code>{token}</code> (the UUID that he received by the GET) to this endpoint.</p>
 
             <h3>7.6 Payments (admin)</h3>
             <ul>
