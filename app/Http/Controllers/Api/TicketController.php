@@ -635,7 +635,7 @@ class TicketController extends Controller
      *   path="/api/tickets/scan/{token}",
      *   summary="Validate entry ticket by QR code scan",
      *   description="Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
-     *   operationId="scanTicket",
+     *   operationId="validateTicket",
      *   tags={"Tickets"},
      *   security={{"bearerAuth":{}}},
      *
