@@ -17,7 +17,7 @@ use App\Http\Requests\TicketCreateRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\SalesStatsRequest;
 use App\Http\Resources\ProductSalesResource;
-
+use Illuminate\Http\JsonResponse;
 
 class TicketController extends Controller
 {
@@ -566,12 +566,12 @@ class TicketController extends Controller
     }
 
     /**
-     * Scan a ticket QR code and mark it as used (employee only).
+     * Scan a ticket QR code and returns user & event info (employee only).
      *
-     * @OA\Post(
+     * @OA\Get(
      *   path="/api/tickets/scan/{token}",
-     *   summary="Scan ticket QR and validate entry",
-     *   description="Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
+     *   summary="Scan ticket QR and returns user & event info",
+     *   description="Employee scans a ticket token and retrieves user and event details.",
      *   operationId="scanTicket",
      *   tags={"Tickets"},
      *   security={{"bearerAuth":{}}},
@@ -588,9 +588,11 @@ class TicketController extends Controller
      *
      *   @OA\Response(
      *     response=200,
-     *     description="Ticket validated: returns attendee & event info",
+     *     description="Informations du ticket trouvées",
      *     @OA\JsonContent(
      *       type="object",
+     *       @OA\Property(property="token",  type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000"),
+     *       @OA\Property(property="status", type="string", example="issued"),
      *       @OA\Property(
      *         property="user",
      *         type="object",
@@ -609,6 +611,52 @@ class TicketController extends Controller
      *     )
      *   ),
      *
+     *   @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
+     *   @OA\Response(response=403, ref="#/components/responses/Forbidden"),
+     *   @OA\Response(response=404, ref="#/components/responses/NotFound"),
+     *   @OA\Response(response=500, ref="#/components/responses/InternalError")
+     * )
+     *
+     * @param Request $request
+     * @param string  $token
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function showTicket(TicketScanRequest $request, string $token): JsonResponse
+    {
+        $ticketInfo = $this->ticketService->getInfoByQrToken($token);
+
+        return response()->json($ticketInfo, 200);
+    }
+
+    /**
+     * Validate a ticket with the token returned by the QR code scan. (employee only)
+     *
+     * @OA\Post(
+     *   path="/api/tickets/scan/{token}",
+     *   summary="Validate entry ticket by QR code scan",
+     *   description="Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
+     *   operationId="scanTicket",
+     *   tags={"Tickets"},
+     *   security={{"bearerAuth":{}}},
+     *
+     *   @OA\Parameter(
+     *     name="token",
+     *     in="path",
+     *     required=true,
+     *     description="Unique ticket UUID token from QR code",
+     *     @OA\Schema(type="string", format="uuid", example="550e8400-e29b-41d4-a716-446655440000")
+     *   ),
+     *
+     *   @OA\Response(
+     *     response=200,
+     *     description="Ticket validated: returns status and timestamp.",
+     *     @OA\JsonContent(
+     *       type="object",
+     *       @OA\Property(property="status",  type="string",   example="used"),
+     *       @OA\Property(property="used_at", type="string", format="date-time", example="2025-07-14T12:34:56+02:00")
+     *     )
+     *   ),
+     *
      *   @OA\Response(
      *     response=409,
      *     description="Ticket already processed: returns status, timestamp, attendee & event info",
@@ -616,21 +664,6 @@ class TicketController extends Controller
      *       type="object",
      *       @OA\Property(property="status",    type="string", example="used"),
      *       @OA\Property(property="timestamp", type="string", format="date-time", example="2025-05-10T15:00:00+02:00"),
-     *       @OA\Property(
-     *         property="user",
-     *         type="object",
-     *         @OA\Property(property="firstname", type="string", example="John"),
-     *         @OA\Property(property="lastname",  type="string", example="Doe"),
-     *         @OA\Property(property="email",     type="string", example="john.doe@example.com")
-     *       ),
-     *       @OA\Property(
-     *         property="event",
-     *         type="object",
-     *         @OA\Property(property="name",     type="string", example="Concert Live"),
-     *         @OA\Property(property="date",     type="string", format="date", example="2024-07-26"),
-     *         @OA\Property(property="time",     type="string", format="time", example="20:00"),
-     *         @OA\Property(property="location", type="string", example="Stade de France")
-     *       ),
      *       @OA\Property(property="code",    type="string", example="ticket_already_processed"),
      *       @OA\Property(property="message", type="string", example="This ticket was already used on 2025-05-10T15:00:00+02:00")
      *     )

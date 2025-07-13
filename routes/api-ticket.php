@@ -46,6 +46,11 @@ Route::prefix('tickets')->group(function () {
         ->middleware('auth:sanctum')
         ->name('tickets.user.qr');
 
+    // This route is used to get the ticket details for the user from the QR code
+    Route::get('/scan/{token}', [TicketController::class, 'showTicket'])
+        ->middleware('auth:sanctum')
+        ->name('tickets.user.qr');
+
     // This route is used for the employee to scan the QR code and mark the ticket as used
     Route::post('/scan/{token}', [TicketController::class, 'scanTicket'])
         ->middleware('auth:sanctum')
