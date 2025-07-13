@@ -518,6 +518,27 @@
             </a>
 
             <h3>4.8 Reports</h3>
+            <p>In the Reports section, you can view and download sales reports.</p>
+            <p>Reports are generated from your sales data and can be sorted by sale amount.</p>
+            <p>Each report includes:</p>
+            <ul>
+                <li>Ticket ID</li>
+                <li>Ticket name</li>
+                <li>Sale amount</li>
+            </ul>
+            <p>Click the <strong>Download Report</strong> button to save the report as a CSV or Excel file.</p>
+            <p class="note">
+                The file and column headers are localized to your language, and the filename includes the current date.
+            </p>
+            <a href="{{ asset('/images/reports.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/reports.png') }}" alt="Reports example">
+            </a>
+            <a href="{{ asset('/images/reports_excel.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/reports_excel.png') }}" alt="Excel Reports example">
+            </a>
+            <a href="{{ asset('/images/reports_csv.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/reports_csv.png') }}" alt="CSV Reports example">
+            </a>
 
             <h3>4.9 Logout</h3>
             <p>To log out, click the “Logout” button in the navigation bar.</p>
