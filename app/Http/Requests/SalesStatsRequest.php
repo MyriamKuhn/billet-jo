@@ -23,7 +23,7 @@ class SalesStatsRequest extends FormRequest
     {
         return [
             'q'          => ['sometimes','string'],                        // recherche sur nom produit
-            'sort_by'    => ['sometimes','in:product_name,sales_count'],   // tri
+            'sort_by'    => ['sometimes','in:sales_count'],   // tri
             'sort_order' => ['sometimes','in:asc,desc'],
             'per_page'   => ['sometimes','integer','min:1','max:100'],
             'page'       => ['sometimes','integer','min:1'],
