@@ -666,7 +666,7 @@ class TicketController extends Controller
      *     @OA\Parameter(ref="#/components/parameters/AcceptLanguageHeader"),
      *
      *     @OA\Parameter(name="q", in="query", description="Search by product name", @OA\Schema(type="string")),
-     *     @OA\Parameter(name="sort_by", in="query", description="Sort by field", @OA\Schema(type="string", enum={"product_name","sales_count"}, default="sales_count")),
+     *     @OA\Parameter(name="sort_by", in="query", description="Sort by field", @OA\Schema(type="string", enum={"sales_count"}, default="sales_count")),
      *     @OA\Parameter(name="sort_order", in="query", description="Sort direction", @OA\Schema(type="string", enum={"asc","desc"}, default="desc")),
      *     @OA\Parameter(name="per_page", in="query", description="Items per page", @OA\Schema(type="integer", default=15)),
      *     @OA\Parameter(name="page", in="query", description="Page number", @OA\Schema(type="integer", default=1)),
