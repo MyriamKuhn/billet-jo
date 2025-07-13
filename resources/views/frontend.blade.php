@@ -438,7 +438,8 @@
                 Free tickets are not paid, so no payment information is required.
                 The customer will receive the ticket by email, and it will appear in their account panel.
                 The admin can preview the ticket to confirm the information before creating it.
-                It is not possible to create a free ticket for an admin or an employee.
+                It is not possible to create a free ticket for an admin or an employee and if there are no tickets available.
+                By creating a free ticket, the ticket is immediately decreased from the available quantity.
             </p>
             <a href="{{ asset('/images/orders_create_free.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/orders_create_free.png') }}" alt="Create Free Ticket example">
