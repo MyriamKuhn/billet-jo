@@ -451,6 +451,43 @@
             </p>
 
             <h3>4.6 Manage payments</h3>
+            <p>In the “Manage Payments” section, you can view all payments and invoices.</p>
+            <p>Each payment record shows:</p>
+            <ul>
+                <li>The payment UUID (a unique identifier for tracking transactions)</li>
+                <li>Date</li>
+                <li>Amount</li>
+                <li>Status (<strong>paid</strong>, <strong>pending</strong>, <strong>failed</strong>, or <strong>refunded</strong>)</li>
+                <li>Payment method (<strong>stripe</strong>, <strong>paypal</strong>, or <strong>free</strong>)</li>
+                <li>Customer info</li>
+                <li>Cart details</li>
+            </ul>
+            <p>You can filter payments by status or method, and search by customer email or UUID.</p>
+            <p>You can also download each invoice:</p>
+            <a href="{{ asset('/images/payments.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/payments.png') }}" alt="Payments List example">
+            </a>
+            <p class="note">The status meanings:</p>
+            <ul class="note">
+                <li><strong>Paid</strong> – the payment was successful and the order is complete.</li>
+                <li><strong>Pending</strong> – the payment is still being processed.</li>
+                <li><strong>Failed</strong> – the payment did not go through (e.g., insufficient funds or payment error).</li>
+                <li><strong>Refunded</strong> – the payment was returned to the customer.</li>
+            </ul>
+            <p class="note">Currently supported payment methods are <strong>stripe</strong>, and <strong>free</strong>.</p>
+            <h4>Refund a payment</h4>
+            <p>To refund a payment:</p>
+            <ol>
+                <li>Enter the amount to refund (must be ≤ the original amount).</li>
+                <li>Click the “Refund” button next to the payment.</li>
+            </ol>
+            <p class="note">You can only refund payments with status <strong>paid</strong>.</p>
+            <p class="note">
+                Refunds are not processed automatically by the payment provider. You must initiate the refund in your payment gateway, and then mark the corresponding ticket as <strong>refunded</strong> to invalidate it.
+            </p>
+            <a href="{{ asset('/images/payments_refund.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/payments_refund.png') }}" alt="Payments Refund example">
+            </a>
 
             <h3>4.7 Manage employees</h3>
             <p>In the “Manage Employees” section, you can view all registered employees.</p>
