@@ -657,7 +657,7 @@ class TicketController extends Controller
      * Get ticket sales count per product (admin only).
      *
      * @OA\Get(
-     *     path="/api/admin/sales",
+     *     path="/api/tickets/admin/sales",
      *     summary="Get ticket sales count per product (admin only)",
      *     description="Returns a paginated list of products with the number of tickets sold for each product. Admin only.",
      *     tags={"Tickets"},
