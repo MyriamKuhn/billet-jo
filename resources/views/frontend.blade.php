@@ -582,17 +582,17 @@
             </a>
 
             <h3>5.3 Scan Tickets</h3>
-            <p>In the “Scan Tickets” section, you can scan tickets using a QR code scanner or manually enter the ticket code.</p>
+            <p>In “Scan Tickets,” you can scan a ticket’s QR code or enter its code manually.</p>
             <p>To scan a ticket:</p>
             <ol>
                 <li>Click the “Scan Ticket” button.</li>
                 <li>Use your device’s camera to scan the QR code on the ticket.</li>
-                <li>You will be redirected to the tickets details where you have to check if all the informations are correct. Especially check the number of places and if it's the right ticket for the event.</li>
-                <li>Click the “Validate Ticket” button to mark it as used.</li>
+                <li>Review the ticket details—especially the event, date, time, and number of seats.</li>
+                <li>Click “Validate Ticket” to mark it as used.</li>
             </ol>
-            <p class="note">You can also manually enter the ticket code if scanning is not possible. This is the code showed in the ticket PDF under the QR Code.</p>
-            <p class="note">Once a ticket is validated, it cannot be used again.</p>
-            <p class="note">If the ticket is already used, you will see a message indicating that the ticket has already been used.</p>
+            <p class="note">If scanning fails, you can enter the ticket code manually. It’s printed beneath the QR code on the PDF.</p>
+            <p class="note">Once validated, a ticket cannot be reused.</p>
+            <p class="note">If a ticket is already used, you’ll see an “already used” message.</p>
             <a href="{{ asset('/images/employee_scan.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/employee_scan.png') }}" alt="Scan Ticket example">
             </a>
@@ -606,17 +606,17 @@
                 <img src="{{ asset('/images/employee_used_ticket.png') }}" alt="Used Ticket example">
             </a>
             <h3>5.4 Validate Tickets</h3>
-            <p>In the “Validate Tickets” section, you can manually validate tickets by entering the ticket reference.</p>
+            <p>In “Validate Tickets,” you can manually validate unused tickets by entering their reference.</p>
             <p>To validate a ticket:</p>
             <ol>
                 <li>Click the “Validate Ticket” button.</li>
-                <li>Enter the ticket reference in the provided field.</li>
-                <li>Click the “Validate” button.</li>
+                <li>Enter the ticket reference in the field provided.</li>
+                <li>Click “Validate.”</li>
             </ol>
-            <p class="note">You can only validate tickets that have not been used yet. Please be carefull with this because it will validate the tickets without you can check them before!</p>
-            <p class="note">You find the ticket reference in the either in the email body from the tickets or in the admin area.</p>
-            <p class="note">If the ticket is already used, you will see a message indicating that the validation failed and why.</p>
-            <p class="note">If the ticket is valid, you will see a message indicating that the ticket has been successfully validated.</p>
+            <p class="note">Only tickets with status “Issued” can be validated. Double-check before you proceed, as validation is final.</p>
+            <p class="note">You can find the ticket reference in the email the user received or in the admin area.</p>
+            <p class="note">If the ticket is already used or invalid, you’ll see an error explaining why validation failed.</p>
+            <p class="note">If valid, you’ll see a success message confirming the ticket is now validated.</p>
             <a href="{{ asset('/images/employee_validate_manual.png') }}" target="_blank" rel="noopener">
                 <img src="{{ asset('/images/employee_validate_manual.png') }}" alt="Validate Ticket manually example">
             </a>
