@@ -283,7 +283,7 @@
                 If you lose both your recovery codes and your authenticator app, you’ll need to contact support to disable two-factor authentication.
             </p>
             <a href="{{ asset('/images/user_dashboard.png') }}" target="_blank" rel="noopener">
-                <img src="{{ asset('/images/user_dashboard.png') }}" alt="User Dashboard example">
+                <img src="{{ asset('/images/user_dashboard.png') }}" alt="Admin Dashboard example">
             </a>
 
             <h3>3.3 My Orders</h3>
@@ -544,14 +544,91 @@
             <p>To log out, click the “Logout” button in the navigation bar.</p>
             <p>You will be redirected to the homepage and any “Remember me” session will be cleared. To access protected areas again, you’ll need to log in.</p>
             <a href="{{ asset('/images/admin_menu.png') }}" target="_blank" rel="noopener">
-                <img src="{{ asset('/images/admin_menu.png') }}" alt="User menu example">
+                <img src="{{ asset('/images/admin_menu.png') }}" alt="Admin menu example">
             </a>
         </div>
 
         <!-- EMPLOYEE SECTION -->
         <div class="section" id="employee">
             <h2 data-icon="👷">5. Employee</h2>
-            <p>Coming soon...</p>
+            <h3>5.1 Sign In (with optional “Remember me” and 2FA via Google Authenticator)</h3>
+            <p>As an employee, you can sign in to access your profile, scan and/or validate tickets.</p>
+            <p>Click the “Login” button in the navigation bar or on the login page. If you check “Remember me,” your session will persist for 7 days.</p>
+            <p>Enter your registered email address and password. If two-factor authentication (2FA) is enabled, enter the code from your authenticator app.</p>
+            <p>Once signed in, you’ll have access to your profile and all interfaces.</p>
+            <a href="{{ asset('/images/menu_login.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_login.png') }}" alt="Login example">
+            </a>
+            <a href="{{ asset('/images/menu_2fa.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_2fa.png') }}" alt="2FA example">
+            </a>
+            <p class="note">Employees cannot order tickets; they don’t have access to the cart or the checkout page.</p>
+
+            <h3>5.2 Employee Dashboard</h3>
+            <p>After logging in, you’ll be redirected to the Employee Dashboard.</p>
+            <p>On this page, you can:</p>
+            <ul>
+                <li>View and update your first and last name.</li>
+                <li>Change your email address.</li>
+                <li>Reset your password—enter your current password, then choose a new one.</li>
+            </ul>
+            <p class="note">Employee Accounts can only be created by the admin.</p>
+            <p class="note">When you update your email, you will receive a verification link (valid for 1 hour) and a cancellation link (valid for 48 hours) in case you did not request the change.</p>
+            <p class="note">Your new password must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.</p>
+            <p>You can also enable two-factor authentication by scanning the displayed QR code with your authenticator app (or by entering the code manually). After activation, you will receive recovery codes—store them securely. These codes let you disable 2FA if you lose access to your authenticator app.</p>
+            <p class="note">If you lose both your recovery codes and your authenticator app, contact admin to disable two-factor authentication.</p>
+            <a href="{{ asset('/images/employee_dashboard.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_dashboard.png') }}" alt="Employee Dashboard example">
+            </a>
+
+            <h3>5.3 Scan Tickets</h3>
+            <p>In the “Scan Tickets” section, you can scan tickets using a QR code scanner or manually enter the ticket code.</p>
+            <p>To scan a ticket:</p>
+            <ol>
+                <li>Click the “Scan Ticket” button.</li>
+                <li>Use your device’s camera to scan the QR code on the ticket.</li>
+                <li>You will be redirected to the tickets details where you have to check if all the informations are correct. Especially check the number of places and if it's the right ticket for the event.</li>
+                <li>Click the “Validate Ticket” button to mark it as used.</li>
+            </ol>
+            <p class="note">You can also manually enter the ticket code if scanning is not possible. This is the code showed in the ticket PDF under the QR Code.</p>
+            <p class="note">Once a ticket is validated, it cannot be used again.</p>
+            <p class="note">If the ticket is already used, you will see a message indicating that the ticket has already been used.</p>
+            <a href="{{ asset('/images/employee_scan.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_scan.png') }}" alt="Scan Ticket example">
+            </a>
+            <a href="{{ asset('/images/employee_validate.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validate.png') }}" alt="Validate Ticket example">
+            </a>
+            <a href="{{ asset('/images/employee_validated.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validated.png') }}" alt="Validated Ticket example">
+            </a>
+            <a href="{{ asset('/images/employee_used_ticket.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_used_ticket.png') }}" alt="Used Ticket example">
+            </a>
+            <h3>5.4 Validate Tickets</h3>
+            <p>In the “Validate Tickets” section, you can manually validate tickets by entering the ticket reference.</p>
+            <p>To validate a ticket:</p>
+            <ol>
+                <li>Click the “Validate Ticket” button.</li>
+                <li>Enter the ticket reference in the provided field.</li>
+                <li>Click the “Validate” button.</li>
+            </ol>
+            <p class="note">You can only validate tickets that have not been used yet. Please be carefull with this because it will validate the tickets without you can check them before!</p>
+            <p class="note">You find the ticket reference in the either in the email body from the tickets or in the admin area.</p>
+            <p class="note">If the ticket is already used, you will see a message indicating that the validation failed and why.</p>
+            <p class="note">If the ticket is valid, you will see a message indicating that the ticket has been successfully validated.</p>
+            <a href="{{ asset('/images/employee_validate_manual.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validate_manual.png') }}" alt="Validate Ticket manually example">
+            </a>
+            <a href="{{ asset('/images/employee_validation_failed.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validation_failed.png') }}" alt="Validation Failed example">
+            </a>
+            <h3>5.5 Logout</h3>
+            <p>To log out, click the “Logout” button in the navigation bar.</p>
+            <p>You will be redirected to the homepage and any “Remember me” session will be cleared. To access protected areas again, you’ll need to log in.</p>
+            <a href="{{ asset('/images/employee_menu.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_menu.png') }}" alt="Employee menu example">
+            </a>
         </div>
 
         <a href="{{ url('/') }}" class="bottom-back">← Back to Home</a>
