@@ -16,6 +16,8 @@ use Mockery;
 use Stripe\StripeClient;
 use App\Models\Cart;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 
 class PaymentControllerTest extends TestCase
 {
@@ -188,5 +190,81 @@ class PaymentControllerTest extends TestCase
             ->assertJsonFragment([
                  'You can only refund up to 70.', // message() construit via max_refund = 70
             ]);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(enabled: false)]
+    public function testWebhook_SkipsInvoiceGenerationWhenAlreadyPaid()
+    {
+        // 1) Prépare un UUID et le payload JSON simulant l'événement Stripe
+        $uuid    = '550e8400-e29b-41d4-a716-446655440000';
+        $payload = json_encode([
+            'type' => 'payment_intent.succeeded',
+            'data' => [
+                'object' => [
+                    'metadata' => ['payment_uuid' => $uuid],
+                    'id'       => 'pi_123456',
+                ],
+            ],
+        ]);
+        $sig     = 'test-signature';
+
+        // 2) Fixture de config pour la clé webhook
+        config(['services.stripe.webhook_secret' => 'secret']);
+
+        // 3) Mock Stripe\Webhook::constructEvent() pour renvoyer un objet event
+        $event = (object)[
+            'type' => 'payment_intent.succeeded',
+            'data' => (object)[
+                'object' => (object)[
+                    'metadata' => ['payment_uuid' => $uuid],
+                    'id'       => 'pi_123456',
+                ],
+            ],
+        ];
+        Mockery::mock('alias:Stripe\Webhook')
+            ->shouldReceive('constructEvent')
+            ->once()
+            ->with($payload, $sig, 'secret')
+            ->andReturn($event);
+
+        // 4) Prépare un vrai modèle Payment avec wasJustPaid = false
+        /** @var \App\Models\Payment $paymentModel */
+        $paymentModel = \App\Models\Payment::factory()->make([
+            'uuid' => $uuid,
+        ]);
+        $paymentModel->wasJustPaid = false;
+
+        // 5) Mock du PaymentService pour renvoyer ce modèle
+        $paymentService = Mockery::mock(\App\Services\PaymentService::class);
+        $paymentService
+            ->shouldReceive('markAsPaidByUuid')
+            ->once()
+            ->with($uuid)
+            ->andReturn($paymentModel);
+
+        // 6) Espionne la façade Log pour vérifier l'appel à info($message)
+        \Illuminate\Support\Facades\Log::shouldReceive('info')
+            ->once()
+            ->with("Payment {$uuid} already marked as paid, skipping invoice generation.");
+
+        // 7) Instancie le controller
+        $controller = new \App\Http\Controllers\Api\PaymentController($paymentService);
+
+        // 8) Crée une Request contenant le payload et l'en‑tête Stripe-Signature
+        $request = \Illuminate\Http\Request::create(
+            '/api/payments/webhook',
+            'POST',
+            [], [], [], [],
+            $payload
+        );
+        $request->headers->set('Stripe-Signature', $sig);
+
+        // 9) Exécution
+        $response = $controller->webhook($request);
+
+        // 10) Assertions sur la réponse
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertSame([], $response->getData(true));
     }
 }

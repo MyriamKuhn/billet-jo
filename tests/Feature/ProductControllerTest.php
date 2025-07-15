@@ -87,20 +87,20 @@ class ProductControllerTest extends TestCase
 
     public function testStoreCreatesProduct()
     {
-        // 1) On fake le disque 'images'
+        // 1) Fake the disk
         Storage::fake('images');
 
-        // 2) On crée et authentifie un admin
+        // 2) Auth a fake admin
         $user = User::factory()->create(['role' => 'admin']);
         $this->actingAs($user, 'sanctum');
 
-        // 3) On prépare les données de base via la factory
+        // 3) Base data from factory
         $base = Product::factory()->make()->only(['name', 'price', 'sale']);
 
-        // 4) On génère un faux fichier image
+        // 4) The uploaded file
         $file = UploadedFile::fake()->image('product.png');
 
-        // 5) On prépare le détail commun à chaque traduction
+        // 5) Shared details *without* image
         $details = [
             'description' => 'Une description valide',
             'date'        => now()->addDay()->toDateString(),
@@ -108,14 +108,14 @@ class ProductControllerTest extends TestCase
             'location'    => 'Paris',
             'category'    => 'Électronique',
             'places'      => 10,
-            'image'       => $file,
         ];
 
-        // 6) On construit le payload complet avec translations pour en, fr et de
+        // 6) Build the payload, *including* top‐level 'image' => $file
         $payload = [
             'price'          => $base['price'],
             'sale'           => $base['sale'],
             'stock_quantity' => 50,
+            'image'          => $file,
             'translations'   => [
                 'en' => [
                     'name'            => $base['name'],
@@ -132,35 +132,31 @@ class ProductControllerTest extends TestCase
             ],
         ];
 
-        // 7) On mocke le service pour qu'il retourne un Product
+        // 7) Mock the create() call
         $serviceMock = Mockery::mock(ProductManagementService::class);
         $serviceMock
             ->shouldReceive('create')
             ->once()
-            ->withArgs(function(array $data) {
-                // On peut vérifier que les clés principales sont bien présentes
-                return isset($data['translations']['en']['product_details'])
-                    && isset($data['translations']['fr']['product_details'])
-                    && isset($data['translations']['de']['product_details']);
-            })
+            ->withArgs(fn(array $data) =>
+                // the stored filename should have been injected
+                isset($data['translations']['en']['product_details']['image'])
+            )
             ->andReturn(new Product());
         $this->app->instance(ProductManagementService::class, $serviceMock);
 
-        // 8) On envoie la requête (Laravel détecte l'UploadedFile et bascule en multipart)
+        // 8) Send as multipart/form-data
         $response = $this->post('/api/products', $payload);
 
-        // 9) On vérifie le statut HTTP
+        // 9) Assert 201
         $response->assertStatus(201);
 
-        // 10) On vérifie qu'un seul fichier a bien été stocké
+        // 10) Exactly one file should have been stored
         $files = Storage::disk('images')->allFiles();
         $this->assertCount(1, $files, 'On attend exactement un fichier stocké.');
 
-        // 11) On vérifie que ce fichier est bien un .png
-        $filename = basename($files[0]);
-        $this->assertStringEndsWith('.png', $filename);
+        // 11) It should end in .png
+        $this->assertStringEndsWith('.png', basename($files[0]));
 
-        // 12) On s'assure que Mockery ne laisse pas de mocks ouverts
         Mockery::close();
     }
 
@@ -181,44 +177,31 @@ class ProductControllerTest extends TestCase
             'location'    => 'Paris',
             'category'    => 'Électronique',
             'places'      => 10,
-            // pas d'« image » : on conserve l’ancienne
         ];
 
-        // 4) Payload complet avec sale et translations
+        // 4) Payload complet
         $payload = [
             'price'          => 123,
             'sale'           => 0.15,
             'stock_quantity' => 42,
             'translations'   => [
-                'en' => [
-                    'name'            => 'Nouveau nom',
-                    'product_details' => $details,
-                ],
-                'fr' => [
-                    'name'            => 'Nouveau nom',
-                    'product_details' => $details,
-                ],
-                'de' => [
-                    'name'            => 'Nouveau nom',
-                    'product_details' => $details,
-                ],
+                'en' => ['name' => 'Nouveau nom', 'product_details' => $details],
+                'fr' => ['name' => 'Nouveau nom', 'product_details' => $details],
+                'de' => ['name' => 'Nouveau nom', 'product_details' => $details],
             ],
         ];
 
-        // 5) Mock du service : on s’assure juste qu’il reçoit un Product et un array
+        // 5) Mock du service
         $serviceMock = Mockery::mock(ProductManagementService::class);
         $serviceMock
             ->shouldReceive('update')
             ->once()
-            ->with(
-                Mockery::type(Product::class),
-                Mockery::type('array')           // on n’impose plus le subset exact
-            )
+            ->with(Mockery::type(Product::class), Mockery::type('array'))
             ->andReturn($product);
         $this->app->instance(ProductManagementService::class, $serviceMock);
 
-        // 6) Requête PUT en JSON
-        $response = $this->putJson("/api/products/{$product->id}", $payload);
+        // 6) **POST** JSON instead of PUT
+        $response = $this->postJson("/api/products/{$product->id}", $payload);
 
         // 7) On attend bien 204 No Content
         $response->assertStatus(204);
@@ -230,15 +213,17 @@ class ProductControllerTest extends TestCase
     {
         Storage::fake('images');
 
-        // 1) Admin authentifié
+        // 1) Admin auth
         $user = User::factory()->create(['role' => 'admin']);
         Sanctum::actingAs($user, ['*']);
 
-        // 2) Produit existant (sans traduction pour l'instant)
+        // 2) Create product and set old image on the base JSON column
         $product = Product::factory()->create();
+        $product->update([
+            'product_details' => ['image' => 'old.png'],
+        ]);
 
-        // 3) On ajoute manuellement les traductions pour chaque locale,
-        //    avec l'ancienne image 'old.png'
+        // 3) Seed translations (as before) so your service mock still works
         foreach (['en', 'fr', 'de'] as $locale) {
             $product->translations()->create([
                 'locale'          => $locale,
@@ -255,13 +240,13 @@ class ProductControllerTest extends TestCase
             ]);
         }
 
-        // 4) On crée l'ancienne image sur le disque fake
+        // 4) Put the old file on the fake disk
         Storage::disk('images')->put('old.png', 'dummy');
 
-        // 5) Nouveau fichier à uploader
+        // 5) Prepare the new upload
         $newFile = UploadedFile::fake()->image('new.png');
 
-        // 6) Détail commun avec la nouvelle image
+        // 6) Shared details *without* any image key
         $details = [
             'description' => 'Desc mise à jour',
             'date'        => now()->addDay()->toDateString(),
@@ -269,14 +254,14 @@ class ProductControllerTest extends TestCase
             'location'    => 'Lyon',
             'category'    => 'Art',
             'places'      => 20,
-            'image'       => $newFile,
         ];
 
-        // 7) Payload complet avec translations (on modifie aussi le nom)
-        $updateData = [
+        // 7) Full payload with top‐level image
+        $payload = [
             'price'          => 200,
             'sale'           => 0.20,
             'stock_quantity' => 5,
+            'image'          => $newFile,      // ← critical
             'translations'   => [
                 'en' => [
                     'name'            => 'Nom modifié EN',
@@ -293,24 +278,23 @@ class ProductControllerTest extends TestCase
             ],
         ];
 
-        // 8) Mock du service (on ne vérifie pas le contenu exact ici)
+        // 8) Mock the service
         $serviceMock = Mockery::mock(ProductManagementService::class);
-        $serviceMock
-            ->shouldReceive('update')
+        $serviceMock->shouldReceive('update')
             ->once()
             ->andReturn($product);
         $this->app->instance(ProductManagementService::class, $serviceMock);
 
-        // 9) Requête multipart (Laravel détecte UploadedFile)
-        $response = $this->put("/api/products/{$product->id}", $updateData);
+        // 9) Call POST (multipart) to update
+        $response = $this->post("/api/products/{$product->id}", $payload);
 
-        // 10) Vérifie le statut 204
+        // 10) Expect 204
         $response->assertStatus(204);
 
-        // 11) L'ancienne image doit avoir été supprimée
+        // 11) old.png must be deleted
         Storage::disk('images')->assertMissing('old.png');
 
-        // 12) Une seule nouvelle image doit exister
+        // 12) Exactly one new image stored
         $files = Storage::disk('images')->allFiles();
         $this->assertCount(1, $files);
         $this->assertStringEndsWith('.png', basename($files[0]));
@@ -440,7 +424,7 @@ class ProductControllerTest extends TestCase
 
         $response = $this->actingAs($admin, 'sanctum')
             ->call(
-                'PUT',
+                'POST',
                 "/api/products/{$product->id}",
                 $payload,
                 [],      // cookies
@@ -487,7 +471,7 @@ class ProductControllerTest extends TestCase
         // 5) Hit the endpoint as an admin with PUT (not PATCH)
         $response = $this
             ->actingAs($admin, 'sanctum')
-            ->putJson("/api/products/{$product->id}/pricing", $payload);
+            ->patchJson("/api/products/{$product->id}/pricing", $payload);
 
         // 6) Assert 204 No Content
         $response->assertNoContent();

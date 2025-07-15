@@ -31,7 +31,31 @@ use App\Notifications\VerifyEmailNotification;
  *     @OA\Property(property="tickets", type="array", @OA\Items(ref="#/components/schemas/Ticket")),
  *     @OA\Property(property="payments", type="array", @OA\Items(ref="#/components/schemas/Payment")),
  *     @OA\Property(property="emailUpdate", type="object", ref="#/components/schemas/EmailUpdate"),
- * )
+ * ),
+ *
+ * @property \App\Enums\UserRole        $role
+ * @property bool                        $twofa_enabled
+ * @property bool                        $is_active
+ * @property \Illuminate\Support\Carbon|null   $email_verified_at
+ * @property \Illuminate\Support\Carbon|null   $created_at
+ * @property \Illuminate\Support\Carbon|null   $updated_at
+ * @property string|null                 $password_hash
+ * @property string|null                 $remember_token
+ * @property \App\Models\Cart|null        $cart
+ * @property \Illuminate\Database\Eloquent\Collection<int, \App\Models\Ticket> $tickets
+ * @property \Illuminate\Database\Eloquent\Collection<int, \App\Models\Payment> $payments
+ * @property \App\Models\EmailUpdate|null $emailUpdate
+ * @property string|null                 $twofa_secret
+ * @property string|null                 $twofa_recovery_codes
+ * @property string|null                 $twofa_secret_temp
+ * @property \Illuminate\Support\Carbon|null $twofa_secret_temp_updated_at
+ * @property \Illuminate\Support\Carbon|null $twofa_recovery_codes_updated_at
+ * @property \Illuminate\Support\Carbon|null $twofa_temp_expires_at
+ * @property string|null                 $firstname
+ * @property string|null                 $lastname
+ * @property string|null                 $email
+ * @property int  $id
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Ticket> $tickets
  */
 class User extends Authenticatable implements MustVerifyEmail
 {

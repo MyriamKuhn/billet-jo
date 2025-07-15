@@ -283,12 +283,12 @@
                 If you lose both your recovery codes and your authenticator app, you’ll need to contact support to disable two-factor authentication.
             </p>
             <a href="{{ asset('/images/user_dashboard.png') }}" target="_blank" rel="noopener">
-                <img src="{{ asset('/images/user_dashboard.png') }}" alt="User Dashboard example">
+                <img src="{{ asset('/images/user_dashboard.png') }}" alt="Admin Dashboard example">
             </a>
 
             <h3>3.3 My Orders</h3>
             <p>In the “My Orders” section, you can view all your past and current orders.</p>
-            <p>Each order displays the date, total amount, and status (e.g., Pending, Completed).</p>
+            <p>Each order displays the date, total amount, and status (e.g., paid, pending).</p>
             <p>Click the icon to download the invoice for that order.</p>
             <p class="note">You can only view orders placed with this account. You may filter orders by status, date, or reference number.</p>
             <a href="{{ asset('/images/orders.png') }}" target="_blank" rel="noopener">
@@ -297,7 +297,7 @@
 
             <h3>3.4 My Tickets</h3>
             <p>In the “My Tickets” section, you can view all tickets you’ve purchased.</p>
-            <p>Each ticket shows a QR code for event entry, the ticket reference, event name, date, time, location, seat information, and status.</p>
+            <p>Each ticket shows a QR code for event entry, the ticket reference, event name (always in the ordered language), date, time, location, seat information, and status.</p>
             <p>You can also download the ticket and its corresponding invoice.</p>
             <p class="note">You can only view tickets purchased with this account. You may filter tickets by status and date.</p>
             <a href="{{ asset('/images/tickets.png') }}" target="_blank" rel="noopener">
@@ -334,13 +334,301 @@
         <!-- ADMIN SECTION -->
         <div class="section" id="admin">
             <h2 data-icon="🛠️">4. Admin</h2>
-            <p>Coming soon...</p>
+            <h3>4.1 Sign In (with optional “Remember me” and 2FA via Google Authenticator)</h3>
+            <p>As an administrator, you can sign in to access your profile, manage users, tickets, orders, payments, employees, and view reports.</p>
+            <p>Click the “Login” button in the navigation bar or on the login page. If you check “Remember me,” your session will persist for 7 days.</p>
+            <p>Enter your registered email address and password. If two-factor authentication (2FA) is enabled, enter the code from your authenticator app.</p>
+            <p>Once signed in, you’ll have access to your profile and all administrative interfaces.</p>
+            <a href="{{ asset('/images/menu_login.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_login.png') }}" alt="Login example">
+            </a>
+            <a href="{{ asset('/images/menu_2fa.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_2fa.png') }}" alt="2FA example">
+            </a>
+            <p class="note">Admins cannot order tickets; they don’t have access to the cart or the checkout page.</p>
+
+            <h3>4.2 Admin Dashboard</h3>
+            <p>After logging in, you’ll be redirected to the Admin Dashboard.</p>
+            <p>On this page, you can:</p>
+            <ul>
+                <li>View and update your first and last name.</li>
+                <li>Change your email address.</li>
+                <li>Reset your password—enter your current password, then choose a new one.</li>
+            </ul>
+            <p class="note">There is currently only one administrator account.</p>
+            <p class="note">When you update your email, you will receive a verification link (valid for 1 hour) and a cancellation link (valid for 48 hours) in case you did not request the change.</p>
+            <p class="note">Your new password must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.</p>
+            <p>You can also enable two-factor authentication by scanning the displayed QR code with your authenticator app (or by entering the code manually). After activation, you will receive recovery codes—store them securely. These codes let you disable 2FA if you lose access to your authenticator app.</p>
+            <p class="note">If you lose both your recovery codes and your authenticator app, contact developper to disable two-factor authentication.</p>
+            <a href="{{ asset('/images/admin_dashboard.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/admin_dashboard.png') }}" alt="User Dashboard example">
+            </a>
+
+            <h3>4.3 Manage customers</h3>
+            <p>Each user record shows their name, email, registration date, last update date, and status (active/inactive, 2FA enabled/disabled, email verified or not).</p>
+            <p>You can edit a user’s first name, last name, and email address.</p>
+            <p class="note">Changing a customer’s email as an admin does not trigger a verification email.</p>
+            <p>You can toggle a user’s active status.</p>
+            <p class="note">An inactive user cannot sign in.</p>
+            <p>You can disable 2FA for an user but cannot enable it on their behalf.</p>
+            <p>You can manually mark a user’s email as verified if they experienced delivery issues.</p>
+            <p>Click the “See Details” button next to a user to view their full name, current email, and any pending email changes.</p>
+            <a href="{{ asset('/images/customers.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/customers.png') }}" alt="Customers List example">
+            </a>
+
+            <h3>4.4 Manage tickets</h3>
+            <p>Under “Manage Tickets,” you can see all tickets, including those with zero stock.</p>
+            <p>You can update the available quantity, adjust the price, or modify the sale percentage.</p>
+            <p>You can create a new ticket by clicking “Create Ticket.”</p>
+            <a href="{{ asset('/images/tickets_admin.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/tickets_admin.png') }}" alt="Tickets List example">
+            </a>
+            <h4>Create Ticket</h4>
+            <p>Click the “Create Ticket” button.</p>
+            <p>Complete all required fields in all supported languages: name, description, price, and available quantity.</p>
+            <p>Upload an image (JPG, JPEG, PNG, GIF, or SVG; max 2 MB).</p>
+            <p>When finished, click “Save Changes” to add the ticket.</p>
+            <a href="{{ asset('/images/tickets_create.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/tickets_create.png') }}" alt="Create Ticket example">
+            </a>
+            <h4>Modify Price, Sale, or Quantity</h4>
+            <p>In the ticket list, edit the price, sale percentage, or quantity directly.</p>
+            <p>Click “Save Changes” to apply your updates.</p>
+            <p class="note">Updates may take a few moments to appear on the live site.</p>
+            <h4>Update Ticket Details</h4>
+            <p>Click “Update Details” next to the ticket you wish to modify.</p>
+            <p>You can change any field, and you do not need to re-upload the image if it remains the same.</p>
+            <p>Click “Save Changes” to commit your edits.</p>
+            <p class="note">All fields are required. The image must meet the same format and size constraints.</p>
+            <a href="{{ asset('/images/tickets_update.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/tickets_update.png') }}" alt="Update Ticket example">
+            </a>
+            <h4>Duplicate Ticket</h4>
+            <p>Click “Duplicate Ticket” next to the ticket you want to copy.</p>
+            <p>A new ticket with the same details will be created for you to modify.</p>
+            <p class="note">This speeds up creating similar tickets.</p>
+            <a href="{{ asset('/images/tickets_duplicate.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/tickets_duplicate.png') }}" alt="Duplicate Ticket example">
+            </a>
+            <h4>Delete Ticket</h4>
+            <p>You cannot delete a ticket directly; set its available quantity to 0 instead.</p>
+            <p>The ticket will no longer appear on the site or be purchasable.</p>
+
+            <h3>4.5 Manage orders</h3>
+            <p>In the “Manage Orders” section, you can view all orders.</p>
+            <p>Each order displays the QR code, ticket ID, payment status, ticket name (always showed in users language), date, time and location, the paid price, the purchase date, and—if applicable—the used, refunded or cancelled date, as well as the status (e.g., used, issued).</p>
+            <p>You can filter orders by status or by customer using the customer dropdown.</p>
+            <p>You can download the ticket and the invoice for paid tickets.</p>
+            <p>You can also change the status of any order if needed.</p>
+            <p class="note">Statuses:<br>
+                <strong>Issued</strong> (for unused tickets)<br>
+                <strong>Used</strong> (when the ticket has been used)<br>
+                <strong>Refunded</strong> (when the ticket has been refunded by an admin)<br>
+                <strong>Cancelled</strong> (when the ticket has been cancelled by an admin)
+            </p>
+            <a href="{{ asset('/images/orders_admin.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/orders_admin.png') }}" alt="Orders List example">
+            </a>
+            <h4>Create Free Tickets</h4>
+            <p>Click the “Create Free Ticket” button to add a new free ticket.</p>
+            <p>Enter the customer ID, ticket ID, quantity, and select the user’s language so that the ticket and invoice are sent in the correct language.</p>
+            <p>Once all fields are completed, click “Create Free Ticket” to save.</p>
+            <p class="note">
+                Free tickets are not paid, so no payment information is required.
+                The customer will receive the ticket by email, and it will appear in their account panel.
+                The admin can preview the ticket to confirm the information before creating it.
+                It is not possible to create a free ticket for an admin or an employee and if there are no tickets available.
+                By creating a free ticket, the ticket is immediately decreased from the available quantity.
+            </p>
+            <a href="{{ asset('/images/orders_create_free.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/orders_create_free.png') }}" alt="Create Free Ticket example">
+            </a>
+            <p class="note">
+                You can find the customer ID in the “Manage Customers” section and the ticket ID in the “Manage Tickets” section.
+            </p>
+            <p class="note">
+                The number following “#” is the customer’s ID, and the number following “ID” is the ticket’s ID.
+            </p>
+
+            <h3>4.6 Manage payments</h3>
+            <p>In the “Manage Payments” section, you can view all payments and invoices.</p>
+            <p>Each payment record shows:</p>
+            <ul>
+                <li>The payment UUID (a unique identifier for tracking transactions)</li>
+                <li>Date</li>
+                <li>Amount</li>
+                <li>Status (<strong>paid</strong>, <strong>pending</strong>, <strong>failed</strong>, or <strong>refunded</strong>)</li>
+                <li>Payment method (<strong>stripe</strong>, <strong>paypal</strong>, or <strong>free</strong>)</li>
+                <li>Customer info</li>
+                <li>Cart details</li>
+            </ul>
+            <p>You can filter payments by status or method, and search by customer email or UUID.</p>
+            <p>You can also download each invoice:</p>
+            <a href="{{ asset('/images/payments.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/payments.png') }}" alt="Payments List example">
+            </a>
+            <p class="note">The status meanings:</p>
+            <ul class="note">
+                <li><strong>Paid</strong> – the payment was successful and the order is complete.</li>
+                <li><strong>Pending</strong> – the payment is still being processed.</li>
+                <li><strong>Failed</strong> – the payment did not go through (e.g., insufficient funds or payment error).</li>
+                <li><strong>Refunded</strong> – the payment was returned to the customer.</li>
+            </ul>
+            <p class="note">Currently supported payment methods are <strong>stripe</strong>, and <strong>free</strong>.</p>
+            <h4>Refund a payment</h4>
+            <p>To refund a payment:</p>
+            <ol>
+                <li>Enter the amount to refund (must be ≤ the original amount).</li>
+                <li>Click the “Refund” button next to the payment.</li>
+            </ol>
+            <p class="note">You can only refund payments with status <strong>paid</strong>.</p>
+            <p class="note">
+                Refunds are not processed automatically by the payment provider. You must initiate the refund in your payment gateway, and then mark the corresponding ticket as <strong>refunded</strong> to invalidate it.
+            </p>
+            <a href="{{ asset('/images/payments_refund.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/payments_refund.png') }}" alt="Payments Refund example">
+            </a>
+
+            <h3>4.7 Manage employees</h3>
+            <p>In the “Manage Employees” section, you can view all registered employees.</p>
+            <p>Each employee record shows their first name, last name, email address, registration date, last update date, and status (active/inactive, 2FA enabled/disabled, email verified or not).</p>
+            <p>You can edit an employee’s first name, last name, and email address.</p>
+            <p class="note">Changing an employee’s email as an administrator does not trigger a verification email.</p>
+            <p>You can also toggle an employee’s active status.</p>
+            <p class="note">If an employee is deactivated, they cannot sign in.</p>
+            <p>You can disable 2FA for an employee, but you cannot enable it on their behalf.</p>
+            <p>Finally, you can manually mark an employee’s email as verified if they experienced delivery issues.</p>
+            <p>Click the “See Details” button next to an employee to view their full name, current email, and any pending email change.</p>
+            <a href="{{ asset('/images/employees.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employees.png') }}" alt="Employees List example">
+            </a>
+            <h4>Create Employee</h4>
+            <p>Click the “Create Employee” button to add a new employee.</p>
+            <ul>
+                <li>Enter the employee’s first name and last name.</li>
+                <li>Provide a valid email address.</li>
+                <li>Choose a secure password and confirm it.</li>
+            </ul>
+            <p>Once all fields are completed, click “Create Employee” to save.</p>
+            <p class="note">Passwords must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.
+            Newly created employees are automatically activated and their email is marked as verified.</p>
+            <a href="{{ asset('/images/employees_create.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employees_create.png') }}" alt="Create Employee example">
+            </a>
+
+            <h3>4.8 Reports</h3>
+            <p>In the Reports section, you can view and download sales reports.</p>
+            <p>Reports are generated from your sales data and can be sorted by sale amount.</p>
+            <p>Each report includes:</p>
+            <ul>
+                <li>Ticket ID</li>
+                <li>Ticket name</li>
+                <li>Sale amount</li>
+            </ul>
+            <p>Click the <strong>Download Report</strong> button to save the report as a CSV or Excel file.</p>
+            <p class="note">
+                The file and column headers are localized to your language, and the filename includes the current date.
+            </p>
+            <a href="{{ asset('/images/reports.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/reports.png') }}" alt="Reports example">
+            </a>
+            <a href="{{ asset('/images/reports_excel.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/reports_excel.png') }}" alt="Excel Reports example">
+            </a>
+            <a href="{{ asset('/images/reports_csv.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/reports_csv.png') }}" alt="CSV Reports example">
+            </a>
+
+            <h3>4.9 Logout</h3>
+            <p>To log out, click the “Logout” button in the navigation bar.</p>
+            <p>You will be redirected to the homepage and any “Remember me” session will be cleared. To access protected areas again, you’ll need to log in.</p>
+            <a href="{{ asset('/images/admin_menu.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/admin_menu.png') }}" alt="Admin menu example">
+            </a>
         </div>
 
         <!-- EMPLOYEE SECTION -->
         <div class="section" id="employee">
             <h2 data-icon="👷">5. Employee</h2>
-            <p>Coming soon...</p>
+            <h3>5.1 Sign In (with optional “Remember me” and 2FA via Google Authenticator)</h3>
+            <p>As an employee, you can sign in to access your profile, scan and/or validate tickets.</p>
+            <p>Click the “Login” button in the navigation bar or on the login page. If you check “Remember me,” your session will persist for 7 days.</p>
+            <p>Enter your registered email address and password. If two-factor authentication (2FA) is enabled, enter the code from your authenticator app.</p>
+            <p>Once signed in, you’ll have access to your profile and all interfaces.</p>
+            <a href="{{ asset('/images/menu_login.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_login.png') }}" alt="Login example">
+            </a>
+            <a href="{{ asset('/images/menu_2fa.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/menu_2fa.png') }}" alt="2FA example">
+            </a>
+            <p class="note">Employees cannot order tickets; they don’t have access to the cart or the checkout page.</p>
+
+            <h3>5.2 Employee Dashboard</h3>
+            <p>After logging in, you’ll be redirected to the Employee Dashboard.</p>
+            <p>On this page, you can:</p>
+            <ul>
+                <li>View and update your first and last name.</li>
+                <li>Change your email address.</li>
+                <li>Reset your password—enter your current password, then choose a new one.</li>
+            </ul>
+            <p class="note">Employee Accounts can only be created by the admin.</p>
+            <p class="note">When you update your email, you will receive a verification link (valid for 1 hour) and a cancellation link (valid for 48 hours) in case you did not request the change.</p>
+            <p class="note">Your new password must be at least 15 characters long and include one uppercase letter, one lowercase letter, one number, and one special character.</p>
+            <p>You can also enable two-factor authentication by scanning the displayed QR code with your authenticator app (or by entering the code manually). After activation, you will receive recovery codes—store them securely. These codes let you disable 2FA if you lose access to your authenticator app.</p>
+            <p class="note">If you lose both your recovery codes and your authenticator app, contact admin to disable two-factor authentication.</p>
+            <a href="{{ asset('/images/employee_dashboard.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_dashboard.png') }}" alt="Employee Dashboard example">
+            </a>
+
+            <h3>5.3 Scan Tickets</h3>
+            <p>In “Scan Tickets,” you can scan a ticket’s QR code or enter its code manually.</p>
+            <p>To scan a ticket:</p>
+            <ol>
+                <li>Click the “Scan Ticket” button.</li>
+                <li>Use your device’s camera to scan the QR code on the ticket.</li>
+                <li>Review the ticket details—especially the event, date, time, and number of seats.</li>
+                <li>Click “Validate Ticket” to mark it as used.</li>
+            </ol>
+            <p class="note">If scanning fails, you can enter the ticket code manually. It’s printed beneath the QR code on the PDF.</p>
+            <p class="note">Once validated, a ticket cannot be reused.</p>
+            <p class="note">If a ticket is already used, you’ll see an “already used” message.</p>
+            <a href="{{ asset('/images/employee_scan.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_scan.png') }}" alt="Scan Ticket example">
+            </a>
+            <a href="{{ asset('/images/employee_validate.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validate.png') }}" alt="Validate Ticket example">
+            </a>
+            <a href="{{ asset('/images/employee_validated.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validated.png') }}" alt="Validated Ticket example">
+            </a>
+            <a href="{{ asset('/images/employee_used_ticket.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_used_ticket.png') }}" alt="Used Ticket example">
+            </a>
+            <h3>5.4 Validate Tickets</h3>
+            <p>In “Validate Tickets,” you can manually validate unused tickets by entering their reference.</p>
+            <p>To validate a ticket:</p>
+            <ol>
+                <li>Click the “Validate Ticket” button.</li>
+                <li>Enter the ticket reference in the field provided.</li>
+                <li>Click “Validate.”</li>
+            </ol>
+            <p class="note">Only tickets with status “Issued” can be validated. Double-check before you proceed, as validation is final.</p>
+            <p class="note">You can find the ticket reference in the email the user received or in the admin area.</p>
+            <p class="note">If the ticket is already used or invalid, you’ll see an error explaining why validation failed.</p>
+            <p class="note">If valid, you’ll see a success message confirming the ticket is now validated.</p>
+            <a href="{{ asset('/images/employee_validate_manual.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validate_manual.png') }}" alt="Validate Ticket manually example">
+            </a>
+            <a href="{{ asset('/images/employee_validation_failed.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_validation_failed.png') }}" alt="Validation Failed example">
+            </a>
+            <h3>5.5 Logout</h3>
+            <p>To log out, click the “Logout” button in the navigation bar.</p>
+            <p>You will be redirected to the homepage and any “Remember me” session will be cleared. To access protected areas again, you’ll need to log in.</p>
+            <a href="{{ asset('/images/employee_menu.png') }}" target="_blank" rel="noopener">
+                <img src="{{ asset('/images/employee_menu.png') }}" alt="Employee menu example">
+            </a>
         </div>
 
         <a href="{{ url('/') }}" class="bottom-back">← Back to Home</a>

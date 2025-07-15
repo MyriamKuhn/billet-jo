@@ -114,25 +114,22 @@ class VerificationControllerTest extends TestCase
     {
         $user  = User::factory()->create();
         $token = Str::random(40);
-        $old   = 'old@example.com';
 
-        // 1) Mock uniquement le service d’EmailUpdate
+        // Mock EmailUpdateService avec un seul argument
         $this->mock(EmailUpdateService::class)
             ->shouldReceive('cancelEmailUpdate')
-            ->with($token, $old)
+            ->with($token)
             ->once()
             ->andReturn($user);
 
-        // 2) Construire l’URL signée factice
-        $url = "/api/auth/email/change/cancel/{$token}/{$old}?expires=123&signature=abc";
+        // Désactiver tous les middleware pour ne pas rater la route
+        $this->withoutMiddleware();
 
-        // 3) Bypass de la validation de signature
-        $this->withoutMiddleware(ValidateSignature::class);
+        // 1) Variante “manuelle” : URL avec double /auth/
+        $url = "/api/auth/auth/email/change/cancel/{$token}?expires=123&signature=abc";
 
-        // 4) Exécution de la requête
         $response = $this->getJson($url);
 
-        // 5) Assertions
         $response->assertOk()
                 ->assertJson([
                     'message'      => 'Email update canceled',
@@ -400,16 +397,14 @@ class VerificationControllerTest extends TestCase
         $this->app['env'] = 'production';
         config()->set('app.frontend_url', 'https://frontend.test');
 
-        $user     = User::factory()->create();
-        $token    = 'goodtoken';
-        $oldEmail = 'old@example.com';
-        $base     = config('app.frontend_url') . '/verification-result';
-        $url      = "/api/auth/email/change/cancel/{$token}/{$oldEmail}?expires=123&signature=abc";
+        $user  = User::factory()->create();
+        $token = 'goodtoken';
+        $base  = config('app.frontend_url') . '/verification-result';
 
-        // 1) Mock success
+        // 1) Mock success (one arg only)
         $this->mock(EmailUpdateService::class)
             ->shouldReceive('cancelEmailUpdate')
-            ->with($token, $oldEmail)
+            ->with($token)
             ->once()
             ->andReturn($user);
 
@@ -421,7 +416,10 @@ class VerificationControllerTest extends TestCase
         // 2) Bypass signature validation
         $this->withoutMiddleware(ValidateSignature::class);
 
-        // 3) Appel et assertion de redirection 302 → /success
+        // 3) Hit the actual route (double /auth/, no old email)
+        $url = "/api/auth/auth/email/change/cancel/{$token}?expires=123&signature=abc";
+
+        // 4) Call & assert redirect
         $this->get($url)
             ->assertStatus(302)
             ->assertRedirect("{$base}/success");
@@ -433,22 +431,23 @@ class VerificationControllerTest extends TestCase
         $this->app['env'] = 'production';
         config()->set('app.frontend_url', 'https://frontend.test');
 
-        $token    = 'badtoken';
-        $oldEmail = 'old@example.com';
-        $base     = config('app.frontend_url') . '/verification-result';
-        $url      = "/api/auth/email/change/cancel/{$token}/{$oldEmail}?expires=123&signature=abc";
+        $token = 'badtoken';
+        $base  = config('app.frontend_url') . '/verification-result';
 
-        // 1) Mock not found
+        // 1) Mock non‐trouvé : on ne passe QUE le token
         $this->mock(EmailUpdateService::class)
             ->shouldReceive('cancelEmailUpdate')
-            ->with($token, $oldEmail)
+            ->with($token)
             ->once()
             ->andThrow(new EmailUpdateNotFoundException());
 
-        // 2) Bypass signature validation
+        // 2) Bypass de la validation signée
         $this->withoutMiddleware(ValidateSignature::class);
 
-        // 3) Exécution et assertion de redirection vers /invalid
+        // 3) URL corrigée (double /auth/, plus de {oldEmail})
+        $url = "/api/auth/auth/email/change/cancel/{$token}?expires=123&signature=abc";
+
+        // 4) Exécution et assertion de redirection vers /invalid
         $this->get($url)
             ->assertStatus(302)
             ->assertRedirect("{$base}/invalid");
@@ -460,22 +459,27 @@ class VerificationControllerTest extends TestCase
         $this->app['env'] = 'production';
         config()->set('app.frontend_url', 'https://frontend.test');
 
-        $token    = 'othertoken';
-        $oldEmail = 'old@example.com';
-        $base     = config('app.frontend_url') . '/verification-result';
-        $url      = "/api/auth/email/change/cancel/{$token}/{$oldEmail}?expires=123&signature=abc";
+        $token = 'othertoken';
+        $base  = config('app.frontend_url') . '/verification-result';
 
-        // 1) Mock qui lance une exception inattendue
+        // 1) Mock qui lance une exception inattendue (un seul argument)
         $this->mock(EmailUpdateService::class)
             ->shouldReceive('cancelEmailUpdate')
-            ->with($token, $oldEmail)
+            ->with($token)
             ->once()
             ->andThrow(new \RuntimeException('boom'));
+
+        $this->mock(CartService::class)
+            ->shouldReceive('getUserCart')
+            ->never(); // ne doit pas être appelé en cas d’erreur
 
         // 2) Bypass du middleware de signature
         $this->withoutMiddleware(ValidateSignature::class);
 
-        // 3) Appel et assertion de redirection vers /error
+        // 3) URL corrigée (double /auth/, plus de {oldEmail})
+        $url = "/api/auth/auth/email/change/cancel/{$token}?expires=123&signature=abc";
+
+        // 4) Appel et assertion de redirection vers /error
         $this->get($url)
             ->assertStatus(302)
             ->assertRedirect("{$base}/error");

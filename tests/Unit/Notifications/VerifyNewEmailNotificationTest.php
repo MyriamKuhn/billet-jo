@@ -14,15 +14,21 @@ class VerifyNewEmailNotificationTest extends TestCase
 {
     public function testViaReturnsMailChannel()
     {
-        $notification = new VerifyNewEmailNotification('dummy-token');
-        $channels = $notification->via(new class {});
+        // Crée un faux utilisateur (en mémoire) :
+        $user = User::factory()->make();
+
+        // Instancie ta notif avec l'user ET le token :
+        $notification = new VerifyNewEmailNotification($user, 'dummy-token');
+
+        // via() attend un "notifiable", here c'est bien $user
+        $channels = $notification->via($user);
 
         $this->assertSame(['mail'], $channels);
     }
 
     public function testToMailBuildsCorrectMailMessage()
     {
-        // Arrange: stub the signed URL generation
+        // Arrange: stub du generation de l’URL signée
         URL::shouldReceive('temporarySignedRoute')
             ->once()
             ->with(
@@ -32,14 +38,15 @@ class VerifyNewEmailNotificationTest extends TestCase
             )
             ->andReturn('http://example.com/verify?token=dummy-token');
 
-        // Create a notifiable user (without persisting)
+        // Création d’un "notifiable" user en mémoire
         $user = User::factory()->make([
-            'email' => 'user@example.com',
+            'email'     => 'user@example.com',
             'firstname' => 'Alice',
             'lastname'  => 'Smith',
         ]);
 
-        $notification = new VerifyNewEmailNotification('dummy-token');
+        // On passe bien l’utilisateur ET le token
+        $notification = new VerifyNewEmailNotification($user, 'dummy-token');
 
         // Act
         $mailMessage = $notification->toMail($user);
@@ -47,7 +54,7 @@ class VerifyNewEmailNotificationTest extends TestCase
         // Assert
         $this->assertInstanceOf(MailMessage::class, $mailMessage);
         $this->assertEquals(
-            __('mail.subject_email_update', ['app_name' => env('APP_NAME')]),
+            __('mail.subject_email_update', ['app_name' => config('app.name')]),
             $mailMessage->subject
         );
         $this->assertEquals('emails.newverify', $mailMessage->view);
@@ -59,8 +66,14 @@ class VerifyNewEmailNotificationTest extends TestCase
 
     public function testToArrayReturnsEmptyArray()
     {
-        $notification = new VerifyNewEmailNotification('dummy-token');
-        $array = $notification->toArray(new class {});
+        // Crée un "notifiable" user en mémoire
+        $user = User::factory()->make();
+
+        // On passe bien l’utilisateur ET le token
+        $notification = new VerifyNewEmailNotification($user, 'dummy-token');
+
+        // toArray() ne se sert que du notifiable, on lui passe donc $user
+        $array = $notification->toArray($user);
 
         $this->assertSame([], $array);
     }

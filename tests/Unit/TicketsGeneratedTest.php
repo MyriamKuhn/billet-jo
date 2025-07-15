@@ -71,7 +71,7 @@ class TicketsGeneratedTest extends TestCase
 
         $this->assertArrayHasKey('clientUrl', $viewData);
         $this->assertEquals(
-            'https://frontend.test/client/tickets',
+            'https://frontend.test/user/tickets',
             $viewData['clientUrl']
         );
     }
@@ -122,5 +122,4 @@ class TicketsGeneratedTest extends TestCase
             );
         }
     }
-
 }

@@ -76,20 +76,28 @@ class AuthControllerTest extends TestCase
 
     public function testEnableTwoFactorReturns200()
     {
+        // 1) Create a user and fake Sanctum auth
         $user = User::factory()->create();
-        /** @var string $response */
-        $response = ['secret' => 'ABC123', 'qrCodeUrl' => 'otpauth://...'];
+        Sanctum::actingAs($user, ['*']);
 
-        $this->mock(TwoFactorService::class)
-            ->shouldReceive('enable')
+        // 2) The stubbed response from the service
+        $response = [
+            'secret'    => 'ABC123',
+            'qrCodeUrl' => 'otpauth://example?secret=ABC123',
+            'expires_at'=> now()->addMinutes(10)->toIso8601String(),
+        ];
+
+        // 3) Mock the method your controller actually calls: prepareEnable()
+        $this->mock(\App\Services\Auth\TwoFactorService::class)
+            ->shouldReceive('prepareEnable')
             ->withArgs(fn($u) => $u->id === $user->id)
             ->once()
             ->andReturn($response);
 
-        Sanctum::actingAs($user, ['*']);
+        // 4) Hit the real endpoint
         $this->postJson('/api/auth/2fa/enable')
             ->assertOk()
-            ->assertJson($response);
+            ->assertExactJson($response);
     }
 
     public function testLogoutReturns200()
@@ -199,18 +207,63 @@ class AuthControllerTest extends TestCase
 
     public function testDisableTwoFactorReturns204()
     {
-        $user = User::factory()->create();
+        $user    = User::factory()->create();
         $payload = ['twofa_code' => '123456'];
 
-        $this->mock(AuthService::class)
+        // ← mock the TwoFactorService, not AuthService
+        $this->mock(\App\Services\Auth\TwoFactorService::class)
             ->shouldReceive('disableTwoFactor')
-            ->withArgs(fn($u, $code) => $u->id === $user->id && $code === $payload['twofa_code'])
+            ->withArgs(fn($u, $code) =>
+                $u->id === $user->id &&
+                $code === $payload['twofa_code']
+            )
             ->once()
             ->andReturnNull();
 
         Sanctum::actingAs($user, ['*']);
+
         $this->postJson('/api/auth/2fa/disable', $payload)
             ->assertNoContent();
+    }
+
+    public function testConfirmTwoFactorRequiresAuthentication(): void
+    {
+        // Sans authentification → 401
+        $this->postJson('/api/auth/2fa/confirm', ['otp' => '123456'])
+            ->assertStatus(401);
+    }
+
+    public function testConfirmTwoFactorValidationErrorWhenOtpMissing(): void
+    {
+        // Authentifié mais sans payload → 422 + erreur de validation pour "otp"
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        $this->postJson('/api/auth/2fa/confirm', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['otp']);
+    }
+
+    public function testConfirmTwoFactorCallsServiceAndReturnsRecoveryCodes(): void
+    {
+        // Préparer l’utilisateur et la réponse mockée du service
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, ['*']);
+
+        $payload = ['otp' => '654321'];
+        $recoveryCodes = ['RCODE1', 'RCODE2', 'RCODE3'];
+
+        // Mock du TwoFactorService.confirmEnable()
+        $this->mock(TwoFactorService::class)
+            ->shouldReceive('confirmEnable')
+            ->withArgs(fn($u, $otp) => $u->id === $user->id && $otp === $payload['otp'])
+            ->once()
+            ->andReturn(['recovery_codes' => $recoveryCodes]);
+
+        // Appel de l’endpoint → 200 + JSON exact
+        $this->postJson('/api/auth/2fa/confirm', $payload)
+            ->assertOk()
+            ->assertExactJson(['recovery_codes' => $recoveryCodes]);
     }
 }
 

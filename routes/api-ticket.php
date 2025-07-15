@@ -22,7 +22,7 @@ Route::prefix('tickets')->group(function () {
         ->name('tickets.user');
 
     // This route is used to get a list of the amount of tickets that are saled per product for the admin
-    Route::get('/admin/sales', [TicketController::class, 'ticketsPerProduct'])
+    Route::get('/admin/sales', [TicketController::class, 'salesStats'])
         ->middleware('auth:sanctum')
         ->name('tickets.admin.sales');
 
@@ -43,6 +43,11 @@ Route::prefix('tickets')->group(function () {
 
     // This route is used to download QR code for the user
     Route::get('/qr/{filename}', [TicketController::class, 'downloadQr'])
+        ->middleware('auth:sanctum')
+        ->name('tickets.user.qr');
+
+    // This route is used to get the ticket details for the user from the QR code
+    Route::get('/scan/{token}', [TicketController::class, 'showTicket'])
         ->middleware('auth:sanctum')
         ->name('tickets.user.qr');
 

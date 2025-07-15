@@ -104,12 +104,13 @@ class EmailUpdateServiceTest extends TestCase
             'new_email' => $newEmail,
         ]);
 
-        // Exécution du service
-        $returnedUser = $this->service->cancelEmailUpdate($rawToken, $oldEmail);
+        // Exécution du service — note qu'on ne passe plus $oldEmail en second param
+        $returnedUser = $this->service->cancelEmailUpdate($rawToken);
 
         // L'email de l'utilisateur est bien revenu à l'ancienne valeur
         $this->assertSame($oldEmail, $returnedUser->email);
-        $this->assertNotNull($returnedUser->email_verified_at);
+        // email_verified_at reste inchangé (null)
+        $this->assertNull($returnedUser->email_verified_at);
 
         // Le record a bien été supprimé
         $this->assertDatabaseMissing('email_updates', [

@@ -35,9 +35,13 @@ class GenerateInvoicePdfTest extends TestCase
 
         // 4) Stub the facade to return our PDF mock
         Pdf::shouldReceive('loadView')
-           ->once()
-           ->with('invoices.template', ['payment' => $payment])
-           ->andReturn($fakePdf);
+            ->once()
+            ->withArgs(function ($view, $data) use ($payment) {
+                return $view === 'invoices.template'
+                    && isset($data['payment']) && $data['payment']->is($payment)
+                    && isset($data['items'])   && is_array($data['items']);
+            })
+            ->andReturn($fakePdf);
 
         // 5) Invoke the listener
         $listener = new GenerateInvoicePdf();

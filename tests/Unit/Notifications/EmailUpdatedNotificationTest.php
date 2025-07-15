@@ -33,12 +33,9 @@ class EmailUpdatedNotificationTest extends TestCase
             ->with(
                 'auth.email.change.cancel',
                 Mockery::on(fn($expires) => $expires instanceof \DateTime),
-                [
-                    'token' => $rawToken,
-                    'old_email' => $oldEmail,
-                ]
+                ['token' => $rawToken]
             )
-            ->andReturn('http://example.com/cancel?token=' . $rawToken . '&old_email=' . urlencode($oldEmail));
+            ->andReturn('http://example.com/cancel?token=' . $rawToken);
 
         $notification = new EmailUpdatedNotification($newEmail, $oldEmail, $rawToken);
 
@@ -58,7 +55,7 @@ class EmailUpdatedNotificationTest extends TestCase
         $this->assertSame($newEmail, $viewData['newEmail']);
         $this->assertArrayHasKey('url', $viewData);
         $this->assertSame(
-            'http://example.com/cancel?token=' . $rawToken . '&old_email=' . urlencode($oldEmail),
+            'http://example.com/cancel?token=' . $rawToken,
             $viewData['url']
         );
     }

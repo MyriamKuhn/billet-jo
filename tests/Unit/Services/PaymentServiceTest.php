@@ -562,4 +562,24 @@ class PaymentServiceTest extends TestCase
             Mockery::close();
         }
     }
+
+    public function testMarkAsPaidByUuidSetsWasJustPaidFalseIfAlreadyPaid(): void
+    {
+        // 1) Créer un paiement déjà en Paid
+        $payment = Payment::factory()->create([
+            'status' => PaymentStatus::Paid,
+            'paid_at' => now()->subHour(),
+        ]);
+
+        // 2) Instancier le service (StripeClient et CartService n'interviennent pas ici)
+        $stripeClient = new StripeClient('sk_test');
+        $cartService  = Mockery::mock(\App\Services\CartService::class);
+        $svc = new PaymentService($stripeClient, $cartService);
+
+        // 3) Appel de markAsPaidByUuid()
+        $result = $svc->markAsPaidByUuid($payment->uuid);
+
+        // 4) Vérifier que wasJustPaid est false
+        $this->assertFalse($result->wasJustPaid);
+    }
 }

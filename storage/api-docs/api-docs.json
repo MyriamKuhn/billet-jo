@@ -1252,6 +1252,7 @@
                                 "required": [
                                     "price",
                                     "stock_quantity",
+                                    "image",
                                     "translations[en][name]",
                                     "translations[fr][name]",
                                     "translations[de][name]",
@@ -1272,10 +1273,7 @@
                                     "translations[de][product_details][location]",
                                     "translations[en][product_details][category]",
                                     "translations[fr][product_details][category]",
-                                    "translations[de][product_details][category]",
-                                    "translations[en][product_details][image]",
-                                    "translations[fr][product_details][image]",
-                                    "translations[de][product_details][image]"
+                                    "translations[de][product_details][category]"
                                 ],
                                 "properties": {
                                     "price": {
@@ -1291,6 +1289,11 @@
                                     "stock_quantity": {
                                         "type": "integer",
                                         "example": 50
+                                    },
+                                    "image": {
+                                        "description": "Single image file applied to all translations",
+                                        "type": "file",
+                                        "format": "binary"
                                     },
                                     "translations[en][name]": {
                                         "type": "string",
@@ -1321,10 +1324,6 @@
                                         "type": "string",
                                         "example": "Ceremonies"
                                     },
-                                    "translations[en][product_details][image]": {
-                                        "type": "file",
-                                        "format": "binary"
-                                    },
                                     "translations[fr][name]": {
                                         "type": "string",
                                         "example": "Cérémonie d’ouverture"
@@ -1354,10 +1353,6 @@
                                         "type": "string",
                                         "example": "Cérémonies"
                                     },
-                                    "translations[fr][product_details][image]": {
-                                        "type": "file",
-                                        "format": "binary"
-                                    },
                                     "translations[de][name]": {
                                         "type": "string",
                                         "example": "Eröffnungszeremonie"
@@ -1386,10 +1381,6 @@
                                     "translations[de][product_details][category]": {
                                         "type": "string",
                                         "example": "Zeremonien"
-                                    },
-                                    "translations[de][product_details][image]": {
-                                        "type": "file",
-                                        "format": "binary"
                                     }
                                 },
                                 "type": "object"
@@ -1637,7 +1628,7 @@
                     }
                 }
             },
-            "put": {
+            "post": {
                 "tags": [
                     "Products"
                 ],
@@ -1664,6 +1655,7 @@
                                 "required": [
                                     "price",
                                     "stock_quantity",
+                                    "image",
                                     "translations[en][name]",
                                     "translations[fr][name]",
                                     "translations[de][name]",
@@ -1684,10 +1676,7 @@
                                     "translations[de][product_details][location]",
                                     "translations[en][product_details][category]",
                                     "translations[fr][product_details][category]",
-                                    "translations[de][product_details][category]",
-                                    "translations[en][product_details][image]",
-                                    "translations[fr][product_details][image]",
-                                    "translations[de][product_details][image]"
+                                    "translations[de][product_details][category]"
                                 ],
                                 "properties": {
                                     "price": {
@@ -1703,6 +1692,11 @@
                                     "stock_quantity": {
                                         "type": "integer",
                                         "example": 50
+                                    },
+                                    "image": {
+                                        "description": "Single image file applied to all translations",
+                                        "type": "file",
+                                        "format": "binary"
                                     },
                                     "translations[en][name]": {
                                         "type": "string",
@@ -1733,10 +1727,6 @@
                                         "type": "string",
                                         "example": "Ceremonies"
                                     },
-                                    "translations[en][product_details][image]": {
-                                        "type": "file",
-                                        "format": "binary"
-                                    },
                                     "translations[fr][name]": {
                                         "type": "string",
                                         "example": "Cérémonie d’ouverture"
@@ -1766,10 +1756,6 @@
                                         "type": "string",
                                         "example": "Cérémonies"
                                     },
-                                    "translations[fr][product_details][image]": {
-                                        "type": "file",
-                                        "format": "binary"
-                                    },
                                     "translations[de][name]": {
                                         "type": "string",
                                         "example": "Eröffnungszeremonie"
@@ -1798,10 +1784,6 @@
                                     "translations[de][product_details][category]": {
                                         "type": "string",
                                         "example": "Zeremonien"
-                                    },
-                                    "translations[de][product_details][image]": {
-                                        "type": "file",
-                                        "format": "binary"
                                     }
                                 },
                                 "type": "object"
@@ -2605,12 +2587,12 @@
             }
         },
         "/api/tickets/scan/{token}": {
-            "post": {
+            "get": {
                 "tags": [
                     "Tickets"
                 ],
-                "summary": "Scan ticket QR and validate entry",
-                "description": "Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
+                "summary": "Scan ticket QR and returns user & event info",
+                "description": "Employee scans a ticket token and retrieves user and event details.",
                 "operationId": "scanTicket",
                 "parameters": [
                     {
@@ -2630,11 +2612,20 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Ticket validated: returns attendee & event info",
+                        "description": "Informations du ticket trouvées",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "example": "issued"
+                                        },
                                         "user": {
                                             "properties": {
                                                 "firstname": {
@@ -2681,6 +2672,67 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/InternalError"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tickets"
+                ],
+                "summary": "Validate entry ticket by QR code scan",
+                "description": "Employee scans a ticket token. If status is `issued`, marks it as `used` and returns user & event info. If already processed, throws 409 with full details.",
+                "operationId": "validateTicket",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "description": "Unique ticket UUID token from QR code",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "550e8400-e29b-41d4-a716-446655440000"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket validated: returns status and timestamp.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "used"
+                                        },
+                                        "used_at": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "example": "2025-07-14T12:34:56+02:00"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "409": {
                         "description": "Ticket already processed: returns status, timestamp, attendee & event info",
                         "content": {
@@ -2695,46 +2747,6 @@
                                             "type": "string",
                                             "format": "date-time",
                                             "example": "2025-05-10T15:00:00+02:00"
-                                        },
-                                        "user": {
-                                            "properties": {
-                                                "firstname": {
-                                                    "type": "string",
-                                                    "example": "John"
-                                                },
-                                                "lastname": {
-                                                    "type": "string",
-                                                    "example": "Doe"
-                                                },
-                                                "email": {
-                                                    "type": "string",
-                                                    "example": "john.doe@example.com"
-                                                }
-                                            },
-                                            "type": "object"
-                                        },
-                                        "event": {
-                                            "properties": {
-                                                "name": {
-                                                    "type": "string",
-                                                    "example": "Concert Live"
-                                                },
-                                                "date": {
-                                                    "type": "string",
-                                                    "format": "date",
-                                                    "example": "2024-07-26"
-                                                },
-                                                "time": {
-                                                    "type": "string",
-                                                    "format": "time",
-                                                    "example": "20:00"
-                                                },
-                                                "location": {
-                                                    "type": "string",
-                                                    "example": "Stade de France"
-                                                }
-                                            },
-                                            "type": "object"
                                         },
                                         "code": {
                                             "type": "string",
@@ -2770,14 +2782,14 @@
                 ]
             }
         },
-        "/api/admin/sales": {
+        "/api/tickets/admin/sales": {
             "get": {
                 "tags": [
                     "Tickets"
                 ],
                 "summary": "Get ticket sales count per product (admin only)",
                 "description": "Returns a paginated list of products with the number of tickets sold for each product. Admin only.",
-                "operationId": "494f8029a85bf61ff898537a5df48e0b",
+                "operationId": "bae4f74eb14eb44042768ba18dda00e2",
                 "parameters": [
                     {
                         "$ref": "#/components/parameters/AcceptLanguageHeader"
@@ -2798,7 +2810,6 @@
                             "type": "string",
                             "default": "sales_count",
                             "enum": [
-                                "product_name",
                                 "sales_count"
                             ]
                         }
@@ -2931,7 +2942,7 @@
                     {
                         "name": "firstname",
                         "in": "query",
-                        "description": "Recherche par prénom (like)",
+                        "description": "Search by firstname (like)",
                         "schema": {
                             "type": "string"
                         }
@@ -2939,7 +2950,7 @@
                     {
                         "name": "lastname",
                         "in": "query",
-                        "description": "Recherche par nom (like)",
+                        "description": "Search by name (like)",
                         "schema": {
                             "type": "string"
                         }
@@ -2947,7 +2958,7 @@
                     {
                         "name": "email",
                         "in": "query",
-                        "description": "Recherche par email (exact)",
+                        "description": "Search by email (exact)",
                         "schema": {
                             "type": "string"
                         }
@@ -2955,7 +2966,7 @@
                     {
                         "name": "role",
                         "in": "query",
-                        "description": "Filtrer par rôle",
+                        "description": "Filter by roles",
                         "schema": {
                             "type": "string",
                             "enum": [

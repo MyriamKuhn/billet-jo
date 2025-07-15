@@ -68,7 +68,7 @@ class ProductControllerNullCoalescingTest extends TestCase
             ],
         ];
 
-        // 4) Stub de StoreProductRequest
+        // 4) Stub de StoreProductRequest corrigé
         $request = new class($validated, $fileEn) extends StoreProductRequest {
             private array $data;
             private $file;
@@ -79,17 +79,22 @@ class ProductControllerNullCoalescingTest extends TestCase
                 $this->file = $file;
             }
 
-            // signature conforme à FormRequest::validated()
+            // On renvoie toujours le tableau validé
             public function validated($key = null, $default = null): array
             {
                 return $this->data;
             }
 
-            // signature conforme à Request::file()
+            // On signale qu’on a bien un fichier "image"
+            public function hasFile($key = null): bool
+            {
+                return $key === 'image';
+            }
+
+            // Quand on demande "image", on retourne notre fake
             public function file($key = null, $default = null)
             {
-                // retourne le fake seulement pour la locale 'en'
-                if ($key === 'translations.en.product_details.image') {
+                if ($key === 'image') {
                     return $this->file;
                 }
                 return $default;

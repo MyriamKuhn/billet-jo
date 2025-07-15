@@ -31,18 +31,19 @@ class ProductManagementServiceTest extends TestCase
             'image'       => 'https://example.com/image.jpg',
         ];
 
+        // **EXTRAIT les valeurs de price/sale/stock au niveau racine**
         $payload = [
+            'price'          => 99.99,
+            'sale'           => 79.99,
+            'stock_quantity' => 10,
+
             'translations' => [
                 'en' => [
                     'name'            => 'Test Product',
-                    'price'           => 99.99,
-                    'sale'            => 79.99,
-                    'stock_quantity'  => 10,
                     'product_details' => $baseDetails,
                 ],
                 'fr' => [
                     'name'            => 'Test Product FR',
-                    // on ne teste pas les prix en fr, donc on peut omettre price/sale/stock (service n’y touchera pas)
                     'product_details' => $baseDetails,
                 ],
                 'de' => [
@@ -83,12 +84,14 @@ class ProductManagementServiceTest extends TestCase
         ];
 
         $payload = [
+            // ← on met PRICE et STOCK_QUANTITY au bon niveau
+            'price'          => 50.00,
+            'stock_quantity' => 3,
+            // 'sale' omis → la méthode prendra null par défaut
+
             'translations' => [
                 'en' => [
                     'name'            => 'No Sale Product',
-                    'price'           => 50.00,
-                    // pas de 'sale' ici
-                    'stock_quantity'  => 3,
                     'product_details' => $baseDetails,
                 ],
                 'fr' => [
@@ -152,14 +155,15 @@ class ProductManagementServiceTest extends TestCase
             'image'       => 'https://example.com/new.jpg',
         ];
 
-        // On emballe sous "translations" pour chaque locale
+        // **PRICE, SALE et STOCK_QUANTITY doivent être au niveau racine**
         $payload = [
+            'price'          => 25.00,
+            'sale'           => null,   // on veut enlever la promo
+            'stock_quantity' => 8,
+
             'translations' => [
                 'en' => [
                     'name'            => 'Updated Name',
-                    'price'           => 25.00,
-                    'sale'            => null,  // on veut enlever la promo
-                    'stock_quantity'  => 8,
                     'product_details' => $newDetails,
                 ],
                 'fr' => [
@@ -178,11 +182,11 @@ class ProductManagementServiceTest extends TestCase
 
         // Vérifications sur l’objet retourné
         $this->assertInstanceOf(Product::class, $updated);
-        $this->assertEquals('Updated Name', $updated->name);
-        $this->assertEquals(25.00,         $updated->price);
+        $this->assertEquals('Updated Name',        $updated->name);
+        $this->assertEquals(25.00,                 $updated->price);
         $this->assertNull($updated->sale);
-        $this->assertEquals(8,             $updated->stock_quantity);
-        $this->assertEquals($newDetails,   $updated->product_details);
+        $this->assertEquals(8,                     $updated->stock_quantity);
+        $this->assertEquals($newDetails,           $updated->product_details);
 
         // Et bien entendu la base de données a été mise à jour
         $this->assertDatabaseHas('products', [

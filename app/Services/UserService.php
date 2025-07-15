@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Collection;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use App\Models\EmailUpdate;

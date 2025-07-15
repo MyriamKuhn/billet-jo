@@ -43,21 +43,54 @@ class StoreProductRequest extends FormRequest
     }
 
     /**
+     * Prépare les données avant validation :
+     * force `places` en int pour chaque locale.
+     */
+    protected function prepareForValidation(): void
+    {
+        $input = $this->all();
+
+        if (isset($input['price'])) {
+            $input['price'] = (float) $input['price'];
+        }
+        if (isset($input['sale'])) {
+            $input['sale'] = $input['sale'] === '' ? null : (float) $input['sale'];
+        }
+        if (isset($input['stock_quantity'])) {
+            $input['stock_quantity'] = (int) $input['stock_quantity'];
+        }
+
+        if (isset($input['translations']) && is_array($input['translations'])) {
+            foreach (['fr','en','de'] as $loc) {
+                if (
+                    isset($input['translations'][$loc]['product_details'])
+                    && isset($input['translations'][$loc]['product_details']['places'])
+                ) {
+                    $input['translations'][$loc]['product_details']['places'] =
+                        (int) $input['translations'][$loc]['product_details']['places'];
+                }
+            }
+        }
+
+        // Merge des données modifiées dans la requête
+        $this->merge($input);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        $imageRules = $this->isMethod('post')
-        ? ['required','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048']
-        : ['nullable','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048'];
+        $imageRules = ['nullable','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048'];
 
         return [
             // Global rules
             'price'          => ['required', 'numeric', 'min:0'],
             'sale'           => ['nullable', 'numeric', 'min:0'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
+            'image'          => $imageRules,
 
             // Translations rules
             'translations'        => ['required','array','size:3'],
@@ -74,8 +107,7 @@ class StoreProductRequest extends FormRequest
             'translations.*.product_details.date'               => ['required','date_format:Y-m-d'],
             'translations.*.product_details.time'               => ['required','string'],
             'translations.*.product_details.location'           => ['required','string'],
-            'translations.*.product_details.category'           => ['required','string'],
-            'translations.*.product_details.image'              => $imageRules,
+            'translations.*.product_details.category'           => ['required','string']
         ];
     }
 }

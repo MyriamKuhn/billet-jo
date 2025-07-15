@@ -235,6 +235,7 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *         required={
      *           "price",
      *           "stock_quantity",
+     *           "image",
      *           "translations[en][name]",
      *           "translations[fr][name]",
      *           "translations[de][name]",
@@ -256,14 +257,13 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *           "translations[en][product_details][category]",
      *           "translations[fr][product_details][category]",
      *           "translations[de][product_details][category]",
-     *           "translations[en][product_details][image]",
-     *           "translations[fr][product_details][image]",
-     *           "translations[de][product_details][image]"
+     *
      *         },
      *
      *         @OA\Property(property="price",          type="number",  format="float", example=100.00),
      *         @OA\Property(property="sale",           type="number",  format="float", example=0.10),
      *         @OA\Property(property="stock_quantity", type="integer", example=50),
+     *         @OA\Property(property="image",          type="file", format="binary", description="Single image file applied to all translations"),
      *
      *         @OA\Property(property="translations[en][name]",           type="string",  example="Opening Ceremony"),
      *         @OA\Property(property="translations[en][product_details][places]",      type="integer", example=1),
@@ -272,7 +272,6 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *         @OA\Property(property="translations[en][product_details][time]",        type="string",  example="19:30"),
      *         @OA\Property(property="translations[en][product_details][location]",    type="string",  example="Stade de France"),
      *         @OA\Property(property="translations[en][product_details][category]",    type="string",  example="Ceremonies"),
-     *         @OA\Property(property="translations[en][product_details][image]",       type="file",    format="binary"),
      *
      *         @OA\Property(property="translations[fr][name]",           type="string",  example="Cérémonie d’ouverture"),
      *         @OA\Property(property="translations[fr][product_details][places]",      type="integer", example=1),
@@ -281,7 +280,6 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *         @OA\Property(property="translations[fr][product_details][time]",        type="string",  example="19:30"),
      *         @OA\Property(property="translations[fr][product_details][location]",    type="string",  example="Stade de France"),
      *         @OA\Property(property="translations[fr][product_details][category]",    type="string",  example="Cérémonies"),
-     *         @OA\Property(property="translations[fr][product_details][image]",       type="file",    format="binary"),
      *
      *         @OA\Property(property="translations[de][name]",           type="string",  example="Eröffnungszeremonie"),
      *         @OA\Property(property="translations[de][product_details][places]",      type="integer", example=1),
@@ -290,7 +288,6 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *         @OA\Property(property="translations[de][product_details][time]",        type="string",  example="19:30"),
      *         @OA\Property(property="translations[de][product_details][location]",    type="string",  example="Stade de France"),
      *         @OA\Property(property="translations[de][product_details][category]",    type="string",  example="Zeremonien"),
-     *         @OA\Property(property="translations[de][product_details][image]",       type="file",    format="binary")
      *       )
      *     )
      *   ),
@@ -308,18 +305,16 @@ Returns a paginated list of all products (including out-of-stock), with optional
         // Retrieve the validated data
         $data = $request->validated();
 
-        // For each locale, process the image file if it exists
-        foreach (['en','fr','de'] as $locale) {
-            if (isset($data['translations'][$locale]['product_details']['image'])) {
-                /** @var \Illuminate\Http\UploadedFile $file */
-                $file = $request->file("translations.{$locale}.product_details.image");
+        if ($request->hasFile('image')) {
+            /** @var \Illuminate\Http\UploadedFile $image */
+            $image    = $request->file('image');
 
-                // store the image in the 'images' disk
-                $path = $file->store('', 'images');
+            // stocke le fichier et récupère son nom
+            $filename = $image->store('', 'images');
 
-                // take only the basename of the path to store in the database
-                $data['translations'][$locale]['product_details']['image']
-                    = basename($path);
+            // on injecte ce même nom partout dans le payload
+            foreach (['en','fr','de'] as $locale) {
+                $data['translations'][$locale]['product_details']['image'] = $filename;
             }
         }
 
@@ -333,7 +328,7 @@ Returns a paginated list of all products (including out-of-stock), with optional
     /**
      * Update an existing product (admin only).
      *
-     * @OA\Put(
+     * @OA\Post(
      *     path="/api/products/{product}",
      *     operationId="updateProduct",
      *     tags={"Products"},
@@ -366,6 +361,7 @@ Updates the details of an existing product for all 3 languages.
      *         required={
      *           "price",
      *           "stock_quantity",
+     *           "image",
      *           "translations[en][name]",
      *           "translations[fr][name]",
      *           "translations[de][name]",
@@ -387,14 +383,12 @@ Updates the details of an existing product for all 3 languages.
      *           "translations[en][product_details][category]",
      *           "translations[fr][product_details][category]",
      *           "translations[de][product_details][category]",
-     *           "translations[en][product_details][image]",
-     *           "translations[fr][product_details][image]",
-     *           "translations[de][product_details][image]"
      *         },
      *
      *         @OA\Property(property="price",          type="number",  format="float", example=100.00),
      *         @OA\Property(property="sale",           type="number",  format="float", example=0.10),
      *         @OA\Property(property="stock_quantity", type="integer", example=50),
+     *         @OA\Property(property="image",          type="file", format="binary", description="Single image file applied to all translations"),
      *
      *         @OA\Property(property="translations[en][name]",           type="string",  example="Opening Ceremony"),
      *         @OA\Property(property="translations[en][product_details][places]",      type="integer", example=1),
@@ -403,7 +397,6 @@ Updates the details of an existing product for all 3 languages.
      *         @OA\Property(property="translations[en][product_details][time]",        type="string",  example="19:30"),
      *         @OA\Property(property="translations[en][product_details][location]",    type="string",  example="Stade de France"),
      *         @OA\Property(property="translations[en][product_details][category]",    type="string",  example="Ceremonies"),
-     *         @OA\Property(property="translations[en][product_details][image]",       type="file",    format="binary"),
      *
      *         @OA\Property(property="translations[fr][name]",           type="string",  example="Cérémonie d’ouverture"),
      *         @OA\Property(property="translations[fr][product_details][places]",      type="integer", example=1),
@@ -412,7 +405,6 @@ Updates the details of an existing product for all 3 languages.
      *         @OA\Property(property="translations[fr][product_details][time]",        type="string",  example="19:30"),
      *         @OA\Property(property="translations[fr][product_details][location]",    type="string",  example="Stade de France"),
      *         @OA\Property(property="translations[fr][product_details][category]",    type="string",  example="Cérémonies"),
-     *         @OA\Property(property="translations[fr][product_details][image]",       type="file",    format="binary"),
      *
      *         @OA\Property(property="translations[de][name]",           type="string",  example="Eröffnungszeremonie"),
      *         @OA\Property(property="translations[de][product_details][places]",      type="integer", example=1),
@@ -421,7 +413,6 @@ Updates the details of an existing product for all 3 languages.
      *         @OA\Property(property="translations[de][product_details][time]",        type="string",  example="19:30"),
      *         @OA\Property(property="translations[de][product_details][location]",    type="string",  example="Stade de France"),
      *         @OA\Property(property="translations[de][product_details][category]",    type="string",  example="Zeremonien"),
-     *         @OA\Property(property="translations[de][product_details][image]",       type="file",    format="binary")
      *       )
      *     )
      *   ),
@@ -441,32 +432,41 @@ Updates the details of an existing product for all 3 languages.
      */
     public function update(StoreProductRequest $request, Product $product): JsonResponse
     {
+        // 1) Récupère les données validées
         $data = $request->validated();
 
-        // For eauch locale, process the image file if it exists
-        foreach (['en','fr','de'] as $locale) {
-            if ($file = $request->file("translations.{$locale}.product_details.image")) {
-                // delete the old image if it exists
-                $old = $product
-                    ->translations()
-                    ->where('locale', $locale)
-                    ->first()?->product_details['image']
-                    ?? null;
+        $oldFilename = data_get($product->product_details, 'image');
 
-                if ($old) {
-                    Storage::disk('images')->delete($old);
-                }
-                // store the new image in the 'images' disk
-                $path = $file->store('', 'images');
-                // replace the data with the new image name
-                $data['translations'][$locale]['product_details']['image']
-                    = basename($path);
+        if (! $request->hasFile('image')) {
+            foreach (['en','fr','de'] as $locale) {
+                $data['translations'][$locale]['product_details']['image'] = $oldFilename;
             }
         }
 
-        // Product update
-        $this->productService->update($product, $data);
+        // 2) Si on a uploadé une image…
+        if ($request->hasFile('image')) {
+            /** @var \Illuminate\Http\UploadedFile $image */
+            $image    = $request->file('image');
+            $oldImage = data_get($product->product_details, 'image');
 
+            // Supprime l’ancienne si elle existe
+            if ($oldImage) {
+                Storage::disk('images')->delete($oldImage);
+            }
+
+            // Stocke la nouvelle et récupère le nom
+            $filename = $image->store('', 'images');
+
+            // Injecte ce même nom dans toutes les traductions
+            foreach (['en', 'fr', 'de'] as $locale) {
+                $data['translations'][$locale]['product_details']['image'] = $filename;
+            }
+        }
+
+        // 3) Toujours déléguer la mise à jour du produit (avec ou sans nouvelle image)
+        $updated = $this->productService->update($product, $data);
+
+        // 4) Répond en 204 (No Content)
         return response()->json(null, 204);
     }
 
