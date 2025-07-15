@@ -19,6 +19,8 @@ use App\Events\PaymentSucceeded;
 use App\Services\TicketService;
 use Mockery;
 use Laravel\Sanctum\Sanctum;
+use App\Http\Controllers\Api\TicketController;
+use App\Http\Requests\TicketScanRequest;
 
 class TicketControllerTest extends TestCase
 {
@@ -260,35 +262,37 @@ class TicketControllerTest extends TestCase
             ->assertNoContent();
     }
 
-    public function testScanTicketMarksIsedOrThrows(): void
+    public function testScanTicketMarksIssuedAndReturnsStatusAndTimestamp(): void
     {
-        $employee = User::factory()->create(['role'=>'employee']);
+        $employee = User::factory()->create(['role' => 'employee']);
         $ticket   = Ticket::factory()->create(['status' => TicketStatus::Issued->value]);
 
-        // Non-auth → 401
+        // non-auth → 401
         $this->postJson("/api/tickets/scan/{$ticket->token}")
             ->assertStatus(401);
 
-        // Auth non-employé → 403
-        $user = User::factory()->create(['role'=>'user']);
+        // auth non‑employé → 403
+        $user = User::factory()->create(['role' => 'user']);
         $this->actingAs($user, 'sanctum')
             ->postJson("/api/tickets/scan/{$ticket->token}")
             ->assertStatus(403);
 
-        // Auth employé → scan OK → 200 + used
+        // auth employé → scan OK → 200 + retourne seulement status & used_at
         $res = $this->actingAs($employee, 'sanctum')
                     ->postJson("/api/tickets/scan/{$ticket->token}");
+
         $res->assertStatus(200)
             ->assertJsonStructure([
-                'user'  => ['firstname','lastname','email'],
-                'event' => ['name','date','time','location'],
+                'status',
+                'used_at',
             ]);
+
         $this->assertDatabaseHas('tickets', [
             'id'     => $ticket->id,
             'status' => TicketStatus::Used->value,
         ]);
 
-        // Seconde tentative → 409
+        // deuxième tentative → 409 et code d’erreur approprié
         $this->actingAs($employee, 'sanctum')
             ->postJson("/api/tickets/scan/{$ticket->token}")
             ->assertStatus(409)
@@ -375,5 +379,58 @@ class TicketControllerTest extends TestCase
             ->assertOk()
             ->assertHeader('Content-Type', 'image/png')
             ->assertDownload($filename);
+    }
+
+    public function testShowTicketRequiresAuthenticationAndEmployeeRole(): void
+    {
+        // Générer un UUID valide
+        $token = (string) Str::uuid();
+
+        // non-authentifié → 401
+        $this->getJson("/api/tickets/scan/{$token}")
+            ->assertStatus(401);
+
+        // auth comme utilisateur non-employé → 403
+        $user = User::factory()->create(['role' => 'user']);
+        $this->actingAs($user, 'sanctum')
+            ->getJson("/api/tickets/scan/{$token}")
+            ->assertStatus(403);
+    }
+
+    public function testEmployeeCanRetrieveTicketInfo(): void
+    {
+        // Générer un UUID valide et un tableau d’info à retourner
+        $token = (string) Str::uuid();
+        $info = [
+            'token'  => $token,
+            'status' => 'issued',
+            'user'   => [
+                'firstname' => 'John',
+                'lastname'  => 'Doe',
+                'email'     => 'john.doe@example.com',
+            ],
+            'event'  => [
+                'name'     => 'Concert Live',
+                'date'     => '2024-07-26',
+                'time'     => '20:00',
+                'location' => 'Stade de France',
+            ],
+        ];
+
+        // Mocker le service pour renvoyer notre $info
+        $this->mock(TicketService::class, function ($mock) use ($token, $info) {
+            $mock->shouldReceive('getInfoByQrToken')
+                ->once()
+                ->with($token)
+                ->andReturn($info);
+        });
+
+        // Authentifié en tant qu’employé → 200 + JSON exact
+        $employee = User::factory()->create(['role' => 'employee']);
+        $response = $this->actingAs($employee, 'sanctum')
+                        ->getJson("/api/tickets/scan/{$token}");
+
+        $response->assertStatus(200)
+                ->assertExactJson($info);
     }
 }

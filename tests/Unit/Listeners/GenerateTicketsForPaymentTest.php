@@ -8,6 +8,9 @@ use App\Models\Payment;
 use App\Services\TicketService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Illuminate\Support\Facades\Log;
+use Mockery;
+use App\Models\Ticket;
 
 class GenerateTicketsForPaymentTest extends TestCase
 {
@@ -43,5 +46,36 @@ class GenerateTicketsForPaymentTest extends TestCase
         $listener->handle($event);
 
         // (l’attente du mock PHPUnit fait office d’assertion)
+    }
+
+    public function testHandleSkipsGenerationWhenTicketsAlreadyExist(): void
+    {
+        // 1) Créer un vrai paiement avec un UUID fixe
+        $payment = Payment::factory()->create([
+            'uuid' => 'test-uuid-5678',
+        ]);
+
+        // 2) Créer un ticket lié à ce paiement (tickets()->exists() sera true)
+        Ticket::factory()->create([
+            'payment_id' => $payment->id,
+        ]);
+
+        // 3) Mocker TicketService pour s'assurer que generateForPaymentUuid n'est jamais appelé
+        $mockService = $this->getMockBuilder(TicketService::class)
+                            ->disableOriginalConstructor()
+                            ->getMock();
+        $mockService->expects($this->never())
+                    ->method('generateForPaymentUuid');
+        $this->app->instance(TicketService::class, $mockService);
+
+        // 4) Mocker le Log pour vérifier qu'on logge bien le message de skip
+        Log::shouldReceive('info')
+            ->once()
+            ->with("Tickets already generated for payment {$payment->uuid}, skipping.");
+
+        // 5) Exécuter le listener
+        $listener = $this->app->make(GenerateTicketsForPayment::class);
+        $event = new PaymentSucceeded($payment);
+        $listener->handle($event);
     }
 }

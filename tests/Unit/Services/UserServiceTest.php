@@ -210,7 +210,11 @@ class UserServiceTest extends TestCase
 
     public function testFiltersByFirstname(): void
     {
-        $actor = User::factory()->create(['role' => UserRole::Admin]);
+        // On force un firstname qui ne contient pas "Ali"
+        $actor = User::factory()->create([
+            'role'      => UserRole::Admin,
+            'firstname' => 'AdminUser',
+        ]);
 
         $match1 = User::factory()->create(['firstname' => 'Alice']);
         User::factory()->create(['firstname' => 'Bob']);
@@ -219,7 +223,7 @@ class UserServiceTest extends TestCase
         $filters = ['firstname' => 'Ali'];
 
         $paginator = $this->service->listAllUsers($actor, $filters);
-        $ids = collect($paginator->items())->pluck('id')->all();
+        $ids       = collect($paginator->items())->pluck('id')->all();
 
         sort($ids);
         $this->assertEqualsCanonicalizing([
@@ -308,7 +312,7 @@ class UserServiceTest extends TestCase
         $this->assertFalse($result['is_active']);
     }
 
-    public function testTwofaDisableResetsSecretAndEnableKeepsIt()
+    public function testAdminCanDisableTwoFactor()
     {
         $admin  = User::factory()->create(['role' => 'admin']);
         $target = User::factory()->create([
@@ -316,21 +320,39 @@ class UserServiceTest extends TestCase
             'twofa_secret'  => Str::random(16),
         ]);
 
-        // Désactivation de la 2FA
+        // Désactivation : doit passer sans exception
         $this->service->updateUserByAdmin($admin, $target, [
             'twofa_enabled' => false,
         ]);
+
         $fresh = $target->fresh();
         $this->assertFalse($fresh->twofa_enabled);
         $this->assertNull($fresh->twofa_secret);
+    }
 
-        // Réactivation de la 2FA (le secret reste null car non généré ici)
-        $this->service->updateUserByAdmin($admin, $target, [
-            'twofa_enabled' => true,
-        ]);
-        $fresh = $target->fresh();
-        $this->assertTrue($fresh->twofa_enabled);
-        $this->assertNull($fresh->twofa_secret);
+    public function testAdminCannotEnableTwoFactorDirectly()
+    {
+        $admin  = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create(['twofa_enabled' => false]);
+
+        try {
+            $this->service->updateUserByAdmin($admin, $target, [
+                'twofa_enabled' => true,
+            ]);
+            $this->fail('Expected HttpResponseException was not thrown');
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            $response = $e->getResponse();
+
+            // On vérifie que c’est bien un 400
+            $this->assertEquals(400, $response->getStatusCode());
+
+            // Et que le JSON renvoyé contient ton message et ton code d’erreur
+            $expected = [
+                'message' => 'Cannot enable two-factor authentication directly; user must enable it via their own account.',
+                'code'    => 'twofa_enable_not_allowed_admin',
+            ];
+            $this->assertEquals($expected, $response->getData(true));
+        }
     }
 
     public function testVerifyEmailSetsEmailVerifiedAt()
@@ -386,5 +408,30 @@ class UserServiceTest extends TestCase
                 $this->assertEquals($value, $result[$key]);
             }
         }
+    }
+
+    public function testAdminDisableTwoFactorAlsoClearsTemporaryFields(): void
+    {
+        $admin  = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create([
+            'twofa_enabled'         => true,
+            'twofa_secret'          => Str::random(16),
+            // Simule aussi les champs temporaires
+            'twofa_secret_temp'     => 'TEMPSECRET',
+            'twofa_temp_expires_at' => now()->addMinutes(10),
+        ]);
+
+        // Désactivation depuis l’admin
+        $this->service->updateUserByAdmin($admin, $target, [
+            'twofa_enabled' => false,
+        ]);
+
+        $fresh = $target->fresh();
+        $this->assertFalse($fresh->twofa_enabled);
+        $this->assertNull($fresh->twofa_secret);
+
+        // ➞ ces deux lignes n'étaient pas couvertes :
+        $this->assertNull($fresh->twofa_secret_temp);
+        $this->assertNull($fresh->twofa_temp_expires_at);
     }
 }

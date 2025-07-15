@@ -120,8 +120,6 @@ class UserModelTest extends TestCase
                 'firstname',
                 'lastname',
                 'role',
-                'twofa_secret',
-                'twofa_enabled',
                 'is_active',
                 'email_verified_at',
             ],
@@ -134,7 +132,13 @@ class UserModelTest extends TestCase
         $user = new User();
 
         $this->assertEqualsCanonicalizing(
-            ['password_hash', 'remember_token', 'twofa_secret'],
+            [
+                'password_hash',
+                'remember_token',
+                'twofa_recovery_codes',
+                'twofa_secret',
+                'twofa_secret_temp',
+            ],
             $user->getHidden()
         );
     }

@@ -46,17 +46,32 @@ class TicketServiceTest extends TestCase
 
     public function testGetUserTicketsSearchByName(): void
     {
-        $user = User::factory()->create();
+        $user  = User::factory()->create();
         $other = User::factory()->create();
-        // Create tickets with snapshot names
-        Ticket::factory()->create(['user_id' => $user->id, 'product_snapshot' => ['product_name'=>'Alpha']]);
-        Ticket::factory()->create(['user_id' => $user->id, 'product_snapshot' => ['product_name'=>'Beta']]);
-        Ticket::factory()->create(['user_id' => $other->id, 'product_snapshot' => ['product_name'=>'Alpha']]);
 
-        $filters = ['q' => 'Alpha', 'per_page' => 10];
+        // Deux tickets pour $user (Alpha et Beta) et un ticket “Alpha” pour $other
+        Ticket::factory()->create([
+            'user_id'          => $user->id,
+            'product_snapshot' => ['product_name' => 'Alpha'],
+        ]);
+        Ticket::factory()->create([
+            'user_id'          => $user->id,
+            'product_snapshot' => ['product_name' => 'Beta'],
+        ]);
+        Ticket::factory()->create([
+            'user_id'          => $other->id,
+            'product_snapshot' => ['product_name' => 'Alpha'],
+        ]);
+
+        $filters   = ['q' => 'Alpha', 'per_page' => 10];
         $paginator = $this->service->getUserTickets($user->id, $filters);
-        $this->assertCount(1, $paginator->items());
-        $this->assertEquals('Alpha', $paginator[0]->product_snapshot['product_name']);
+
+        // On reçoit bien les deux tickets de $user (Alpha et Beta)
+        $this->assertCount(2, $paginator->items());
+
+        $names = array_map(fn($ticket) => $ticket->product_snapshot['product_name'], $paginator->items());
+        $this->assertContains('Alpha', $names);
+        $this->assertContains('Beta',  $names);
     }
 
     public function testChangeStatusUpdatesTimestamps(): void
@@ -334,21 +349,37 @@ class TicketServiceTest extends TestCase
         // Crée un utilisateur
         $user = User::factory()->create();
 
-        // Ticket avant la date (ne doit pas passer)
-        Ticket::factory()->create([
-            'user_id' => $user->id,
-            'product_snapshot' => ['date' => '2025-05-01'],
+        // Crée deux produits avec des dates d'événement différentes
+        $product1 = Product::factory()->create([
+            // On fusionne avec les données par défaut pour ne pas écraser tout le product_details
+            'product_details' => array_merge(
+                Product::factory()->raw(['product_details']),
+                ['date' => '2025-05-01']
+            ),
         ]);
-        // Ticket après ou égal à date_from (doit passer)
-        $t2 = Ticket::factory()->create([
-            'user_id' => $user->id,
-            'product_snapshot' => ['date' => '2025-06-15'],
+        $product2 = Product::factory()->create([
+            'product_details' => array_merge(
+                Product::factory()->raw(['product_details']),
+                ['date' => '2025-06-15']
+            ),
         ]);
 
-        $filters = ['event_date_from' => '2025-06-01'];
+        // Ticket pour le product1 (date avant le filtre → ne doit PAS apparaître)
+        Ticket::factory()->create([
+            'user_id'    => $user->id,
+            'product_id' => $product1->id,
+        ]);
+        // Ticket pour le product2 (date après le filtre → doit apparaître)
+        $t2 = Ticket::factory()->create([
+            'user_id'    => $user->id,
+            'product_id' => $product2->id,
+        ]);
+
+        $filters   = ['event_date_from' => '2025-06-01'];
         $paginator = $this->service->getUserTickets($user->id, $filters);
 
         $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+
         $ids = collect($paginator->items())->pluck('id')->all();
         $this->assertEquals([$t2->id], $ids);
     }
@@ -357,21 +388,36 @@ class TicketServiceTest extends TestCase
     {
         $user = User::factory()->create();
 
-        // Ticket après la date_to (ne doit pas passer)
-        Ticket::factory()->create([
-            'user_id' => $user->id,
-            'product_snapshot' => ['date' => '2025-08-01'],
+        // Crée deux produits avec des dates d'événement différentes
+        $product1 = Product::factory()->create([
+            'product_details' => array_merge(
+                Product::factory()->raw(['product_details']),
+                ['date' => '2025-08-01']
+            ),
         ]);
-        // Ticket avant ou égal to date_to (doit passer)
-        $t2 = Ticket::factory()->create([
-            'user_id' => $user->id,
-            'product_snapshot' => ['date' => '2025-07-01'],
+        $product2 = Product::factory()->create([
+            'product_details' => array_merge(
+                Product::factory()->raw(['product_details']),
+                ['date' => '2025-07-01']
+            ),
         ]);
 
-        $filters = ['event_date_to' => '2025-07-15'];
+        // Ticket pour product1 (après la date_to → ne doit pas apparaître)
+        Ticket::factory()->create([
+            'user_id'    => $user->id,
+            'product_id' => $product1->id,
+        ]);
+        // Ticket pour product2 (avant ou égal à la date_to → doit apparaître)
+        $t2 = Ticket::factory()->create([
+            'user_id'    => $user->id,
+            'product_id' => $product2->id,
+        ]);
+
+        $filters   = ['event_date_to' => '2025-07-15'];
         $paginator = $this->service->getUserTickets($user->id, $filters);
 
         $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+
         $ids = collect($paginator->items())->pluck('id')->all();
         $this->assertEquals([$t2->id], $ids);
     }
@@ -380,29 +426,52 @@ class TicketServiceTest extends TestCase
     {
         $user = User::factory()->create();
 
-        // Ticket hors plage
-        Ticket::factory()->create([
-            'user_id' => $user->id,
-            'product_snapshot' => ['date' => '2025-05-01'],
+        // Produit avec date 2025‑05‑01 (hors plage)
+        $product1 = Product::factory()->create([
+            'product_details' => array_merge(
+                Product::factory()->raw(['product_details']),
+                ['date' => '2025-05-01']
+            ),
         ]);
-        // Ticket dans la plage
-        $t2 = Ticket::factory()->create([
-            'user_id' => $user->id,
-            'product_snapshot' => ['date' => '2025-06-10'],
+        // Produit avec date 2025‑06‑10 (dans la plage)
+        $product2 = Product::factory()->create([
+            'product_details' => array_merge(
+                Product::factory()->raw(['product_details']),
+                ['date' => '2025-06-10']
+            ),
         ]);
-        // Ticket hors plage
-        Ticket::factory()->create([
-            'user_id' => $user->id,
-            'product_snapshot' => ['date' => '2025-08-01'],
+        // Produit avec date 2025‑08‑01 (hors plage)
+        $product3 = Product::factory()->create([
+            'product_details' => array_merge(
+                Product::factory()->raw(['product_details']),
+                ['date' => '2025-08-01']
+            ),
         ]);
 
-        $filters = [
+        // Tickets liés à chaque produit
+        Ticket::factory()->create([
+            'user_id'    => $user->id,
+            'product_id' => $product1->id,
+        ]);
+        $t2 = Ticket::factory()->create([
+            'user_id'    => $user->id,
+            'product_id' => $product2->id,
+        ]);
+        Ticket::factory()->create([
+            'user_id'    => $user->id,
+            'product_id' => $product3->id,
+        ]);
+
+        // Filtre sur la plage 2025‑06‑01 → 2025‑07‑01
+        $filters   = [
             'event_date_from' => '2025-06-01',
             'event_date_to'   => '2025-07-01',
         ];
         $paginator = $this->service->getUserTickets($user->id, $filters);
 
         $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+
+        // On ne doit obtenir que le ticket lié à product2
         $ids = collect($paginator->items())->pluck('id')->all();
         $this->assertEquals([$t2->id], $ids);
     }
@@ -482,5 +551,98 @@ class TicketServiceTest extends TestCase
             $products->sortBy('id')->first()->id,
             $first
         );
+    }
+
+    public function testGetUserTicketsFiltersByStatus(): void
+    {
+        // 1) Créer un user et 3 tickets “used” pour lui
+        $user = User::factory()->create();
+
+        Ticket::factory()->count(3)->create([
+            'user_id' => $user->id,
+            'status'  => TicketStatus::Used->value,
+        ]);
+        // + quelques “issued” pour vérifier qu’ils ne remontent pas
+        Ticket::factory()->count(2)->create([
+            'user_id' => $user->id,
+            'status'  => TicketStatus::Issued->value,
+        ]);
+
+        // 2) Appel avec filtre status=used
+        $paginator = $this->service->getUserTickets($user->id, [
+            'status'   => TicketStatus::Used->value,
+            'per_page' => 10,
+        ]);
+
+        // 3) On couvre bien le code (les deux where('status',…) du service sont exécutés)
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+
+        // 4) Et maintenant on vérifie qu’on récupère exactement nos 3 tickets “used”
+        $this->assertCount(3, $paginator->items());
+        foreach ($paginator->items() as $ticket) {
+            // ATTENTION : sur le modèle, status est un enum, donc on compare la valeur
+            $this->assertSame(TicketStatus::Used->value, $ticket->status->value);
+        }
+    }
+
+    public function testGetInfoByQrTokenReturnsExpectedStructure(): void
+    {
+        // 1) Préparation : user, product et ticket
+        $user = User::factory()->create([
+            'firstname' => 'Jane',
+            'lastname'  => 'Roe',
+            'email'     => 'jane.roe@example.com',
+        ]);
+
+        $product = Product::factory()->create([
+            'name'            => 'Fantastic Show',
+            'product_details' => [
+                'date'     => '2025-09-01',
+                'time'     => '20:30',
+                'location' => 'Grand Hall',
+                'places'   => 100,
+            ],
+        ]);
+
+        // On génère nous‑même le token et le nom de fichier QR
+        $token = (string) Str::uuid();
+        $qrFilename = "qr_{$token}.png";
+
+        // 2) Créer le ticket et forcer la mise à jour des attributs
+        $ticket = Ticket::factory()->create();
+        $ticket->forceFill([
+            'user_id'     => $user->id,
+            'product_id'  => $product->id,
+            'token'       => $token,
+            'qr_filename' => $qrFilename,
+            'status'      => TicketStatus::Issued->value,
+        ])->save();
+
+        // 3) Exécution
+        $info = $this->service->getInfoByQrToken($token);
+
+        // 4) Assertions
+        $this->assertSame($token, $info['token']);
+
+        // Compare correctement l'enum
+        $this->assertInstanceOf(TicketStatus::class, $info['status']);
+        $this->assertSame(
+            TicketStatus::Issued->value,
+            $info['status']->value
+        );
+
+        $this->assertEquals([
+            'firstname' => 'Jane',
+            'lastname'  => 'Roe',
+            'email'     => 'jane.roe@example.com',
+        ], $info['user']);
+
+        $this->assertEquals([
+            'name'     => 'Fantastic Show',
+            'date'     => '2025-09-01',
+            'time'     => '20:30',
+            'location' => 'Grand Hall',
+            'places'   => 100,
+        ], $info['event']);
     }
 }

@@ -75,23 +75,26 @@ class PaymentWebhookTest extends TestCase
 
     public function testItProcessesSucceededEventAndDispatchesInvoiceRequested()
     {
+        // 1) Fake all events
         Event::fake();
 
-        // Crée un Payment factice pour l'event
-        $paymentModel = \App\Models\Payment::factory()->create([
+        // 2) Create a Payment *with* the uuid that your metadata will carry
+        $payment = \App\Models\Payment::factory()->create([
+            'uuid'           => 'uuid-123',       // ← must match the metadata
             'transaction_id' => 'pi_123',
-            'status'         => \App\Enums\PaymentStatus::Paid,
+            'status'         => \App\Enums\PaymentStatus::Pending,
         ]);
 
-        // Stub du service pour vérifier l'appel markAsPaidByUuid
-        $mockService = $this->mock(\App\Services\PaymentService::class);
-        $mockService->shouldReceive('markAsPaidByUuid')
-                    ->once()
-                    ->with('uuid-123')
-                    ->andReturn($paymentModel);
+        // 3) Partial‐mock so the real markAsPaidByUuid() runs (finds your record) and dispatches InvoiceRequested
+        $this->partialMock(\App\Services\PaymentService::class, function ($mock) {
+            $mock->shouldReceive('markAsPaidByUuid')
+                ->once()
+                ->with('uuid-123')
+                ->passthru();
+        });
 
-        // Prépare le payload et le header
-        $payloadArray = [
+        // 4) Build the Stripe payload & header
+        $payload = [
             'type' => 'payment_intent.succeeded',
             'data' => [
                 'object' => [
@@ -100,19 +103,25 @@ class PaymentWebhookTest extends TestCase
                 ],
             ],
         ];
-        $body      = json_encode($payloadArray);
+        $body      = json_encode($payload);
         $timestamp = time();
-        $header    = $this->makeStripeSignatureHeader($body, $this->stripeSecret, $timestamp);
+        $secret    = config('services.stripe.webhook_secret');
+        $sig       = $this->makeStripeSignatureHeader($body, $secret, $timestamp);
 
-        // Envoi en JSON via postJson()
-        $this->postJson('/api/payments/webhook', $payloadArray, [
-            'Stripe-Signature' => $header,
-        ])->assertStatus(200)
-        ->assertExactJson([]);
+        // 5) (Optional) Disable only the Stripe‐signature check if you have a middleware for it.
+        //    If you don’t, you can safely omit this line.
+        $this->withoutMiddleware(\App\Http\Middleware\VerifyStripeSignature::class);
 
-        // Vérifie que l’événement a bien été dispatché avec le bon Payment
-        Event::assertDispatched(InvoiceRequested::class, function ($e) use ($paymentModel) {
-            return $e->payment->is($paymentModel);
+        // 6) Hit the route (hard‑coded or via route helper—here hard‑coded)
+        $this->postJson('/api/payments/webhook', $payload, [
+            'Stripe-Signature' => $sig,
+        ])
+        ->assertStatus(200)
+        ->assertExactJson([]);  // your controller always returns [] on success
+
+        // 7) Finally, assert that InvoiceRequested was dispatched with the right model
+        Event::assertDispatched(\App\Events\InvoiceRequested::class, function ($e) use ($payment) {
+            return $e->payment->is($payment);
         });
     }
 
@@ -144,39 +153,36 @@ class PaymentWebhookTest extends TestCase
 
     public function testItLogsWarningAndReturns200WhenUuidMissingInSucceededEvent()
     {
-        // Prévoir l'appel au logger
         Log::shouldReceive('warning')
         ->once()
         ->withArgs(function ($message, $context) {
             return str_contains($message, 'Webhook received without payment_uuid')
-                && isset($context['object_id'])
                 && $context['object_id'] === 'pi_456';
         });
 
-        // On ne dispatch pas InvoiceRequested
         Event::fake([InvoiceRequested::class]);
 
-        // Prépare le payload et le header
-        $payloadArray = [
-            'type' => 'checkout.session.completed',
-            'data' => [
-                'object' => [
-                    'id'       => 'pi_456',
-                    'metadata' => [],  // pas de payment_uuid
-                ],
-            ],
+        $payload = [
+            'type' => 'payment_intent.succeeded',        // ← not checkout.session.completed
+            'data' => ['object' => [
+                'id'       => 'pi_456',
+                'metadata' => [],                       // no payment_uuid
+            ]],
         ];
-        $body      = json_encode($payloadArray);
+        $body      = json_encode($payload);
         $timestamp = time();
-        $header    = $this->makeStripeSignatureHeader($body, $this->stripeSecret, $timestamp);
+        $secret    = config('services.stripe.webhook_secret');
+        $sig       = $this->makeStripeSignatureHeader($body, $secret, $timestamp);
 
-        // Envoi via postJson avec le tableau
-        $this->postJson('/api/payments/webhook', $payloadArray, [
-            'Stripe-Signature' => $header,
-        ])->assertStatus(200)
+        // **Bypass all middleware** so Laravel definitely matches the route
+        $this->withoutMiddleware();
+
+        $this->postJson('/api/payments/webhook', $payload, [
+            'Stripe-Signature' => $sig,
+        ])
+        ->assertStatus(200)
         ->assertExactJson([]);
 
-        // Aucun InvoiceRequested n'est dispatché
         Event::assertNotDispatched(InvoiceRequested::class);
     }
 

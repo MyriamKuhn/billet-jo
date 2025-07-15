@@ -18,6 +18,7 @@ use App\Helpers\EmailHelper;
 use App\Notifications\VerifyNewEmailNotification;
 use App\Notifications\EmailUpdatedNotification;
 use Laravel\Sanctum\PersonalAccessToken;
+use App\Services\Auth\TwoFactorService;
 
 class AuthServiceTest extends TestCase
 {
@@ -36,7 +37,7 @@ class AuthServiceTest extends TestCase
         $this->expectException(HttpResponseException::class);
 
         $service->login([
-            'email' => 'nonexistent@example.com',
+            'email'    => 'nonexistent@example.com',
             'password' => 'wrong',
             'remember' => false,
         ]);
@@ -100,22 +101,35 @@ class AuthServiceTest extends TestCase
 
     public function testLoginWithInvalidTwoFactorCodeThrowsException()
     {
-        $user = User::factory()->create(['is_active' => true, 'twofa_enabled' => true]);
+        $user = User::factory()->create([
+            'is_active'     => true,
+            'twofa_enabled' => true,
+        ]);
         $user->markEmailAsVerified();
         Hash::shouldReceive('check')->andReturn(true);
 
-        $mock2fa = Mockery::mock(Google2FA::class);
-        $mock2fa->shouldReceive('verifyKey')->with($user->twofa_secret, '123456')->andReturn(false);
+        // 1) on mocke TwoFactorService, pas Google2FA
+        $mock2faSvc = Mockery::mock(\App\Services\Auth\TwoFactorService::class);
+        $mock2faSvc
+            ->shouldReceive('verifyOtp')
+            ->once()
+            ->withArgs(fn($calledUser, $code) =>
+                $calledUser->id === $user->id && $code === '123456'
+            )
+            ->andReturn(false);
 
-        $service = $this->makeAuthService(google2fa: $mock2fa);
+        // 2) on l’injecte dans AuthService
+        $service = $this->makeAuthService(
+            twoFactorService: $mock2faSvc
+        );
 
         $this->expectException(HttpResponseException::class);
 
         $service->login([
-            'email' => $user->email,
-            'password' => 'password',
-            'twofa_code' => '123456',
-            'remember' => false,
+            'email'     => $user->email,
+            'password'  => 'password',
+            'twofa_code'=> '123456',
+            'remember'  => false,
         ]);
     }
 
@@ -260,45 +274,62 @@ class AuthServiceTest extends TestCase
 
     public function testDisableTwoFactorScenarios()
     {
-        $service = $this->makeAuthService();
-        $user = User::factory()->create(['twofa_enabled'=>false]);
+        // 1) On mocke Google2FA
+        $google2fa = Mockery::mock(Google2FA::class);
 
-        // Not enabled
+        // 2) On instancie le service correct
+        $service = new TwoFactorService($google2fa);
+
+        // Prépare un user sans 2FA
+        $user = User::factory()->create(['twofa_enabled' => false]);
+
+        // a) cas non activé → exception
         $this->expectException(HttpResponseException::class);
         $service->disableTwoFactor($user, 'code');
 
-        // Invalid code
+        // b) cas activé mais code invalide
         $user->twofa_enabled = true;
-        $user->twofa_secret = 'secret';
-        $service = $this->makeAuthService(google2fa: Mockery::mock(Google2FA::class)->shouldReceive('verifyKey')->andReturn(false)->getMock());
+        $user->twofa_secret  = 'secret';
+        $google2fa
+            ->shouldReceive('verifyKey')
+            ->once()
+            ->with('secret', 'wrong')
+            ->andReturn(false);
         $this->expectException(HttpResponseException::class);
         $service->disableTwoFactor($user, 'wrong');
 
-        // Success
-        $mock2fa = Mockery::mock(Google2FA::class);
-        $mock2fa->shouldReceive('verifyKey')->andReturn(true);
-        $service = $this->makeAuthService(google2fa: $mock2fa);
+        // c) cas activé et code valide → plus d’exception, deuxfa_disabled
+        $google2fa
+            ->shouldReceive('verifyKey')
+            ->once()
+            ->with('secret', '123456')
+            ->andReturn(true);
+        // on réactive avant de tester la réussite
         $user->twofa_enabled = true;
-        $user->twofa_secret = 'secret';
+        $user->twofa_secret  = 'secret';
         $service->disableTwoFactor($user, '123456');
-        $this->assertFalse($user->fresh()->twofa_enabled);
-        $this->assertNull($user->fresh()->twofa_secret);
+
+        $fresh = $user->fresh();
+        $this->assertFalse($fresh->twofa_enabled, '2FA doit être désactivée');
+        $this->assertNull($fresh->twofa_secret, 'Le secret doit être effacé');
     }
 
     /**
      * Helper to instantiate AuthService with mocked dependencies
      */
     protected function makeAuthService(
-        Google2FA $google2fa = null,
-        PasswordBroker $passwordBroker = null,
-        CartService $cartService = null,
-        LoggerInterface $logger = null
-    ) {
+        Google2FA $google2fa             = null,
+        PasswordBroker $passwordBroker   = null,
+        CartService $cartService         = null,
+        LoggerInterface $logger          = null,
+        TwoFactorService $twoFactorService = null   // ← ajouté
+    ): AuthService {
         return new AuthService(
-            $google2fa ?? Mockery::mock(Google2FA::class),
-            $passwordBroker ?? Mockery::mock(PasswordBroker::class),
-            $cartService ?? Mockery::mock(CartService::class),
-            $logger ?? Mockery::mock(LoggerInterface::class)
+            $google2fa           ?? Mockery::mock(Google2FA::class),
+            $passwordBroker      ?? Mockery::mock(PasswordBroker::class),
+            $cartService         ?? Mockery::mock(CartService::class),
+            $logger              ?? Mockery::mock(LoggerInterface::class),
+            $twoFactorService    ?? Mockery::mock(TwoFactorService::class)  // ← aussi
         );
     }
 
@@ -444,46 +475,72 @@ class AuthServiceTest extends TestCase
             ->with('totp-secret', 'wrongcode')
             ->andReturn(false);
 
-        $service = $this->makeAuthService(google2fa: $mock2fa);
+        $service = new \App\Services\Auth\TwoFactorService($mock2fa);
 
         try {
             $service->disableTwoFactor($user, 'wrongcode');
             $this->fail('Expected HttpResponseException was not thrown.');
         } catch (HttpResponseException $e) {
             $response = $e->getResponse();
-            // Vérifie le code HTTP 400
             $this->assertEquals(400, $response->status());
-            // Vérifie le contenu JSON exact
             $this->assertEquals([
-                'message' => 'Invalid two-factor authentication code',
+                'message' => 'Invalid two-factor authentication code or recovery code',
                 'code'    => 'twofa_invalid_code',
             ], $response->getData(true));
         }
     }
 
-    public function testDisableTwoFactorSuccess()
+    public function testLoginWithTwoFactorSuccess()
     {
-        // Création d’un user avec 2FA activée
+        // 1) Création d’un user avec 2FA activée et un mot de passe "secret"
         $user = User::factory()->create([
-            'twofa_enabled' => true,
-            'twofa_secret'  => 'valid-secret',
+            'password_hash'   => bcrypt('secret'),
+            'is_active'       => true,
+            'email_verified_at' => now(),
+            'twofa_enabled'   => true,
+            'twofa_secret'    => 'valid-secret',
         ]);
 
-        // Mock Google2FA pour retourner true sur la vérif
-        $mock2fa = Mockery::mock(Google2FA::class);
-        $mock2fa
-            ->shouldReceive('verifyKey')
-            ->with('valid-secret', 'correctcode')
-            ->andReturn(true);
+        // 2) Mock du PasswordBroker (pas utilisé ici, mais nécessaire au constructeur)
+        $passwordBroker = Mockery::mock(\Illuminate\Contracts\Auth\PasswordBroker::class);
+        // 3) Mock du CartService et du Logger (on ignore les appels)
+        $cartService    = Mockery::mock(\App\Services\CartService::class)->shouldIgnoreMissing();
+        $logger         = Mockery::mock(\Psr\Log\LoggerInterface::class)->shouldIgnoreMissing();
 
-        $service = $this->makeAuthService(google2fa: $mock2fa);
+        // 4) Mock du TwoFactorService pour valider le code 2FA
+        $twoFactorService = Mockery::mock(\App\Services\Auth\TwoFactorService::class);
+        $twoFactorService
+            ->shouldReceive('verifyOtp')
+            ->once()
+            ->withArgs(function ($calledUser, $calledCode) use ($user) {
+                return $calledUser instanceof \App\Models\User
+                    && $calledUser->id === $user->id
+                    && $calledCode === 'correctcode';
+            })
+            ->andReturnTrue();
 
-        // Appel sans exception
-        $service->disableTwoFactor($user, 'correctcode');
+        // 5) Instanciation du service avec tous les mocks
+        $authService = new \App\Services\Auth\AuthService(
+            new \PragmaRX\Google2FA\Google2FA(),
+            $passwordBroker,
+            $cartService,
+            $logger,
+            $twoFactorService
+        );
 
-        // Vérifier que le user est mis à jour
-        $userFresh = $user->fresh();
-        $this->assertFalse($userFresh->twofa_enabled, '2FA should be disabled');
-        $this->assertNull($userFresh->twofa_secret, '2FA secret should be cleared');
+        // 6) Appel de login() avec 2FA
+        $response = $authService->login([
+            'email'      => $user->email,
+            'password'   => 'secret',
+            'twofa_code' => 'correctcode',
+            'remember'   => false,
+        ]);
+
+        // 7) Assertions
+        $this->assertIsArray($response);
+        $this->assertEquals('Logged in successfully', $response['message']);
+        $this->assertArrayHasKey('token', $response);
+        $this->assertEquals($user->id, $response['user']['id']);
+        $this->assertTrue($response['user']['twofa_enabled']);
     }
 }
