@@ -19,10 +19,26 @@ use App\Http\Requests\SalesStatsRequest;
 use App\Http\Resources\ProductSalesResource;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * Controller for managing tickets:
+ * - Admin endpoints for listing, downloading, status updates, and sales stats.
+ * - User endpoints for viewing and downloading their own tickets.
+ * - Employee endpoints for scanning and validating tickets.
+ */
 class TicketController extends Controller
 {
+    /**
+     * The service handling ticket business logic.
+     *
+     * @var TicketService
+     */
     protected TicketService $ticketService;
 
+    /**
+     * Inject the TicketService.
+     *
+     * @param  TicketService  $ticketService
+     */
     public function __construct(TicketService $ticketService)
     {
         $this->ticketService = $ticketService;
@@ -173,6 +189,9 @@ class TicketController extends Controller
      *   @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  TicketIndexRequest  $request  Validated filters and pagination inputs.
+     * @return JsonResponse                   List of tickets and pagination metadata.
      */
     public function index(TicketIndexRequest $request)
     {
@@ -251,8 +270,8 @@ class TicketController extends Controller
      *   @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param TicketUserRequest $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param  TicketUserRequest  $request  Validated filters (e.g. status, date range).
+     * @return JsonResponse                   User’s tickets and pagination metadata.
      */
     public function userTickets(TicketUserRequest $request)
     {
@@ -303,8 +322,8 @@ class TicketController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param Request $request
-     * @param string $filename
+     * @param  Request  $request   HTTP request (for auth context).
+     * @param  string   $filename  Ticket PDF filename.
      * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
     public function downloadTicket(Request $request, string $filename)
@@ -326,6 +345,8 @@ class TicketController extends Controller
 
     /**
      * Download any ticket PDF as admin.
+     *
+     * Checks admin privileges before serving the file.
      *
      * @OA\Get(
      *     path="/api/tickets/admin/{filename}",
@@ -354,8 +375,8 @@ class TicketController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param Request $request
-     * @param string $filename
+     * @param  Request  $request   HTTP request (for auth context).
+     * @param  string   $filename  Ticket PDF filename.
      * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
     public function downloadAdminTicket(Request $request, string $filename)
@@ -377,7 +398,7 @@ class TicketController extends Controller
     }
 
     /**
-     * Download a qr code for an authentificated user.
+     * Download a ticket QR code PNG for the authenticated user.
      *
      * @OA\Get(
      *     path="/api/tickets/qr/{filename}",
@@ -408,8 +429,8 @@ class TicketController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param Request $request
-     * @param string $filename
+     * @param  Request  $request   HTTP request (for auth context).
+     * @param  string   $filename  QR code filename.
      * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
     public function downloadQr(Request $request, string $filename)
@@ -430,7 +451,9 @@ class TicketController extends Controller
     }
 
     /**
-     * Download any qr code as an admin.
+     * Download any QR code PNG as admin.
+     *
+     * Checks admin privileges before serving the file.
      *
      * @OA\Get(
      *     path="/api/tickets/admin/qr/{filename}",
@@ -459,8 +482,8 @@ class TicketController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param Request $request
-     * @param string $filename
+     * @param  Request  $request   HTTP request (for auth context).
+     * @param  string   $filename  QR code filename.
      * @return \Symfony\Component\HttpFoundation\StreamedResponse
      */
     public function downloadAdminQr(Request $request, string $filename)
@@ -516,6 +539,10 @@ class TicketController extends Controller
      *   @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  TicketStatusRequest  $request  Validated new status.
+     * @param  int                  $id       ID of the ticket to update.
+     * @return JsonResponse                   204 No Content on success.
      */
     public function updateStatus(TicketStatusRequest $request, int $id)
     {
@@ -526,6 +553,8 @@ class TicketController extends Controller
     }
 
     /**
+     * Generate free tickets for a user (admin only).
+     *
      * @OA\Post(
      *   path="/api/tickets",
      *   summary="Generate free tickets for a user (admin only)",
@@ -551,6 +580,9 @@ class TicketController extends Controller
      *   @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  TicketCreateRequest  $request  Validated user, product, quantity, and locale.
+     * @return JsonResponse                   204 No Content on success.
      */
     public function createForUser(TicketCreateRequest $request)
     {
@@ -566,7 +598,7 @@ class TicketController extends Controller
     }
 
     /**
-     * Scan a ticket QR code and returns user & event info (employee only).
+     * Scan a ticket QR code and return user & event info (employee only).
      *
      * @OA\Get(
      *   path="/api/tickets/scan/{token}",
@@ -617,9 +649,9 @@ class TicketController extends Controller
      *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param Request $request
-     * @param string  $token
-     * @return \Illuminate\Http\JsonResponse
+     * @param  TicketScanRequest  $request  Validated scan token.
+     * @param  string             $token    Ticket UUID token from QR code.
+     * @return JsonResponse                  Ticket details.
      */
     public function showTicket(TicketScanRequest $request, string $token): JsonResponse
     {
@@ -629,7 +661,9 @@ class TicketController extends Controller
     }
 
     /**
-     * Validate a ticket with the token returned by the QR code scan. (employee only)
+     * Validate a ticket by QR code scan (employee only).
+     *
+     * Marks issued tickets as used; throws a 409 if already processed.
      *
      * @OA\Post(
      *   path="/api/tickets/scan/{token}",
@@ -675,9 +709,9 @@ class TicketController extends Controller
      *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param Request $request
-     * @param string  $token
-     * @return \Illuminate\Http\JsonResponse
+     * @param  TicketScanRequest  $request  Validated scan token.
+     * @param  string             $token    Ticket UUID token from QR code.
+     * @return JsonResponse                  Validation result (status, timestamps, etc.).
      */
     public function scanTicket(TicketScanRequest $request, string $token)
     {
@@ -724,8 +758,8 @@ class TicketController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * ),
      *
-     * @param SalesStatsRequest $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param  SalesStatsRequest  $request  Validated search and pagination filters.
+     * @return JsonResponse                  Paginated product sales data.
      */
     public function salesStats(SalesStatsRequest $request)
     {

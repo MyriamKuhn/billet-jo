@@ -23,19 +23,22 @@ use App\Events\InvoiceRequested;
 use App\Events\PaymentSucceeded;
 use App\Exceptions\TicketAlreadyProcessedException;
 
+/**
+ * Service class for managing tickets.
+ */
 class TicketService
 {
     /**
-     * Get tickets with optional filters and pagination.
+     * Retrieve tickets with optional filters and pagination.
      *
-     * @param array $filters
+     * @param  array  $filters
      * @return LengthAwarePaginator
      */
     public function getFilteredTickets(array $filters): LengthAwarePaginator
     {
         $query = Ticket::query();
 
-        // 1) Recherche globale sur token, nom de produit, type de ticket
+        // 1) Global search on token, product name, or ticket type
         if (! empty($filters['q'])) {
             $q = $filters['q'];
             $query->where(function($qb) use ($q) {
@@ -45,7 +48,7 @@ class TicketService
             });
         }
 
-        // 2) Filtres simples
+        // 2) Simple filters
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
@@ -68,7 +71,7 @@ class TicketService
             });
         }
 
-        // 3) Filtres de date
+        // 3) Date filters helper
         $applyDate = fn($column,$from,$to) =>
             tap($query, function($q) use ($column,$from,$to,$filters) {
                 if (! empty($filters[$from])) {
@@ -93,10 +96,11 @@ class TicketService
     }
 
     /**
-     * Get tickets for the authenticated user.
+     * Retrieve tickets for a specific user with filters and pagination.
      *
      * @param  int    $userId
      * @param  array  $filters
+     * @return LengthAwarePaginator
      */
     public function getUserTickets(int $userId, array $filters): LengthAwarePaginator
     {
@@ -107,7 +111,7 @@ class TicketService
             $query->where('status', $filters['status']);
         }
 
-        // Filtre par date d'événement
+        // Filter by event date range
         if (!empty($filters['event_date_from']) || !empty($filters['event_date_to'])) {
             $query->whereHas('product', function($qProd) use ($filters) {
                 if (!empty($filters['event_date_from'])) {
@@ -140,6 +144,13 @@ class TicketService
         return $query->paginate($perPage)->appends($filters);
     }
 
+    /**
+     * Generate tickets for a given payment UUID and locale.
+     *
+     * @param  string  $paymentUuid
+     * @param  string  $locale
+     * @return void
+     */
     public function generateForPaymentUuid(string $paymentUuid, string $locale): void
     {
         $payment = Payment::with('user')
@@ -155,11 +166,11 @@ class TicketService
         DB::transaction(function() use ($payment, $user, &$createdTickets) {
             foreach ($payment->cart_snapshot['items'] as $itemData) {
                 $productId = $itemData['product_id'];
-                // Retrieve the quantity from the item data or default to 1
                 $quantity = $itemData['quantity'] ?? 1;
 
                 $product = Product::findOrFail($productId);
 
+                // Decrease stock for the product
                 $product->decrement('stock_quantity', $quantity);
 
                 for ($i = 0; $i < $quantity; $i++) {
@@ -167,7 +178,7 @@ class TicketService
                     $qrFilename  = "qr_{$token}.png";
                     $pdfFilename = "ticket_{$token}.pdf";
 
-                    // Generate and store the QR code
+                    // Build and save QR code image
                     $result = Builder::create()
                         ->writer(new PngWriter())
                         ->data($token)
@@ -179,10 +190,9 @@ class TicketService
 
                     $qrDataUri = $result->getDataUri();
 
-                    // Generate and store the PDF
+                    // Render and save ticket PDF
                     $pdf = Pdf::loadView('tickets.template', [
                         'user'   => $user,
-                        // passe l'objet product pour avoir tous ses détails
                         'item'   => (object)[
                             'product'          => $product,
                             'product_snapshot' => $itemData,
@@ -192,7 +202,7 @@ class TicketService
                     ]);
                     Storage::disk('tickets')->put($pdfFilename, $pdf->output());
 
-                    // Save the ticket to the database
+                    // Store the ticket record
                     $createdTickets[] = Ticket::create([
                         'product_snapshot' => $itemData,
                         'token'            => $token,
@@ -207,16 +217,16 @@ class TicketService
             }
         });
 
-        // Mail sending
+        // Send notification email with generated tickets
         Mail::to($user->email)
             ->send(new TicketsGenerated($user, $createdTickets));
     }
 
     /**
-     * Change the status of a ticket.
+     * Change the status of a ticket and adjust stock if needed.
      *
-     * @param  int    $ticketId
-     * @param  string $status
+     * @param  int     $ticketId
+     * @param  string  $status
      * @return Ticket
      */
     public function changeStatus(int $ticketId, string $status): Ticket
@@ -224,6 +234,7 @@ class TicketService
         $ticket = Ticket::findOrFail($ticketId);
         $now = Carbon::now();
 
+        // Map status to the corresponding timestamp field
         $timestamps = [
             TicketStatus::Used->value      => ['status' => $status, 'used_at'      => $now],
             TicketStatus::Refunded->value  => ['status' => $status, 'refunded_at'  => $now],
@@ -234,10 +245,10 @@ class TicketService
         $data = $timestamps[$status] ?? ['status' => $status];
 
         DB::transaction(function() use ($ticket, $data, $status) {
-        // 1) Mise à jour du ticket
+            // 1) Update the ticket
             $ticket->update($data);
 
-            // 2) Si on annule ou on rembourse, on restitue 1 place en stock
+            // 2) If cancelled or refunded, restore one unit to product stock
             if (in_array($status, [TicketStatus::Cancelled->value, TicketStatus::Refunded->value], true)) {
                 $ticket->product->increment('stock_quantity', 1);
             }
@@ -247,11 +258,13 @@ class TicketService
     }
 
     /**
-     * Create free tickets for a user and product.
+     * Create free tickets (no payment) for a user and product.
      *
-     * @param  int $userId
-     * @param  int $productId
-     * @param  int $quantity
+     * @param  int     $userId
+     * @param  int     $productId
+     * @param  int     $quantity
+     * @param  string  $locale
+     * @return void
      */
     public function createFreeTickets(int $userId, int $productId, int $quantity, string $locale): void
     {
@@ -271,7 +284,7 @@ class TicketService
             'discounted_price' => 0.0,
         ];
 
-        // 1) Create the payment free with the invoice link
+        // 1) Create a "free" payment record
         $invoiceFilename = 'invoice_'.Str::uuid().'.pdf';
 
         $payment = Payment::create([
@@ -286,17 +299,17 @@ class TicketService
             'invoice_link'  => $invoiceFilename,
         ]);
 
-        // 2) Generate the invoice PDF
+        // 2) Trigger invoice generation
         event(new InvoiceRequested($payment, $locale));
 
-        // 3) Generate the tickets
+        // 3) Trigger ticket generation
         event(new PaymentSucceeded($payment, $locale));
     }
 
     /**
-     * Get ticket information by QR code token.
+     * Retrieve ticket info by its QR code filename token.
      *
-     * @param  string $token
+     * @param  string  $token
      * @return array
      */
     public function getInfoByQrToken(string $token): array
@@ -326,10 +339,11 @@ class TicketService
     }
 
     /**
-     * Validate a ticket by scanning the QR code token.
+     * Scan and validate a ticket by its token.
      *
-     * @param  string $token
+     * @param  string  $token
      * @return array
+     * @throws TicketAlreadyProcessedException
      */
     public function scanAndValidate(string $token): array
     {
@@ -353,9 +367,10 @@ class TicketService
     }
 
     /**
-     * Retourne les ventes groupées par produit, avec pagination, recherche & tri.
+     * Return sales statistics grouped by product, with pagination, search, and sorting.
      *
-     * @param  array  $filters  q, sort_by, sort_order, per_page
+     * @param  array  $filters  Supported keys: 'q', 'sort_by', 'sort_order', 'per_page'
+     * @return LengthAwarePaginator
      */
     public function getSalesStats(array $filters): LengthAwarePaginator
     {
@@ -369,7 +384,7 @@ class TicketService
             $query->where('products.name', 'like', "%{$filters['q']}%");
         }
 
-        // Tri
+        // Apply sorting
         $sortBy    = $filters['sort_by']    ?? 'sales_count';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $query->orderBy($sortBy, $sortOrder);

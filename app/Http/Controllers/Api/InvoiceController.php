@@ -8,11 +8,23 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\Payment;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Http\JsonResponse;
 
+
+/**
+ * Controller for listing and downloading invoice PDFs.
+ *
+ * Provides endpoints for:
+ * - Listing the authenticated user’s invoices with filtering, sorting, and pagination.
+ * - Downloading an invoice file for the authenticated user.
+ * - (Admin-only) Downloading any invoice by filename.
+ */
 class InvoiceController extends Controller
 {
     /**
      * List all invoices for the authenticated user.
+     *
+     * Supports optional filters (status, date range), sorting, and pagination.
      *
      * @OA\Get(
      *     path="/api/invoices",
@@ -98,6 +110,9 @@ class InvoiceController extends Controller
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
+     *
+     * @param  InvoiceIndexRequest  $request  Validated filters, sort, and pagination inputs.
+     * @return JsonResponse                   Paginated invoice data including download URLs.
      */
     public function index(InvoiceIndexRequest $request)
     {
@@ -157,7 +172,7 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Download an invoice PDF for the authenticated user.
+     * Stream the PDF for a specific invoice belonging to the authenticated user.
      *
      * @OA\Get(
      *     path="/api/invoices/{filename}",
@@ -188,9 +203,9 @@ class InvoiceController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param Request $request
-     * @param string $filename
-     * @return StreamedResponse
+     * @param  Request  $request    The HTTP request instance (used for auth).
+     * @param  string   $filename   The invoice PDF filename.
+     * @return StreamedResponse      PDF download response or 404 if not found.
      */
     public function download(Request $request, string $filename): Response
     {
@@ -210,7 +225,9 @@ class InvoiceController extends Controller
     }
 
     /**
-     * Download any invoice as admin.
+     * (Admin only) Stream any invoice PDF by filename.
+     *
+     * Checks that the caller has admin privileges before serving.
      *
      * @OA\Get(
      *     path="/api/invoices/admin/{filename}",
@@ -239,9 +256,9 @@ class InvoiceController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param Request $request
-     * @param string $filename
-     * @return StreamedResponse
+     * @param  Request  $request    The HTTP request instance (used for auth).
+     * @param  string   $filename   The invoice PDF filename.
+     * @return StreamedResponse      PDF download response or 403/404 on failure.
      */
     public function adminDownload(Request $request, string $filename): StreamedResponse
     {

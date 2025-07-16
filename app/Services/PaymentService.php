@@ -12,6 +12,10 @@ use Stripe\Exception\ApiErrorException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * PaymentService handles payment-related operations such as creating payments from carts,
+ * paginating payments with filters, and managing payment statuses.
+ */
 class PaymentService
 {
     private CartService $cartService;
@@ -21,12 +25,12 @@ class PaymentService
     }
 
     /**
-     * Paginate the payments with optional filters and sorting.
+     * Paginate payments with optional filters and sorting.
      *
-     * @param  array  $filters    Indexed array of filters
-     * @param  string $sortBy     Columne to sort by
-     * @param  string $sortOrder  Sort order (asc or desc)
-     * @param  int    $perPage    Number of items per page
+     * @param  array   $filters    Associative array of filters.
+     * @param  string  $sortBy     Column to sort by.
+     * @param  string  $sortOrder  Sort direction ('asc' or 'desc').
+     * @param  int     $perPage    Items per page.
      * @return LengthAwarePaginator
      */
     public function paginate(
@@ -37,7 +41,7 @@ class PaymentService
     ): LengthAwarePaginator {
         $query = Payment::with('user');
 
-        // Global search filter
+        // Global search filter across UUID, invoice link, transaction ID, and user email/ID
         if (! empty($filters['q'])) {
             $q = $filters['q'];
             $query->where(function($qBuilder) use ($q) {
@@ -51,14 +55,14 @@ class PaymentService
             });
         }
 
-        // Simple filters
+        // Simple equality filters for status, payment_method, and user_id
         foreach (['status','payment_method','user_id'] as $field) {
             if (isset($filters[$field])) {
                 $query->where($field, $filters[$field]);
             }
         }
 
-        // Date filters
+        // Date range filters on created_at
         if (! empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
@@ -66,7 +70,7 @@ class PaymentService
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
-        // Amount filters
+        // Numeric range filters on amount
         if (! empty($filters['amount_min'])) {
             $query->where('amount', '>=', $filters['amount_min']);
         }
@@ -74,19 +78,19 @@ class PaymentService
             $query->where('amount', '<=', $filters['amount_max']);
         }
 
-        // Dynamic sorting and pagination
+        // Apply sorting and return paginated result
         return $query
             ->orderBy($sortBy, $sortOrder)
             ->paginate($perPage);
     }
 
     /**
-     * Create a payment from a cart.
+     * Create a payment record from a cart.
      *
-     * @param  int     $userId    ID of the authenticated user
-     * @param  int     $cartId    ID of the cart to be paid
-     * @param  string  $method    Payment method (e.g. 'stripe', 'paypal')
-     * @return \App\Models\Payment
+     * @param  int     $userId    Authenticated user ID.
+     * @param  int     $cartId    Cart ID to be paid.
+     * @param  string  $method    Payment method ('stripe', 'paypal', etc.).
+     * @return Payment
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException
      */
@@ -95,7 +99,7 @@ class PaymentService
         DB::beginTransaction();
 
         try {
-            // 1) Idempotency: check for an existing pending payment for this user/cart
+            // 1) Idempotency: reuse any existing pending payment for this user and cart
             $existing = Payment::where('user_id', $userId)
                 ->where('status', PaymentStatus::Pending)
                 ->whereJsonContains('cart_snapshot', ['cart_id' => $cartId])
@@ -106,7 +110,7 @@ class PaymentService
                 return $existing;
             }
 
-            // 2) Create a new pending payment record in the database
+            // 2) Prepare a new pending payment record
             $cart     = $this->loadCart($userId, $cartId);
             $this->cartService->assertStockAvailable($cart);
             $rawSnapshot = $this->buildSnapshot($cart);
@@ -126,7 +130,7 @@ class PaymentService
                 'user_id'        => $userId,
             ]);
 
-            // 3) Inline Stripe call to create a PaymentIntent
+            // 3) Create a Stripe PaymentIntent
             try {
                 $intent = $this->stripe->paymentIntents->create([
                     'amount'               => intval($payment->amount * 100),
@@ -139,7 +143,7 @@ class PaymentService
                     ],
                 ]);
             } catch (ApiErrorException $e) {
-                // Log the Stripe error, mark payment as failed, and abort with 502
+                // On Stripe error, mark as failed and abort with a 502
                 Log::error('Stripe PaymentIntent creation failed', [
                     'exception'  => $e,
                     'payment_id' => $payment->id,
@@ -149,7 +153,7 @@ class PaymentService
                 abort(502, 'Payment gateway error, please try again later');
             }
 
-            // 4) Finalize the payment by storing Stripe transaction details
+            // 4) Store Stripe intent details and commit
             $payment->update([
                 'transaction_id' => $intent->id,
                 'client_secret'  => $intent->client_secret,
@@ -160,23 +164,23 @@ class PaymentService
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            // If it's an HTTP exception, rethrow it
+            // Rethrow HTTP exceptions
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
                 throw $e;
             }
 
-            // Otherwise, log unexpected errors and return a generic 500
+            // Log and abort on unexpected errors
             Log::error('Unexpected payment error', ['exception' => $e]);
             abort(500, 'Internal payment error');
         }
     }
 
     /**
-     * Load the cart with its items and related products, ensuring it belongs to the user.
+     * Load the cart with its items and products, ensuring ownership.
      *
-     * @param  int  $userId  ID of the authenticated user
-     * @param  int  $cartId  ID of the cart to load
-     * @return \App\Models\Cart
+     * @param  int  $userId  Authenticated user ID.
+     * @param  int  $cartId  Cart ID.
+     * @return Cart
      */
     private function loadCart(int $userId, int $cartId): Cart
     {
@@ -186,10 +190,22 @@ class PaymentService
     }
 
     /**
-     * Build a snapshot of the cart items for invoice and payment processing.
+     * Build a snapshot of the cart for invoice and payment processing.
      *
-     * @param  \App\Models\Cart  $cart
-     * @return array<int, array{product_id:int, product_name:string, ticket_type:string, quantity:int, unit_price:float, discount_rate:float, discounted_price:float}>
+     * @param  Cart  $cart
+     * @return array{
+     *   locale: string,
+     *   items: array<int, array{
+     *       product_id:int,
+     *       product_name:string,
+     *       ticket_type:string,
+     *       ticket_places:int,
+     *       quantity:int,
+     *       unit_price:float,
+     *       discount_rate:float,
+     *       discounted_price:float
+     *   }>
+     * }
      */
     private function buildSnapshot(Cart $cart): array
     {
@@ -207,16 +223,16 @@ class PaymentService
         ])->toArray();
 
         return [
-            'locale' => app()->getLocale(),  // ← on y stocke la locale courante
+            'locale' => app()->getLocale(),  // store the current locale
             'items'  => $lines,
         ];
     }
 
     /**
-     * Calculate the total payment amount based on the snapshot.
+     * Calculate the total amount from the cart snapshot.
      *
-     * @param  array<int, array{ticket_type:string,quantity:int,unit_price:float,discount_rate:float,discounted_price:float}>  $snapshot
-     * @return float  Total amount (sum of discounted_price * quantity)
+     * @param  array{items: array<int, array{discounted_price:float,quantity:int}>}  $snapshot
+     * @return float  Sum of (discounted_price × quantity).
      */
     private function calculateAmount(array $snapshot): float
     {
@@ -225,11 +241,11 @@ class PaymentService
     }
 
     /**
-     * Retrieve a payment by UUID for a given user.
+     * Find a payment by UUID for a given user.
      *
-     * @param  string  $uuid     Unique identifier of the payment
-     * @param  int     $userId   ID of the user who owns the payment
-     * @return \App\Models\Payment
+     * @param  string  $uuid    Payment UUID.
+     * @param  int     $userId  Owning user ID.
+     * @return Payment
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
@@ -241,10 +257,10 @@ class PaymentService
     }
 
     /**
-     * Mark a payment as paid using its UUID (from Checkout Session metadata).
+     * Mark a payment as paid by its UUID.
      *
-     * @param  string  $uuid  Unique identifier of the payment
-     * @return \App\Models\Payment
+     * @param  string  $uuid  Payment UUID.
+     * @return Payment
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
@@ -257,19 +273,18 @@ class PaymentService
                 'paid_at' => now(),
             ]);
             $payment->refresh();
-            // Ajout dynamique d’une propriété pour usage immédiat
+            // Dynamically add a flag to indicate just-paid status
             $payment->wasJustPaid = true;
         } else {
-            // Déjà payé précédemment
             $payment->wasJustPaid = false;
         }
         return $payment;
     }
 
     /**
-     * Mark a payment as paid using the Stripe PaymentIntent ID.
+     * Mark a payment as paid by its Stripe PaymentIntent ID.
      *
-     * @param  string  $intentId  Stripe PaymentIntent identifier
+     * @param  string  $intentId  Stripe PaymentIntent ID.
      * @return void
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
@@ -281,9 +296,9 @@ class PaymentService
     }
 
     /**
-     * Mark a payment as failed using the Stripe PaymentIntent ID.
+     * Mark a payment as failed by its Stripe PaymentIntent ID.
      *
-     * @param  string  $intentId  Stripe PaymentIntent identifier
+     * @param  string  $intentId  Stripe PaymentIntent ID.
      * @return void
      *
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
@@ -299,9 +314,9 @@ class PaymentService
     }
 
     /**
-     * Transition a payment from Pending to Paid.
+     * Transition a pending payment to paid.
      *
-     * @param  \App\Models\Payment  $payment  The payment instance to update
+     * @param  Payment  $payment  The payment to update.
      * @return void
      */
     public function markAsPaid(Payment $payment): void
@@ -316,11 +331,11 @@ class PaymentService
     }
 
     /**
-     * Refund a payment by UUID.
+     * Issue a refund for a payment by UUID.
      *
-     * @param  string  $uuid
-     * @param  float   $amount
-     * @return \App\Models\Payment
+     * @param  string  $uuid    Payment UUID.
+     * @param  float   $amount  Amount to refund.
+     * @return Payment
      *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException
      */

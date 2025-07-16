@@ -7,6 +7,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use App\Models\Product;
 
 /**
+ * Resource for admin-facing payment data.
+ *
  * @OA\Schema(
  *     schema="PaymentResource",
  *     type="object",
@@ -51,30 +53,40 @@ use App\Models\Product;
 class PaymentResource extends JsonResource
 {
     /**
-     * Transform the resource into an array for admin listing.
+     * Transform the model into an array for admin listing view.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return array<string, mixed>
      */
     public function toArray($request): array
     {
+        // Use loaded products for localization of snapshot items
         $products = $this->whenLoaded('snapshot_products');
 
+        // Build a localized snapshot of cart items
         $localizedSnapshot = collect($this->cart_snapshot['items'])->map(function($line) use ($products) {
             $product = $products[$line['product_id']] ?? null;
 
             return [
+                // Always include product ID
                 'product_id'    => $line['product_id'],
+                // Use the loaded product's name if available
                 'product_name'  => $product
                     ? $product->name
                     : ($line['product_name'] ?? null),
+                // Category from product details, or fallback
                 'ticket_type'   => $product
                     ? $product->product_details['category']
                     : ($line['ticket_type'] ?? null),
+                // Number of places per ticket
                 'ticket_places' => $line['ticket_places'],
+                // Discount rate applied (e.g., 0.10 for 10%)
                 'discount_rate' => $line['discount_rate'],
+                // Final price after applying discount
                 'discounted_price' => $line['discounted_price'],
+                // Quantity of tickets purchased
                 'quantity'      => $line['quantity'],
+                // Price before discount
                 'unit_price'    => $line['unit_price'],
             ];
         })->toArray();

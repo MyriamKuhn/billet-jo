@@ -8,6 +8,13 @@ use App\Services\Auth\CaptchaService;
 use Stripe\StripeClient;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * The application service provider.
+ *
+ * This class is responsible for registering application services and bootstrapping
+ * any necessary functionality during the application's lifecycle.
+ *
+ */
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -15,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // CaptchaService
+        // Bind the CaptchaService as a singleton.
         $this->app->singleton(CaptchaService::class, function ($app) {
             $recaptcha = config('services.recaptcha', []);
 
@@ -26,7 +33,7 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        // StripeClient
+        // Bind the Stripe client as a singleton.
         $this->app->singleton(StripeClient::class, fn() =>
             new StripeClient(config('services.stripe.secret'))
         );
@@ -37,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Ensure storage directories exist for generated assets.
         Storage::disk('invoices')->makeDirectory('');
         Storage::disk('qrcodes')->makeDirectory('');
         Storage::disk('tickets')->makeDirectory('');

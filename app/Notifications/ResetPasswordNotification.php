@@ -3,17 +3,18 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\URL;
 
+/**
+ * Notification sent when a user requests a password reset.
+ */
 class ResetPasswordNotification extends Notification
 {
     use Queueable;
 
     /**
-     * The token for resetting the password.
+     * The password reset token.
      *
      * @var string
      */
@@ -21,6 +22,8 @@ class ResetPasswordNotification extends Notification
 
     /**
      * Create a new notification instance.
+     *
+     * @param  string  $token  The password reset token.
      */
     public function __construct($token)
     {
@@ -28,9 +31,10 @@ class ResetPasswordNotification extends Notification
     }
 
     /**
-     * Get the notification's delivery channels.
+     * Determine which channels to send the notification through.
      *
-     * @return array<int, string>
+     * @param  mixed  $notifiable
+     * @return string[]
      */
     public function via(object $notifiable): array
     {
@@ -38,15 +42,20 @@ class ResetPasswordNotification extends Notification
     }
 
     /**
-     * Get the mail representation of the notification.
+     * Build the mail message for the password reset.
+     *
+     * @param  mixed  $notifiable
+     * @return \Illuminate\Notifications\Messages\MailMessage
      */
     public function toMail(object $notifiable): MailMessage
     {
+        // Choose front-end URL based on the environment
         $frontendUrl = match (app()->environment()) {
             'production' => 'https://jo2024.mkcodecreations.dev',
             default => 'http://localhost:3000',
         };
 
+        // Construct the password reset link with token, email and locale
         $url = $frontendUrl . '/password-reset?token=' . $this->token . '&email=' . urlencode($notifiable->email) . '&locale=' . app()->getLocale();
 
         return (new MailMessage)
@@ -61,6 +70,7 @@ class ResetPasswordNotification extends Notification
     /**
      * Get the array representation of the notification.
      *
+     * @param  mixed  $notifiable
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array

@@ -9,19 +9,35 @@ use App\Models\User;
 use App\Models\Ticket;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * Class TicketsGenerated
+ *
+ * This Mailable class is responsible for sending an email to the user
+ * with the generated tickets attached as PDFs.
+ */
 class TicketsGenerated extends Mailable
 {
     use Queueable, SerializesModels;
 
+    /**
+     * The user who will receive the tickets.
+     *
+     * @var \App\Models\User
+     */
     public User $user;
-    /** @var \Illuminate\Support\Collection|Ticket[] */
+
+    /**
+     * A collection of generated tickets.
+     *
+     * @var \Illuminate\Support\Collection|\App\Models\Ticket[]
+     */
     public $tickets;
 
     /**
-     * Create a new message instance.
+     * Initialize the mailable with the user and their tickets.
      *
-     * @param \App\Models\User $user
-     * @param \Illuminate\Support\Collection|Ticket[] $tickets
+     * @param  \App\Models\User  $user
+     * @param  \Illuminate\Support\Collection|\App\Models\Ticket[]  $tickets
      */
     public function __construct(User $user, $tickets)
     {
@@ -30,12 +46,15 @@ class TicketsGenerated extends Mailable
     }
 
     /**
-     * Build the message.
+     * Build the email message.
+     *
+     * Attaches each ticket PDF and passes the necessary data to the view.
      *
      * @return $this
      */
     public function build()
     {
+        // Frontend URL for direct access to the user's tickets page
         $clientUrl = rtrim(config('app.frontend_url'), '/') . '/user/tickets';
 
         $mail = $this
@@ -47,7 +66,7 @@ class TicketsGenerated extends Mailable
                 'clientUrl'     => $clientUrl,
             ]);
 
-        // Attach each ticket PDF
+        // Attach each ticket PDF file to the email
         foreach ($this->tickets as $ticket) {
             $path = Storage::disk('tickets')->path($ticket->pdf_filename);
             $mail->attach($path, [

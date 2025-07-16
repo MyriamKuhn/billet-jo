@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Represents a user ticket resource, typically used in ticketing systems.
+ *
  * @OA\Schema(
  *   schema="UserTicketResource",
  *   type="object",
@@ -40,7 +42,8 @@ class UserTicketResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @return array<string, mixed>
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
      */
     public function toArray(Request $request): array
     {

@@ -6,24 +6,41 @@ use App\Http\Controllers\Controller;
 use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\Cart;
 use App\Http\Resources\CartResource;
 use App\Http\Requests\UpdateCartItemRequest;
 use App\Models\Product;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Auth;
 
+/**
+ * API controller for managing the shopping cart.
+ *
+ * Supports retrieving the current cart (guest or authenticated),
+ * updating item quantities, and clearing the authenticated user’s cart.
+ */
 class CartController extends Controller
 {
+    /**
+     * The service handling cart business logic.
+     *
+     * @var CartService
+     */
     protected CartService $cartService;
 
+    /**
+     * Inject the CartService.
+     *
+     * @param  CartService  $cartService
+     */
     public function __construct(CartService $cartService)
     {
         $this->cartService = $cartService;
     }
 
     /**
-     * Get current cart (guest or authenticated user).
+     * Retrieve the current shopping cart.
+     *
+     * For authenticated users, returns full cart data via CartResource.
+     * For guests, returns a map of product IDs → quantities plus metadata.
      *
      * @OA\Get(
      *     operationId="getCurrentCart",
@@ -106,6 +123,7 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
         $user = $request->user('sanctum');
 
         if ($user) {
+            // Authenticated: load user’s cart with product details
             $cart = $this->cartService->getUserCart($user);
             $cart->load([
                 'cartItems.product' => fn($q) => $q->select([
@@ -118,7 +136,7 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
             ], 200);
         }
 
-        // Guest
+        // Guest: build items list from session data
         $guestItemsMap = $this->cartService->getGuestCart();
         $products = Product::whereIn('id', array_keys($guestItemsMap))
             ->get(['id','stock_quantity','name','price','sale','product_details']);
@@ -162,7 +180,10 @@ Provide a Bearer token to operate on the user’s cart; omit it to operate on th
     }
 
     /**
-     * Update the quantity of an item in the current cart.
+     * Update the quantity of an item in the cart.
+     *
+     * If quantity > 0, adjusts by delta; if quantity = 0, removes the item.
+     * Handles both guest and authenticated carts.
      *
      * @OA\Patch(
      *     path="/api/cart/items/{product}",
@@ -214,20 +235,19 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
      *
-     * @param  Product  $product
-     * @param  UpdateCartItemRequest  $request
-     * @return JsonResponse
+     * @param  Product                 $product  The product to update
+     * @param  UpdateCartItemRequest   $request  Validated request with `quantity`
+     * @return JsonResponse            204 No Content on success
      */
     public function updateItem(Product $product, UpdateCartItemRequest $request): JsonResponse
     {
         $newQty   = $request->input('quantity');
         $productId = $product->id;
 
-        // Check if Bearer token is provided
         $user = $request->user('sanctum');
 
         if ($user) {
-            // ── Connected User ────────────────────────────────────────
+            // Authenticated user: calculate change and apply
             $cart = $this->cartService->getUserCart($user);
             $cart->load('cartItems');
             $existingItem = $cart->cartItems->firstWhere('product_id', $productId);
@@ -241,7 +261,7 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
                 $this->cartService->removeItemForUser($user, $productId, abs($delta));
             }
         } else {
-            // ── Guest ────────────────────────────────────────────────────────
+            // Guest cart: similar delta logic using session storage
             $guestItems = $this->cartService->getGuestCart();
             $currentQty = (int) ($guestItems[$productId] ?? 0);
 
@@ -258,7 +278,9 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
     }
 
     /**
-     * Clear the entire cart of the authenticated user.
+     * Remove all items from the authenticated user’s cart.
+     *
+     * Requires authentication; always returns 204 No Content.
      *
      * @OA\Delete(
      *     path="/api/cart/items",
@@ -279,11 +301,12 @@ Accessible by guests and authenticated users. Provide a Bearer token to update t
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
      *
+     * @param  Request  $request
      * @return JsonResponse
      */
     public function clearCart(Request $request): JsonResponse
     {
-        $user = $request->user('sanctum'); // toujours présent, car middleware auth:sanctum
+        $user = $request->user('sanctum');
         $this->cartService->clearCartForUser($user);
         return response()->json(null, 204);
     }

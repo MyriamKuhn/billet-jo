@@ -11,6 +11,12 @@ use Illuminate\Support\Str;
 use App\Enums\TicketStatus;
 use Illuminate\Support\Carbon;
 
+/**
+ * Factory for creating Ticket instances.
+ *
+ * This factory generates random ticket data, including product snapshots,
+ * user associations, payment details, and ticket status.
+ */
 class TicketFactory extends Factory
 {
     /**
@@ -27,14 +33,12 @@ class TicketFactory extends Factory
      */
     public function definition()
     {
-        // Crée automatiquement un utilisateur, un paiement et un produit associés
         $user = User::factory()->create();
         $payment = Payment::factory()->create([
             'user_id' => $user->id,
         ]);
         $product = Product::factory()->create();
 
-        // Snapshot des données produit au moment de l'achat
         $snapshot = [
             'product_name'    => $product->name,
             'ticket_type'     => data_get($product->product_details, 'category', $this->faker->word()),
@@ -58,6 +62,11 @@ class TicketFactory extends Factory
         ];
     }
 
+    /**
+     * Indicate that the ticket is used.
+     *
+     * @return static
+     */
     public function used(): static
     {
         return $this->state(function (array $attributes) {

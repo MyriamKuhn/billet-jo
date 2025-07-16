@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\EmailUpdate>
+ * Factory for creating EmailUpdate instances.
  */
 class EmailUpdateFactory extends Factory
 {

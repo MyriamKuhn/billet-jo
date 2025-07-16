@@ -7,10 +7,26 @@ use App\Models\User;
 use App\Models\Payment;
 use App\Models\Product;
 
+/**
+ * Factory for creating Payment instances.
+ *
+ * This factory generates random payment data, including items purchased,
+ * their quantities, prices, and payment status.
+ */
 class PaymentFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
     protected $model = Payment::class;
 
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
         $status = $this->faker->randomElement(['pending', 'paid', 'failed', 'refunded']);
@@ -24,15 +40,14 @@ class PaymentFactory extends Factory
             $quantity  = $this->faker->numberBetween(1, 5);
             $unitPrice = $this->faker->randomFloat(2, 10, 500);
 
-            // On peut également simuler un discount aléatoire
             $discountRate     = $this->faker->randomFloat(2, 0, 0.3); // jusque 30%
             $discountedPrice  = round($unitPrice * (1 - $discountRate), 2);
 
             $items[] = [
                 'product_id'       => $product->id,
-                'product_name'     => $product->name,      // au cas où on ne charge pas snapshot_products
+                'product_name'     => $product->name,
                 'ticket_type'      => $this->faker->randomElement(['adult','child','senior']),
-                'ticket_places'    => $quantity,            // on choisit ici d'aligner places = quantité
+                'ticket_places'    => $quantity,
                 'quantity'         => $quantity,
                 'unit_price'       => $unitPrice,
                 'discount_rate'    => $discountRate,

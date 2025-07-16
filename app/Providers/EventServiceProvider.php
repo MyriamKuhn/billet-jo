@@ -10,17 +10,25 @@ use App\Listeners\GenerateInvoicePdf;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 
+/**
+ * The event service provider.
+ *
+ * This class is responsible for registering event listeners and bootstrapping
+ * any necessary functionality during the application's lifecycle.
+ */
 class EventServiceProvider extends ServiceProvider
 {
     /**
-     * The event → listener mappings for the application.
+     * The event-to-listener mappings for the application.
      *
      * @var array<class-string, array<int, class-string>>
      */
     protected $listen = [
+        // When an invoice is requested, generate its PDF
         InvoiceRequested::class => [
             GenerateInvoicePdf::class,
         ],
+        // After a payment succeeds, generate tickets
         PaymentSucceeded::class => [
             GenerateTicketsForPayment::class,
         ],
@@ -33,7 +41,7 @@ class EventServiceProvider extends ServiceProvider
     {
         parent::boot();
 
-        // “Un-hook” the framework’s default Registered → SendEmailVerificationNotification
+        // Remove Laravel’s default listener for the Registered → SendEmailVerificationNotification event
         $this->app['events']->forget(Registered::class, [SendEmailVerificationNotification::class, 'handle']);
     }
 }

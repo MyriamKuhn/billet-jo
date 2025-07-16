@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Client\Factory as HttpClient;
 
+/**
+ * CaptchaService handles the verification of Google reCAPTCHA tokens.
+ * It uses the provided secret key and verify URL to validate the token.
+ */
 class CaptchaService
 {
     public function __construct(protected string $secret, protected string $verifyUrl, protected HttpClient $http) {}
@@ -18,12 +22,14 @@ class CaptchaService
      */
     public function verify(string $token): bool
     {
+        // Ensure the secret key is set
         if (empty($this->secret)) {
             Log::error('reCAPTCHA secret key is not configured');
             return false;
         }
 
         try {
+            // Send the token to Google's verification endpoint
             $response = $this->http
                 ->retry(3, 100)
                 ->asForm()
@@ -32,7 +38,7 @@ class CaptchaService
                     'response' => $token,
                 ]);
 
-            // If google returns a HTTP error, we log it and return false
+            // If Google returns an HTTP error, log and treat as failure
             if (!$response->successful()) {
                 Log::warning('reCAPTCHA verification invalid', [
                     'status' => $response->status(),
@@ -43,8 +49,8 @@ class CaptchaService
 
             $data = $response->json();
 
+            // For v3, you may also check 'score' >= your threshold
             if (empty($data['success'])) {
-                // Pour reCAPTCHA v3, aussi vérifier 'score' >= threshold
                 Log::warning('reCAPTCHA validation failed', $data);
                 return false;
             }
@@ -52,6 +58,7 @@ class CaptchaService
             return true;
 
         } catch (\Throwable $e) {
+            // Any exception during HTTP call is logged and treated as failure
             Log::error('Error during reCAPTCHA verification', [
                 'exception' => $e,
             ]);

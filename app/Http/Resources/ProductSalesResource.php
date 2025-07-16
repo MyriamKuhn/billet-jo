@@ -5,6 +5,8 @@ namespace App\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Represents the sales data of a product, typically used in e-commerce or inventory systems.
+ *
  * @OA\Schema(
  *   schema="ProductSalesResource",
  *   type="object",
@@ -15,6 +17,12 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class ProductSalesResource extends JsonResource
 {
+    /**
+     * Transform the resource into an array.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
     public function toArray($request): array
     {
         return [

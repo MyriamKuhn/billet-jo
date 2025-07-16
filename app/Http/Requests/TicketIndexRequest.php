@@ -3,13 +3,21 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use App\Enums\TicketStatus;
 
+/**
+ * Form request to validate filtering and pagination parameters for listing all tickets (admin only).
+ *
+ * Ensures that only admins may access the endpoint, and that any provided filters,
+ * date ranges, and pagination values conform to expected formats and relationships.
+ */
 class TicketIndexRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * Only authenticated administrators can list all tickets.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -19,19 +27,31 @@ class TicketIndexRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * Supports:
+     * - Global search by token/product/category.
+     * - Filtering by status, user, product, or payment.
+     * - Date-range filters for created, updated, used, refunded, or cancelled timestamps.
+     * - Pagination parameters.
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
+            // Optional global search term (ticket token, product name, etc.)
             'q'                 => 'sometimes|string',
+            // Ticket status filter
             'status'            => 'sometimes|in:issued,used,refunded,cancelled',
+            // Filter by user ID or email
             'user_id'           => 'sometimes|integer|exists:users,id',
             'user_email'        => 'sometimes|email|exists:users,email',
+            // Filter by product or payment
             'product_id'     => 'sometimes|integer|exists:products,id',
             'payment_uuid'   => 'sometimes|string|exists:payments,uuid',
+            // Pagination
             'per_page'          => 'sometimes|integer|min:1|max:100',
             'page'           => 'sometimes|integer|min:1',
+            // Date range filters
             'created_from'      => 'sometimes|date',
             'created_to'        => 'sometimes|date|after_or_equal:created_from',
             'updated_from'      => 'sometimes|date',
@@ -46,7 +66,9 @@ class TicketIndexRequest extends FormRequest
     }
 
     /**
-     * Return only the validated filter parameters.
+     * Retrieve only the validated filters for use in the controller.
+     *
+     * @return array<string, mixed>  Subset of validated inputs corresponding to filters.
      */
     public function validatedFilters(): array
     {

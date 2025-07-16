@@ -5,6 +5,8 @@ namespace App\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Represents a user resource, typically used in user management systems.
+ *
  * @OA\Schema(
  *   schema="UserResource",
  *   type="object",
@@ -27,7 +29,7 @@ class UserResource extends JsonResource
      * Transform the resource into an array.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return array<string, mixed>
+     * @return array
      */
     public function toArray($request)
     {

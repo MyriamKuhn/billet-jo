@@ -5,6 +5,12 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
+ * Form request to validate data for creating or updating a product in all locales.
+ *
+ * Ensures that only administrators may perform the operation, normalizes incoming
+ * numeric and array values, and enforces rules on common fields as well as per-locale
+ * translation entries.
+ *
  * @OA\Schema(
  *   schema="StoreProductSingleLocale",
  *   type="object",
@@ -36,6 +42,10 @@ class StoreProductRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * Only authenticated admins may create or update products.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -43,13 +53,19 @@ class StoreProductRequest extends FormRequest
     }
 
     /**
-     * Prépare les données avant validation :
-     * force `places` en int pour chaque locale.
+     * Prepare the data for validation.
+     *
+     * - Casts price and sale to floats (sale may be empty string ➔ null).
+     * - Casts stock_quantity to integer.
+     * - Casts each locale's `product_details.places` to integer for fr, en, de.
+     *
+     * @return void
      */
     protected function prepareForValidation(): void
     {
         $input = $this->all();
 
+        // Normalize top‑level numeric values
         if (isset($input['price'])) {
             $input['price'] = (float) $input['price'];
         }
@@ -60,6 +76,7 @@ class StoreProductRequest extends FormRequest
             $input['stock_quantity'] = (int) $input['stock_quantity'];
         }
 
+        // Normalize `places` under product_details for each locale
         if (isset($input['translations']) && is_array($input['translations'])) {
             foreach (['fr','en','de'] as $loc) {
                 if (
@@ -72,33 +89,37 @@ class StoreProductRequest extends FormRequest
             }
         }
 
-        // Merge des données modifiées dans la requête
+        // Merge normalized values back into the request
         $this->merge($input);
     }
 
     /**
      * Get the validation rules that apply to the request.
      *
+     * - Validates global product fields (price, sale, stock_quantity, image).
+     * - Requires exactly three translations (fr, en, de), each with its own rules.
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        // Shared image validation rules
         $imageRules = ['nullable','file','image','mimes:jpeg,png,jpg,gif,svg','max:2048'];
 
         return [
-            // Global rules
+            // Top‑level product attributes
             'price'          => ['required', 'numeric', 'min:0'],
             'sale'           => ['nullable', 'numeric', 'min:0'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
             'image'          => $imageRules,
 
-            // Translations rules
+            // Require exactly three locales
             'translations'        => ['required','array','size:3'],
             'translations.en'     => ['required','array'],
             'translations.fr'     => ['required','array'],
             'translations.de'     => ['required','array'],
 
-            // Translations fields
+            // Common translation fields
             'translations.*.name'                               => ['required','string','max:255'],
 
             'translations.*.product_details'                    => ['required','array'],

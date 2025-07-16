@@ -9,18 +9,23 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
+/**
+ * Service pour gérer l'activation/désactivation de la 2FA (authentification à deux facteurs)
+ * avec Google2FA.
+ */
 class TwoFactorService
 {
     public function __construct(private Google2FA $google2fa) {}
 
     /**
-     * Prépare l'activation de la 2FA :
-     * génère secret temporaire, stocke dans les colonnes twofa_secret_temp et twofa_temp_expires_at,
-     * retourne secret + QR.
+     * Prepare two-factor authentication setup:
+     * - Generate a temporary secret
+     * - Store it in `twofa_secret_temp` with an expiry timestamp
+     * - Return the secret and OTP‑Auth URL for QR code generation
      *
-     * @param User $user
-     * @return array{secret: string, qrCodeUrl: string}
-     * @throws HttpResponseException
+     * @param  User  $user
+     * @return array{secret: string, qrCodeUrl: string, expires_at: string}
+     * @throws HttpResponseException  If 2FA is already enabled
      */
     public function prepareEnable(User $user): array
     {
@@ -31,16 +36,15 @@ class TwoFactorService
             ], 400));
         }
 
-        // Générer un nouveau secret
+        // Generate a new secret key
         $secret = $this->google2fa->generateSecretKey();
 
-        // Stocker temporairement dans les colonnes du user
+        // Store it temporarily on the user with a 10‑minute TTL
         $user->twofa_secret_temp = $secret;
-        // TTL par ex. 10 minutes
         $user->twofa_temp_expires_at = Carbon::now()->addMinutes(10);
         $user->save();
 
-        // Générer l’URL OTP Auth pour QR code (ex. otpauth://totp/...)
+        // Build the OTP-Auth URL for QR code scanning
         $qrCodeUrl = $this->google2fa->getQRCodeUrl(
             config('app.name'),
             $user->email,
@@ -55,12 +59,14 @@ class TwoFactorService
     }
 
     /**
-     * Confirm 2FA for the given user.
+     * Confirm two-factor authentication setup:
+     * - Verify the provided OTP against the temporary secret
+     * - Activate 2FA and generate recovery codes
      *
-     * @param  User  $user
+     * @param  User    $user
      * @param  string  $otp
-     * @return array{recovery_codes: array<string>}
-     * @throws HttpResponseException
+     * @return array{recovery_codes: string[]}
+     * @throws HttpResponseException  On invalid or expired setup, or if already enabled
      */
     public function confirmEnable(User $user, string $otp): array
     {
@@ -71,7 +77,7 @@ class TwoFactorService
             ], 400));
         }
 
-        // Vérifier qu’il y a un secret temporaire en base et qu’il n’est pas expiré
+        // Ensure a temporary secret exists and has not expired
         if (empty($user->twofa_secret_temp) || empty($user->twofa_temp_expires_at)
             || now()->greaterThan($user->twofa_temp_expires_at)) {
             throw new HttpResponseException(response()->json([
@@ -82,7 +88,7 @@ class TwoFactorService
 
         $secret = $user->twofa_secret_temp;
 
-        // Vérifier l’OTP
+        // Check the OTP code
         if (! $this->google2fa->verifyKey($secret, $otp)) {
             throw new HttpResponseException(response()->json([
                 'message' => 'Invalid OTP code',
@@ -90,14 +96,13 @@ class TwoFactorService
             ], 400));
         }
 
-        // OTP valide → activer définitivement
+        // Activate 2FA permanently
         $user->twofa_secret = $secret;
         $user->twofa_enabled = true;
-        // Supprimer les infos temp
         $user->twofa_secret_temp = null;
         $user->twofa_temp_expires_at = null;
 
-        // Générer recovery codes (par ex. 8 codes de 10 caractères)
+        // Generate and store hashed recovery codes
         $plainCodes = [];
         $hashedCodes = [];
         for ($i = 0; $i < 8; $i++) {
@@ -109,20 +114,22 @@ class TwoFactorService
 
         $user->save();
 
-        // Retourner les codes en clair pour que le frontend les affiche/stocke
+        // Return plain recovery codes for the user to save
         return [
             'recovery_codes' => $plainCodes,
         ];
     }
 
     /**
-     * Disable 2FA for the given user after verifying the code or a recovery code.
+     * Disable two-factor authentication:
+     * - Accept either a current OTP or one of the recovery codes
+     * - Consume the recovery code if used
+     * - Remove all 2FA data from the user
      *
-     * @param User   $user
-     * @param string $code  Le code OTP ou recovery code fourni par l'utilisateur
+     * @param  User    $user
+     * @param  string  $code  OTP or recovery code
      * @return void
-     *
-     * @throws HttpResponseException On invalid code or if 2FA not enabled
+     * @throws HttpResponseException  On invalid code or if 2FA not enabled
      */
     public function disableTwoFactor(User $user, string $code): void
     {
@@ -135,18 +142,17 @@ class TwoFactorService
 
         $valid = false;
 
-        // 1. Vérifier OTP normal contre le secret
+        // First try verifying against the current secret
         if (! empty($user->twofa_secret) && $this->google2fa->verifyKey($user->twofa_secret, $code)) {
             $valid = true;
         } else {
-            // 2. Vérifier recovery codes stockés
+            // Otherwise, check recovery codes
             $hashes = $user->twofa_recovery_codes ?? [];
             foreach ($hashes as $idx => $hash) {
                 if (Hash::check($code, $hash)) {
-                    // Consommer ce recovery code : le supprimer de la liste
+                    // Consume this recovery code
                     unset($hashes[$idx]);
                     $user->twofa_recovery_codes = array_values($hashes);
-                    // On sauvegarde maintenant pour enregistrer la consommation du code
                     $user->save();
                     $valid = true;
                     break;
@@ -161,12 +167,12 @@ class TwoFactorService
             ], 400));
         }
 
-        // 3. Désactivation définitive : nettoyer tous les champs 2FA
+        // Clear all 2FA-related fields
         $user->twofa_enabled        = false;
         $user->twofa_secret         = null;
         $user->twofa_recovery_codes = null;
 
-        // Si vous utilisez les colonnes temporaires, on les nettoie aussi
+        // Also clear any temp setup if present
         if (isset($user->twofa_secret_temp)) {
             $user->twofa_secret_temp = null;
         }
@@ -178,11 +184,11 @@ class TwoFactorService
     }
 
     /**
-     * Validate a recovery code for the given user.
+     * Verify a one-time OTP (used during login):
      *
-     * @param User $user
-     * @param string $code
-     * @return bool
+     * @param  User    $user
+     * @param  string  $otp
+     * @return bool    True if the code is valid
      */
     public function verifyOtp(User $user, string $otp): bool
     {

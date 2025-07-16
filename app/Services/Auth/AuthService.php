@@ -15,6 +15,10 @@ use App\Services\CartService;
 use Psr\Log\LoggerInterface;
 use App\Services\Auth\TwoFactorService;
 
+/**
+ * AuthService handles user authentication, including login, logout,
+ * password reset, and email change requests.
+ */
 class AuthService
 {
     public function __construct(
@@ -26,9 +30,20 @@ class AuthService
     ) {}
 
     /**
+     * Authenticate a user and return token + profile.
+     *
+     * Steps:
+     * 1. Validate credentials
+     * 2. Check account is active
+     * 3. Ensure email is verified
+     * 4. Verify 2FA code if enabled
+     * 5. Generate API token (with optional “remember me”)
+     * 6. Merge any guest cart into user cart
+     * 7. Return success payload
+     *
      * @param  array  $data
      * @return array
-     * @throws HttpResponseException
+     * @throws HttpResponseException on failure
      */
     public function login(array $data): array
     {
@@ -116,7 +131,7 @@ class AuthService
      *
      * @param  User  $user
      * @return array{message: string}
-     * @throws HttpResponseException
+     * @throws HttpResponseException if no active token
      */
     public function logout(User $user): array
     {
@@ -139,7 +154,7 @@ class AuthService
      *
      * @param  string  $email
      * @return array{message: string}
-     * @throws HttpResponseException
+     * @throws HttpResponseException on failure
      */
     public function sendResetLink(string $email): array
     {
@@ -158,11 +173,11 @@ class AuthService
     }
 
     /**
-     * Perform the password reset.
+     * Reset the user’s password using broker.
      *
      * @param  array{token:string,email:string,password:string,password_confirmation:string}  $data
      * @return array{message:string}
-     * @throws HttpResponseException
+     * @throws HttpResponseException on invalid token/user or other error
      */
     public function resetPassword(array $data): array
     {
@@ -194,10 +209,13 @@ class AuthService
     /**
      * Change the authenticated user’s password.
      *
-     * @param  User   $user
+     * 1. Verify current password
+     * 2. Save new password
+     *
+     * @param  User  $user
      * @param  array  $data  ['current_password','password','password_confirmation']
      * @return array{message:string}
-     * @throws HttpResponseException
+     * @throws HttpResponseException if current password is wrong
      */
     public function updatePassword(User $user, array $data): array
     {
@@ -217,7 +235,13 @@ class AuthService
     }
 
     /**
-     * Request an email change for the given user.
+     * Initiate an email change for the given user.
+     *
+     * Steps:
+     * 1. Generate a raw/hashed token pair
+     * 2. Store the hashed token along with old & new email
+     * 3. Send verification email to the new address
+     * 4. Notify the old address with cancellation link
      *
      * @param  User    $user
      * @param  string  $newEmail

@@ -17,12 +17,25 @@ use Illuminate\Support\Facades\Storage;
 use App\Events\PaymentSucceeded;
 use App\Models\Product;
 
+/**
+ * Controller handling all payment-related operations:
+ * - Listing payments (admin only)
+ * - Initiating a new payment
+ * - Receiving Stripe webhook events
+ * - Retrieving payment status
+ * - Refunding an existing payment
+ */
 class PaymentController extends Controller
 {
+    /**
+     * The payment business logic service.
+     *
+     * @var PaymentService
+     */
     public function __construct(protected PaymentService $payments) {}
 
     /**
-     * List all payments with optional filters and sorting parameters for admins.
+     * List all payments with optional filters and sorting for admins.
      *
      * @OA\Get(
      *     path="/api/payments",
@@ -133,18 +146,17 @@ class PaymentController extends Controller
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
      *
-     * @param  PaymentIndexRequest  $request
+     * @param  PaymentIndexRequest  $request  Validated query filters and pagination/sort options.
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
     public function index(PaymentIndexRequest $request)
     {
-        // Retrieving the validated filters from the request
         $filters = $request->validatedFilters();
-
-        // Adding default values for sorting and pagination
         $sortBy    = $request->query('sort_by', 'created_at');
         $sortOrder = $request->query('sort_order', 'desc');
         $perPage   = (int) $request->query('per_page', 15);
 
+        // Retrieve paginated payments matching filters
         $paginator = $this->payments->paginate(
             $filters,
             $sortBy,
@@ -152,6 +164,7 @@ class PaymentController extends Controller
             $perPage
         );
 
+        // Preload related product snapshots for display
         $payments = $paginator->getCollection();
 
         $allIds = $payments
@@ -164,6 +177,7 @@ class PaymentController extends Controller
                         ->get()
                         ->keyBy('id');
 
+        // Attach products to each payment snapshot
         $payments->transform(function($payment) use ($products) {
             $payment->setRelation('snapshot_products', $products);
             return $payment;
@@ -171,11 +185,14 @@ class PaymentController extends Controller
 
         $paginator->setCollection($payments);
 
+        // Return as resource collection
         return PaymentResource::collection($paginator);
     }
 
     /**
      * Initiate a payment from a user’s cart.
+     *
+     * Creates a pending payment record and returns Stripe client secret.
      *
      * @OA\Post(
      *     path="/api/payments",
@@ -223,8 +240,8 @@ class PaymentController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param  PaymentInitiationRequest  $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param  PaymentInitiationRequest  $request  Validated cart ID and payment method.
+     * @return \Illuminate\Http\JsonResponse        Payment initiation data with status 201.
      */
     public function store(PaymentInitiationRequest $request)
     {
@@ -242,6 +259,9 @@ class PaymentController extends Controller
 
     /**
      * Handle incoming Stripe webhook events.
+     *
+     * Verifies payload signature, updates payment status,
+     * and dispatches InvoiceRequested & PaymentSucceeded events on success.
      *
      * @OA\Post(
      *     path="/api/payments/webhook",
@@ -285,6 +305,9 @@ class PaymentController extends Controller
      *     ),
      *    @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
+     *
+     * @param  Request  $request  Raw HTTP request with Stripe signature header.
+     * @return \Illuminate\Http\JsonResponse
      */
     public function webhook(Request $request)
     {
@@ -309,15 +332,13 @@ class PaymentController extends Controller
                 $uuid = $object->metadata['payment_uuid'] ?? null;
 
                 if (is_string($uuid)) {
-                    // 1) Mark the payment as paid and return the Payment UUID
                     $payment = $this->payments->markAsPaidByUuid($uuid);
 
-                    // Si on vient juste de passer au statut Paid, on génère invoice & tickets
                     if (!empty($payment->wasJustPaid)) {
                         $locale = $payment->cart_snapshot['locale'] ?? config('app.fallback_locale');
                         app()->setLocale($locale);
 
-                    // 2) Generate the invoice PDF and store it and the ticket
+                    // Generate invoice PDF & tickets
                     event(new InvoiceRequested($payment, $locale));
                     event(new PaymentSucceeded($payment, $locale));
                     } else {
@@ -374,6 +395,9 @@ class PaymentController extends Controller
      *     @OA\Response(response=404, ref="#/components/responses/NotFound"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  string  $uuid  Unique identifier of the payment.
+     * @return \Illuminate\Http\JsonResponse
      */
     public function showStatus(string $uuid)
     {
@@ -385,7 +409,9 @@ class PaymentController extends Controller
     }
 
     /**
-     * Refund a payment (partial or full) by UUID.
+     * Refund a payment (partial or full) and regenerate its invoice.
+     *
+     * Deletes the old PDF, issues the refund, and re-dispatches invoice generation.
      *
      * @OA\Post(
      *     path="/api/payments/{uuid}/refund",
@@ -441,28 +467,27 @@ class PaymentController extends Controller
      *     )),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  RefundRequest  $request  Validated refund amount input.
+     * @param  string         $uuid     UUID of the payment to refund.
+     * @return \Illuminate\Http\JsonResponse
      */
     public function refund(RefundRequest $request, string $uuid)
     {
-        // Validated amount
         $amount = $request->input('amount');
-
-        // Perform the refund logic (e.g. via a PaymentService->refund($uuid, $amount))
         $payment = $this->payments->refundByUuid($uuid, $amount);
 
-        // Delete the old invoice file
+        // Remove old invoice file if present
         $oldFilename = $payment->invoice_link;
         if (Storage::disk('invoices')->exists($oldFilename)) {
             Storage::disk('invoices')->delete($oldFilename);
         }
 
+        // Regenerate invoice PDF in the correct locale
         $locale = $payment->cart_snapshot['locale'];
         app()->setLocale($locale);
-
-        // Re-dispatch InvoiceRequested to regenerate the PDF
         event(new InvoiceRequested($payment, $locale));
 
-        // Return JSON response
         return response()->json([
             'uuid'            => $payment->uuid,
             'refunded_amount' => $payment->refunded_amount,

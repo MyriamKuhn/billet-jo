@@ -9,6 +9,8 @@ use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
+ * Model representing a payment transaction.
+ *
  * @OA\Schema(
  *     schema="Payment",
  *     type="object",
@@ -39,7 +41,7 @@ class Payment extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var string[]
      */
     protected $fillable = [
         'uuid',
@@ -59,7 +61,7 @@ class Payment extends Model
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array<string, string>
+     * @var array<string,string>
      */
     protected $casts = [
         'cart_snapshot'  => 'array',
@@ -72,9 +74,9 @@ class Payment extends Model
     ];
 
     /**
-     * Associate the payment with a user.
+     * Get the user who made this payment.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<User, Payment>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function user()
     {
@@ -82,9 +84,9 @@ class Payment extends Model
     }
 
     /**
-     * Associate the payment with a ticket.
+     * Get the tickets associated with this payment.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, Payment>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function tickets()
     {

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\ProductTranslation;
 
 /**
+ * Model representing a product with localized details.
+ *
  * @OA\Schema(
  *     schema="Product",
  *     type="object",
@@ -46,6 +48,11 @@ class Product extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var string[]
+     */
     protected $fillable = [
         'name',           // default/fallback English name
         'product_details',
@@ -54,6 +61,11 @@ class Product extends Model
         'stock_quantity',
     ];
 
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array<string,string>
+     */
     protected $casts = [
         'product_details' => 'array',
         'price'           => 'decimal:2',
@@ -62,7 +74,9 @@ class Product extends Model
     ];
 
     /**
-     * Relation vers toutes les traductions disponibles.
+     * Get all available translations for this product.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function translations(): HasMany
     {
@@ -70,7 +84,10 @@ class Product extends Model
     }
 
     /**
-     * Récupère la traduction pour la locale courante (ou 'en' en fallback).
+     * Retrieve the translation for the current locale (or 'en' as fallback).
+     *
+     * @param  string|null  $locale
+     * @return \App\Models\ProductTranslation|null
      */
     public function translate(string $locale = null): ?ProductTranslation
     {
@@ -86,7 +103,9 @@ class Product extends Model
     }
 
     /**
-     * Accessor pour ->name : renvoie le nom traduit.
+     * Accessor for the 'name' attribute: returns the translated name.
+     *
+     * @return string
      */
     public function getNameAttribute(): string
     {
@@ -97,7 +116,10 @@ class Product extends Model
     }
 
     /**
-     * Accessor pour ->product_details : renvoie les détails traduits.
+     * Accessor for the 'product_details' attribute: returns the translated details.
+     *
+     * @param  mixed  $value
+     * @return array<string,mixed>
      */
     public function getProductDetailsAttribute($value): array
     {
@@ -108,7 +130,9 @@ class Product extends Model
     }
 
     /**
-     * Tickets liés à ce produit.
+     * Get the tickets associated with this product.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function tickets(): HasMany
     {
@@ -116,7 +140,9 @@ class Product extends Model
     }
 
     /**
-     * Éléments du panier liés à ce produit.
+     * Get the cart items associated with this product.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function cartItems(): HasMany
     {

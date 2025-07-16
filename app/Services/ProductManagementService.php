@@ -4,10 +4,14 @@ namespace App\Services;
 
 use App\Models\Product;
 
+/**
+ * ProductManagementService handles the creation and updating of products
+ * and their translations in different languages.
+ */
 class ProductManagementService
 {
     /**
-     * Create a new product with its details.
+     * Create a new product along with its translations.
      *
      * @param  array  $data  Validated input from StoreProductRequest.
      * @return \App\Models\Product
@@ -18,7 +22,7 @@ class ProductManagementService
         $sale  = $data['sale'] ?? null;
         $stock = $data['stock_quantity'];
 
-        // 1) Create the master product
+        // 1) Create the base (English) product record
         $en = $data['translations']['en'];
         $product = Product::create([
             'name'            => $en['name'],
@@ -28,7 +32,7 @@ class ProductManagementService
             'product_details' => $en['product_details'],
         ]);
 
-        // 2) Loop on each locale to create the translations
+        // 2) Create translations for the other locales
         foreach (['fr','de'] as $locale) {
             $trans = $data['translations'][$locale];
             $product->translations()->create([
@@ -42,10 +46,10 @@ class ProductManagementService
     }
 
     /**
-     * Update an existing product with its details.
+     * Update an existing product and its translations.
      *
-     * @param Product $product
-     * @param array $data Validated input from StoreProductRequest.
+     * @param  Product  $product
+     * @param  array    $data     Validated input from StoreProductRequest.
      * @return \App\Models\Product
      */
     public function update(Product $product, array $data): Product
@@ -54,7 +58,7 @@ class ProductManagementService
         $sale   = $data['sale'] ?? null;
         $stock  = $data['stock_quantity'];
 
-        // 1) Update the master product
+        // 1) Update the base (English) product record
         $en = $data['translations']['en'];
         $product->update([
 			'name'            => $en['name'],
@@ -64,7 +68,7 @@ class ProductManagementService
 			'product_details' => $en['product_details'],
 		]);
 
-        // 2) Loop on each locale to update the translations
+        // 2) Update or create translations for the other locales
         foreach (['fr','de'] as $locale) {
             $trans = $data['translations'][$locale];
             $product->translations()->updateOrCreate(
@@ -80,16 +84,18 @@ class ProductManagementService
     }
 
     /**
-     * Update only the quantity, the pricing and the sale of an existing product.
+     * Update only the price, sale, and stock quantity of a product.
      *
-     * @param Product $product
-     * @param array $data Validated input from UpdateProductPricingRequest.
+     * @param  Product  $product
+     * @param  array    $data     Validated input from UpdateProductPricingRequest.
      * @return void
      */
     public function updatePricing(Product $product, array $data): void
     {
+        // Fill in only the provided fields (price, sale, stock_quantity)
         $product->fill($data);
 
+        // Save the changes
         $product->save();
     }
 }

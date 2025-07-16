@@ -5,6 +5,8 @@ namespace App\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Resource representation for a single cart item.
+ *
  * @OA\Schema(
  *   schema="CartItemMinimal",
  *   title="CartItemMinimal",
@@ -32,32 +34,51 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class CartItemResource extends JsonResource
 {
+    /**
+     * Transform the resource into an array for JSON serialization.
+     *
+     * Calculates pricing fields and determines stock availability.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array<string, mixed>
+     */
     public function toArray($request): array
     {
+        // Original price from the product model
         $originalPrice  = $this->product->price;
-        $discountRate   = $this->product->sale ?? 0.0; // ex. 0.10 = 10%
+        // Discount rate, if any (e.g. 0.10 = 10% off)
+        $discountRate   = $this->product->sale ?? 0.0;
+        // Calculate the unit price after discount
         $unitPrice      = round($originalPrice * (1 - $discountRate), 2);
+        // Calculate the total price for the quantity
         $totalPrice     = round($unitPrice * $this->quantity, 2);
+        // Check if there is enough stock to fulfill this quantity
         $available = $this->product->stock_quantity >= $this->quantity;
 
         return [
+            // Unique identifier for the cart item
             'id' => $this->id,
+            // The associated product ID
             'product_id' => $this->product_id,
+            // Quantity of the product in the cart
             'quantity' => $this->quantity,
+            // Whether the requested quantity is currently in stock
             'in_stock' => $available,
+            // The maximum available stock for this product
             'available_quantity' => $this->product->stock_quantity,
 
-            // Price after discount
+            // Price per unit after applying any discount
             'unit_price' => $unitPrice,
+            // Total price for this line item
             'total_price' => $totalPrice,
 
-            // Show only if the product is on sale
+            // Include original_price and discount_rate only if a discount applies
             $this->mergeWhen($discountRate > 0, [
                 'original_price' => $originalPrice,
                 'discount_rate' => $discountRate,
             ]),
 
-            // Select product details
+            // Product details to assist the frontend (localized fields)
             'product'  => [
                 'name'     => $this->product->name,
                 'image'    => $this->product->product_details['image']    ?? null,

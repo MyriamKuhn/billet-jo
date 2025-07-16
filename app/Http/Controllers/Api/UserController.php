@@ -11,12 +11,38 @@ use App\Http\Requests\AdminUpdateUserRequest;
 use App\Http\Requests\StoreEmployeeRequest;
 use Illuminate\Http\Request;
 
+/**
+ * Controller for user management endpoints.
+ *
+ * Supports:
+ * - Listing all users (admin only)
+ * - Retrieving a user's basic information (admin/employee)
+ * - Updating names (self and admin updates)
+ * - Checking pending email updates (admin only)
+ * - Creating employee users (admin only)
+ * - Retrieving the authenticated user's profile
+ */
 class UserController extends Controller
 {
-    public function __construct(private UserService $userService) {}
+    /**
+     * Service handling user business logic.
+     *
+     * @var UserService
+     */
+    private UserService $userService;
 
     /**
-     * Retrieve the list of all users paginated and filtered.
+     * Inject the UserService dependency.
+     *
+     * @param UserService $userService  The service for user operations.
+     */
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
+    /**
+     * Retrieve a paginated and filtered list of all users (admin only).
      *
      * @OA\Get(
      *     path="/api/users",
@@ -71,7 +97,8 @@ class UserController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @return JsonResponse
+     * @param  Request     $request  Query parameters: firstname, lastname, email, role, page, per_page
+     * @return JsonResponse          List of users with pagination data and navigation links.
      */
     public function index(Request $request): JsonResponse
     {
@@ -100,7 +127,7 @@ class UserController extends Controller
     }
 
     /**
-     * Get a user’s basic information.
+     * Get basic details of a specific user (admin or employee only).
      *
      * @OA\Get(
      *     path="/api/users/{user}",
@@ -138,8 +165,8 @@ class UserController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param User $user
-     * @return JsonResponse
+     * @param  User         $user    The user model resolved via route binding.
+     * @return JsonResponse          User's firstname, lastname, and email.
      */
     public function show(User $user): JsonResponse
     {
@@ -151,7 +178,7 @@ class UserController extends Controller
     }
 
     /**
-     * Update the authenticated user’s firstname and lastname.
+     * Update the authenticated user's firstname and lastname.
      *
      * @OA\Patch(
      *     path="/api/users/me",
@@ -175,6 +202,9 @@ class UserController extends Controller
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  UpdateUserNameRequest  $request  Validated firstname and lastname.
+     * @return JsonResponse                     Empty response with 204 status on success.
      */
     public function updateSelf(UpdateUserNameRequest $request): JsonResponse
     {
@@ -185,6 +215,8 @@ class UserController extends Controller
     }
 
     /**
+     * Update a user's details (admin only).
+     *
      * @OA\Patch(
      *     path="/api/users/{user}",
      *     summary="Modify a user's details (admin only)",
@@ -221,9 +253,9 @@ class UserController extends Controller
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param AdminUpdateUserRequest $request
-     * @param User $user
-     * @return JsonResponse
+     * @param  AdminUpdateUserRequest  $request  Validated fields: status, 2FA, name, email, role, verify_email.
+     * @param  User                    $user     The user to update.
+     * @return JsonResponse                       Empty response with 204 status on success.
      */
     public function update(AdminUpdateUserRequest $request, User $user): JsonResponse
     {
@@ -237,7 +269,7 @@ class UserController extends Controller
     }
 
     /**
-     * Check if a user has a pending email update.
+     * Check for a pending email update for a user (admin only).
      *
      * @OA\Get(
      *     path="/api/users/email/{user}",
@@ -282,6 +314,9 @@ class UserController extends Controller
      *     @OA\Response(response=403, ref="#/components/responses/Forbidden"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  User         $user    The user whose pending email change is checked.
+     * @return JsonResponse          Pending email update data or null, plus a message.
      */
     public function checkEmailUpdate(User $user): JsonResponse
     {
@@ -325,8 +360,8 @@ The new user is immediately active and email‐verified. Password must meet secu
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param StoreEmployeeRequest $request
-     * @return JsonResponse
+     * @param  StoreEmployeeRequest  $request  Validated data: firstname, lastname, email, password.
+     * @return JsonResponse                   Empty response with 201 status on success.
      */
     public function storeEmployee(StoreEmployeeRequest $request): JsonResponse
     {
@@ -339,7 +374,7 @@ The new user is immediately active and email‐verified. Password must meet secu
     }
 
     /**
-     * Get the authenticated user's profile.
+     * Get the authenticated user's own profile.
      *
      * @OA\Get(
      *     path="/api/users/me",
@@ -367,6 +402,8 @@ The new user is immediately active and email‐verified. Password must meet secu
      *     @OA\Response(response=401, ref="#/components/responses/Unauthenticated"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @return JsonResponse  Authenticated user's firstname, lastname, email, and twofa status.
      */
     public function showSelf(): JsonResponse
     {
