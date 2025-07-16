@@ -4,10 +4,22 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Form request to validate a ticket creation request for the authenticated user.
+ *
+ * Ensures that:
+ * - The user is logged in.
+ * - A valid `payment_uuid` is provided.
+ * - The referenced payment exists and belongs to the authenticated user.
+ */
 class TicketStoreRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * Any authenticated user may attempt to generate tickets for their own payment.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {
@@ -17,6 +29,9 @@ class TicketStoreRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * - payment_uuid: required, must be a valid UUID, and must correspond
+     *   to a payment record belonging to the current user.
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -25,7 +40,7 @@ class TicketStoreRequest extends FormRequest
             'payment_uuid' => [
                 'required',
                 'uuid',
-                // Check if the payment belongs to the authenticated user
+                // Custom validation: ensure the payment belongs to the authenticated user
                 function($attribute, $value, $fail) {
                     $payment = auth()->user()
                         ->payments()
@@ -41,9 +56,9 @@ class TicketStoreRequest extends FormRequest
     }
 
     /**
-     * Get the validated data.
+     * Retrieve the validated payment UUID.
      *
-     * @return array
+     * @return string
      */
     public function validatedUuid(): string
     {

@@ -16,9 +16,47 @@ use App\Http\Requests\Auth\UpdateEmailRequest;
 use App\Http\Requests\Auth\DisableTwoFactorRequest;
 use Illuminate\Http\Request;
 
+/**
+ * Controller for authentication endpoints:
+ * - Registration
+ * - Login/Logout
+ * - Password reset and change
+ * - Email update
+ * - Two‑factor authentication enable/confirm/disable
+ */
 class AuthController extends Controller
 {
-    public function __construct(private RegistrationService $registrationService, private AuthService $authService, private TwoFactorService $twoFactorService) {}
+    /**
+     * @var RegistrationService
+     */
+    private RegistrationService $registrationService;
+
+    /**
+     * @var AuthService
+     */
+    private AuthService $authService;
+
+    /**
+     * @var TwoFactorService
+     */
+    private TwoFactorService $twoFactorService;
+
+    /**
+     * Inject authentication-related services.
+     *
+     * @param RegistrationService $registrationService
+     * @param AuthService         $authService
+     * @param TwoFactorService    $twoFactorService
+     */
+    public function __construct(
+        RegistrationService $registrationService,
+        AuthService $authService,
+        TwoFactorService $twoFactorService
+    ) {
+        $this->registrationService = $registrationService;
+        $this->authService         = $authService;
+        $this->twoFactorService    = $twoFactorService;
+    }
 
     /**
      * Register a new user.
@@ -56,8 +94,8 @@ This endpoint allows a visitor to create a new user account with built-in protec
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param RegisterRequest $request
-     * @return JsonResponse
+     * @param  RegisterRequest  $request  Validated registration data.
+     * @return JsonResponse               Success message with HTTP 201.
      */
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -72,7 +110,7 @@ This endpoint allows a visitor to create a new user account with built-in protec
     }
 
     /**
-     * Login a user.
+     * Authenticate a user and issue a token.
      *
      * @OA\Post(
      *     path="/api/auth/login",
@@ -167,6 +205,9 @@ This endpoint allows a user to log in and receive an authentication token:
     *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
     *     @OA\Response(response=500, ref="#/components/responses/InternalError")
     * )
+    *
+    * @param  LoginRequest  $request  Validated login credentials.
+    * @return JsonResponse            Token and user info on success.
     */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -176,7 +217,7 @@ This endpoint allows a user to log in and receive an authentication token:
     }
 
     /**
-     * Enable two-factor authentication for the user.
+     * Generate a new temporary secret to enable 2FA.
      *
      * @OA\Post(
      *     path="/api/auth/2fa/enable",
@@ -209,7 +250,7 @@ This endpoint allows a user to log in and receive an authentication token:
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
      *
-     * @return JsonResponse
+     * @return JsonResponse  Secret, QR‑code URL, and expiry timestamp.
      */
     public function enableTwoFactor(): JsonResponse
     {
@@ -219,7 +260,7 @@ This endpoint allows a user to log in and receive an authentication token:
     }
 
     /**
-     * Confirm two-factor authentication setup.
+     * Confirm and activate two‑factor authentication.
      *
      * @OA\Post(
      *     path="/api/auth/2fa/confirm",
@@ -257,23 +298,24 @@ This endpoint allows a user to log in and receive an authentication token:
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
+     *
+     * @param  Request  $request  Must include 'otp' code.
+     * @return JsonResponse       Recovery codes on success.
      */
     public function confirmTwoFactor(Request $request): JsonResponse
     {
-        // Valider la requête : OTP code nécessaire
         $request->validate([
-            'otp' => 'required|string', // selon votre format, ex. 6-digit code
+            'otp' => 'required|string',
         ]);
 
         $user = auth()->user();
         $result = $this->twoFactorService->confirmEnable($user, $request->input('otp'));
 
-        // $result contient typiquement les recovery codes en clair
         return response()->json($result, 200);
     }
 
     /**
-     * Logout the current user.
+     * Revoke the current user's authentication token.
      *
      * @OA\Post(
      *     path="/api/auth/logout",
@@ -305,7 +347,7 @@ This endpoint allows a user to log in and receive an authentication token:
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
      *
-     * @return JsonResponse
+     * @return JsonResponse  Confirmation message on success.
      */
     public function logout(): JsonResponse
     {
@@ -315,7 +357,7 @@ This endpoint allows a user to log in and receive an authentication token:
     }
 
     /**
-     * Send a password reset link.
+     * Send a password reset link to the user's email.
      *
      * @OA\Post(
      *     path="/api/auth/password/forgot",
@@ -360,8 +402,8 @@ Sends an email containing a password reset link to the user.
      *     )
      * )
      *
-     * @param ForgotPasswordRequest $request
-     * @return JsonResponse
+     * @param  ForgotPasswordRequest  $request  Must include 'email'.
+     * @return JsonResponse                     Message on success.
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
@@ -371,7 +413,7 @@ Sends an email containing a password reset link to the user.
     }
 
     /**
-     * Reset the user's password using the token sent to their email.
+     * Reset password using a valid reset token.
      *
      * @OA\Post(
      *     path="/api/auth/password/reset",
@@ -433,8 +475,8 @@ Allows a user to reset their password using a valid reset token:
      *     )
      * )
      *
-     * @param ResetPasswordRequest $request
-     * @return JsonResponse
+     * @param  ResetPasswordRequest  $request  token, email, new password + confirmation.
+     * @return JsonResponse                     Message on success.
      */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
@@ -444,7 +486,7 @@ Allows a user to reset their password using a valid reset token:
     }
 
     /**
-     * Update the user's password.
+     * Change the authenticated user's password.
      *
      * @OA\Patch(
      *     path="/api/auth/password",
@@ -509,8 +551,8 @@ Allows an authenticated user to change their password:
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      * )
      *
-     * @param UpdatePasswordRequest $request
-     * @return JsonResponse
+     * @param  UpdatePasswordRequest  $request  current + new password + confirmation.
+     * @return JsonResponse                        Message on success.
      */
     public function updatePassword(UpdatePasswordRequest $request): JsonResponse
     {
@@ -523,7 +565,7 @@ Allows an authenticated user to change their password:
     }
 
     /**
-     * Request email change for the current user.
+     * Request an email update for the authenticated user.
      *
      * @OA\Patch(
      *     path="/api/auth/email",
@@ -560,8 +602,8 @@ Requires authentication via Bearer token.
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
      *
-     * @param UpdateEmailRequest $request
-     * @return JsonResponse
+     * @param  UpdateEmailRequest  $request  Must include new 'email'.
+     * @return JsonResponse                  Message on success.
      */
     public function updateEmail(UpdateEmailRequest $request): JsonResponse
     {
@@ -574,7 +616,7 @@ Requires authentication via Bearer token.
     }
 
     /**
-     * Disable two-factor authentication for the user.
+     * Disable two‑factor authentication after verifying a code.
      *
      * @OA\Post(
      *     path="/api/auth/2fa/disable",
@@ -618,6 +660,9 @@ Requires authentication via Bearer token.
      *     @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  DisableTwoFactorRequest  $request  Must include valid 'twofa_code'.
+     * @return JsonResponse                          Empty body with HTTP 204.
      */
     public function disableTwoFactor(DisableTwoFactorRequest $request): JsonResponse
     {

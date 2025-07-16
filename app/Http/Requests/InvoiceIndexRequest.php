@@ -4,10 +4,18 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Form request to validate invoice listing parameters for authenticated users.
+ *
+ * Ensures the user is authenticated and all provided query parameters
+ * for filtering, sorting, and pagination conform to expected formats.
+ */
 class InvoiceIndexRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * @return bool  True if the user is authenticated.
      */
     public function authorize(): bool
     {
@@ -22,11 +30,15 @@ class InvoiceIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Filter by invoice status: pending, paid, failed, or refunded
             'status'     => ['sometimes', 'string', 'in:pending,paid,failed,refunded'],
+            // Date range filters in YYYY-MM-DD format
             'date_from'  => ['sometimes', 'date_format:Y-m-d'],
             'date_to'    => ['sometimes', 'date_format:Y-m-d'],
+            // Sorting options
             'sort_by'    => ['sometimes', 'string', 'in:uuid,amount,created_at'],
             'sort_order' => ['sometimes', 'string', 'in:asc,desc'],
+            // Pagination parameters
             'per_page'   => ['sometimes', 'integer', 'min:1'],
             'page'       => ['sometimes', 'integer', 'min:1'],
         ];
@@ -34,6 +46,8 @@ class InvoiceIndexRequest extends FormRequest
 
     /**
      * Prepare the data for validation.
+     *
+     * Trim whitespace from date fields if they are present.
      *
      * @return void
      */
@@ -49,9 +63,9 @@ class InvoiceIndexRequest extends FormRequest
     }
 
     /**
-     * Get filters array for the controller.
+     * Retrieve only the filter parameters that have been provided.
      *
-     * @return array<string, mixed>
+     * @return array<string, mixed>  Associative array of non-null filters.
      */
     public function validatedFilters(): array
     {
@@ -63,9 +77,9 @@ class InvoiceIndexRequest extends FormRequest
     }
 
     /**
-     * Get pagination and sort parameters, with defaults.
+     * Retrieve pagination and sorting options with default values.
      *
-     * @return array<string, mixed>
+     * @return array<string, mixed>  Array containing sort_by, sort_order, per_page, and page.
      */
     public function paginationAndSort(): array
     {

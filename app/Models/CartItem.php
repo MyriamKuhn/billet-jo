@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
+ * Model representing a cart item in a shopping cart.
+ *
  * @OA\Schema(
  *     schema="CartItem",
  *     type="object",
@@ -28,9 +30,9 @@ class CartItem extends Model
     use HasFactory;
 
     /**
-     * The attributes that are mass assignable.
+     * The attributes that can be mass assigned.
      *
-     * @var list<string>
+     * @var string[]
      */
     protected $fillable = [
         'quantity',
@@ -39,16 +41,16 @@ class CartItem extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast to native types.
      *
-     * @return array<string, string>
+     * @var array<string,string>
      */
     protected $casts = [
         'quantity' => 'integer',
     ];
 
     /**
-     * Associate the cart item with a cart.
+     * Get the cart that this item belongs to.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Cart, CartItem>
      */
@@ -58,7 +60,7 @@ class CartItem extends Model
     }
 
     /**
-     * Associate the cart item with a product.
+     * Get the product associated with this cart item.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Product, CartItem>
      */

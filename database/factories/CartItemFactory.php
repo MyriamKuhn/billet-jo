@@ -7,7 +7,9 @@ use App\Models\Cart;
 use App\Models\Product;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CartItem>
+ * Factory for creating CartItem instances.
+ * This factory generates random cart item data, including quantity,
+ * associated cart ID, and product ID.
  */
 class CartItemFactory extends Factory
 {

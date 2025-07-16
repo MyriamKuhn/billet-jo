@@ -6,12 +6,20 @@ use App\Events\PaymentSucceeded;
 use App\Services\TicketService;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * Class GenerateTicketsForPayment
+ *
+ * This listener handles the generation of tickets when a payment succeeds.
+ * It checks if tickets already exist for the payment and generates them if not.
+ */
 class GenerateTicketsForPayment
 {
     protected TicketService $tickets;
 
     /**
-     * Create the event listener.
+     * GenerateTicketsForPayment constructor.
+     *
+     * @param TicketService $tickets
      */
     public function __construct(TicketService $tickets)
     {
@@ -20,16 +28,19 @@ class GenerateTicketsForPayment
 
     /**
      * Handle the event.
+     *
+     * @param PaymentSucceeded $event
+     * @return void
      */
     public function handle(PaymentSucceeded $event): void
     {
         $payment = $event->payment;
-        // Si des tickets sont déjà en base pour ce paiement, on ne régénère pas
+        // If tickets already exist for this payment, skip generation
         if ($payment->tickets()->exists()) {
             \Log::info("Tickets already generated for payment {$payment->uuid}, skipping.");
             return;
         }
-        // Sinon, on génère
+        // Otherwise, generate tickets for this payment UUID and locale
         $this->tickets->generateForPaymentUuid($payment->uuid, $event->locale);
     }
 }

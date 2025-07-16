@@ -3,26 +3,45 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\URL;
 
+/**
+ * Class EmailUpdatedNotification
+ *
+ * This notification is sent to users when they request an email update.
+ * It includes a link to cancel the email update request.
+ */
 class EmailUpdatedNotification extends Notification
 {
     use Queueable;
 
     /**
-     * The token for resetting the password.
+     * The new email address requested by the user.
      *
      * @var string
      */
     protected $newEmail;
+    /**
+     * The user’s previous email address.
+     *
+     * @var string
+     */
     protected $oldEmail;
+    /**
+     * The raw token used to identify and cancel the email update.
+     *
+     * @var string
+     */
     protected $rawToken;
 
     /**
      * Create a new notification instance.
+     *
+     * @param  string  $newEmail   The requested new email address.
+     * @param  string  $oldEmail   The previous email address.
+     * @param  string  $rawToken   The cancellation token.
      */
     public function __construct(string $newEmail, string $oldEmail, string $rawToken)
     {
@@ -32,9 +51,10 @@ class EmailUpdatedNotification extends Notification
     }
 
     /**
-     * Get the notification's delivery channels.
+     * Determine which channels the notification will be delivered on.
      *
-     * @return array<int, string>
+     * @param  mixed  $notifiable
+     * @return string[]
      */
     public function via(object $notifiable): array
     {
@@ -42,7 +62,10 @@ class EmailUpdatedNotification extends Notification
     }
 
     /**
-     * Get the mail representation of the notification.
+     * Build the mail message to notify the user about the email update and provide a cancel link.
+     *
+     * @param  mixed  $notifiable
+     * @return \Illuminate\Notifications\Messages\MailMessage
      */
     public function toMail(object $notifiable): MailMessage
     {
@@ -58,25 +81,26 @@ class EmailUpdatedNotification extends Notification
     }
 
     /**
-     * Get the URL to cancel the email update.
+     * Generate a temporary signed URL for cancelling the email update.
      *
-     * @param  \App\Models\User  $notifiable
+     * @param  mixed  $notifiable
      * @return string
      */
     protected function getCancelLink($notifiable)
     {
         return URL::temporarySignedRoute(
-            'auth.email.change.cancel', // Route to cancel the update
-            now()->addHours(48), // URL will be valid for 48 hours
+            'auth.email.change.cancel', // The named route for cancelling
+            now()->addHours(48), // Link valid for 48 hours
             [
-                'token' => $this->rawToken
+                'token' => $this->rawToken  // Pass the cancellation token
                 ],
         );
     }
 
     /**
-     * Get the array representation of the notification.
+     * Get the array representation of the notification (not used for mail).
      *
+     * @param  mixed  $notifiable
      * @return array<string, mixed>
      */
     public function toArray(object $notifiable): array

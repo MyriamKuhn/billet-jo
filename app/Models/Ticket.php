@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
+ * Model for tickets.
+ *
  * @OA\Schema(
  *   schema="Ticket",
  *   type="object",
@@ -41,7 +43,7 @@ class Ticket extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array<string>
+     * @var string[]
      */
     protected $fillable = [
         'product_snapshot',
@@ -58,7 +60,7 @@ class Ticket extends Model
     ];
 
     /**
-     * The attributes that should be cast.
+     * The attributes that should be cast to native types.
      *
      * @var array<string, string>
      */
@@ -71,7 +73,7 @@ class Ticket extends Model
     ];
 
     /**
-     * Boot the model and generate a UUID token on creation.
+     * Automatically generate a UUID token when creating.
      */
     protected static function booted(): void
     {
@@ -81,7 +83,9 @@ class Ticket extends Model
     }
 
     /**
-     * Use the token for route model binding instead of the ID.
+     * Use the ticket token for route model binding.
+     *
+     * @return string
      */
     public function getRouteKeyName(): string
     {
@@ -89,7 +93,9 @@ class Ticket extends Model
     }
 
     /**
-     * Return a full URL for the QR code image.
+     * Get the full URL for the QR code image.
+     *
+     * @return string
      */
     public function getQrCodeUrlAttribute(): string
     {
@@ -97,7 +103,9 @@ class Ticket extends Model
     }
 
     /**
-     * Return a full URL for the ticket PDF.
+     * Get the full URL for the ticket PDF.
+     *
+     * @return string
      */
     public function getPdfUrlAttribute(): string
     {
@@ -105,7 +113,9 @@ class Ticket extends Model
     }
 
     /**
-     * Ticket belongs to a User.
+     * Ticket belongs to a user.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function user()
     {
@@ -114,6 +124,8 @@ class Ticket extends Model
 
     /**
      * Ticket belongs to a Payment.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function payment()
     {
@@ -122,6 +134,8 @@ class Ticket extends Model
 
     /**
      * Ticket belongs to a Product.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function product()
     {

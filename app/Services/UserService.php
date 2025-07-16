@@ -10,14 +10,21 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
+/**
+ * UserService provides methods to manage user accounts, including listing,
+ * updating, and creating users, with appropriate authorization checks.
+ */
 class UserService
 {
     /**
-     * Return all users for an administrator filtered and paginated.
+     * Return all users for an administrator, applying filters and pagination.
      *
-     * @param  User  $actor  The currently authenticated user
+     * @param  User  $actor    The currently authenticated user
+     * @param  array $filters  Optional filters: firstname, lastname, email, role
+     * @param  int   $perPage  Items per page
      * @return LengthAwarePaginator
-     * @throws AuthorizationException  If the actor is not an admin
+     *
+     * @throws AuthorizationException  If the actor is not an administrator
      */
     public function listAllUsers(User $actor, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
@@ -49,7 +56,7 @@ class UserService
     }
 
     /**
-     * Return the basic info of a target user, if the actor is admin or employee.
+     * Return basic information of a target user, if the actor is an admin or employee.
      *
      * @param  User  $actor   The currently authenticated user
      * @param  User  $target  The target user
@@ -71,13 +78,13 @@ class UserService
     }
 
     /**
-     * Update the given user’s firstname and lastname.
+     * Update the authenticated user’s firstname and lastname.
      *
-     * @param  User   $user
-     * @param  array  $data  ['firstname','lastname']
+     * @param  User  $user
+     * @param  array $data  ['firstname','lastname']
      * @return array{firstname:string,lastname:string}
      *
-     * @throws AuthenticationException If somehow the user is not authenticated
+     * @throws AuthenticationException  If the user is not authenticated
      */
     public function updateName(User $user, array $data): array
     {
@@ -95,12 +102,12 @@ class UserService
     /**
      * Update a target user’s attributes (admin only).
      *
-     * @param  User   $actor   the currently authenticated user
-     * @param  User   $target  the target user
-     * @param  array  $data    Validated data from the request
-     * @return array           Updated datas
+     * @param  User  $actor   The currently authenticated admin
+     * @param  User  $target  The user being updated
+     * @param  array $data    Validated input data
+     * @return array          The updated fields
      *
-     * @throws AuthorizationException If the actor is not an admin
+     * @throws AuthorizationException  If the actor is not an admin
      */
     public function updateUserByAdmin(User $actor, User $target, array $data): array
     {
@@ -108,33 +115,30 @@ class UserService
             throw new AuthorizationException();
         }
 
-        // Appliquer les changements
+        // Apply is_active change if provided
         if (array_key_exists('is_active', $data)) {
             $target->is_active = (bool) $data['is_active'];
         }
 
-        // Gestion de la 2FA
+        // Handle two-factor authentication toggling
         if (array_key_exists('twofa_enabled', $data)) {
             $wantEnable = (bool) $data['twofa_enabled'];
             if (! $wantEnable && $target->twofa_enabled) {
-                // ADMIN FORCE DISABLE 2FA
-                // Nettoyer tous les champs 2FA
+                // ADMIN FORCES DISABLE 2FA
+                // Clear all 2FA fields
                 $target->twofa_enabled = false;
                 $target->twofa_secret  = null;
                 $target->twofa_recovery_codes = null;
-                // S’il existe des champs temporaires
+                // Also clear any temporary 2FA setup
                 if (isset($target->twofa_secret_temp)) {
                     $target->twofa_secret_temp = null;
                 }
                 if (isset($target->twofa_temp_expires_at)) {
                     $target->twofa_temp_expires_at = null;
                 }
-                // Vous pouvez journaliser :
-                // \Log::info("2FA disabled by admin for user {$target->id}");
             } elseif ($wantEnable) {
-                // ADMIN ESSAIE D’ACTIVER 2FA
-                // Décider de la politique : ici, on interdit l’activation directe
-                // On peut soit ignorer silencieusement, soit lever une exception.
+                // ADMIN ATTEMPTS TO ENABLE 2FA
+                // Policy: users must enable 2FA themselves
                 throw new HttpResponseException(response()->json([
                     'message' => 'Cannot enable two-factor authentication directly; user must enable it via their own account.',
                     'code'    => 'twofa_enable_not_allowed_admin',
@@ -142,14 +146,14 @@ class UserService
             }
         }
 
-        // Vérification de l’email
+        // Verify email if requested
         if (array_key_exists('verify_email', $data) && $data['verify_email']) {
             if (! $target->hasVerifiedEmail()) {
                 $target->markEmailAsVerified();
             }
         }
 
-        // Autres champs modifiables par admin
+        // Update other fields allowed for admins
         foreach (['firstname','lastname','email','role'] as $field) {
             if (array_key_exists($field, $data)) {
                 $target->$field = $data[$field];
@@ -170,10 +174,10 @@ class UserService
     }
 
     /**
-     * Return the update email request for a user, or null if none.
+     * Retrieve pending email-change request for a user, or null if none exists.
      *
-     * @param  User  $actor   The currently authenticated user
-     * @param  User  $target  The target user
+     * @param  User  $actor   The currently authenticated admin
+     * @param  User  $target  The user whose email-update is checked
      * @return array<string,mixed>|null
      *
      * @throws AuthorizationException  If the actor is not an admin
@@ -198,10 +202,10 @@ class UserService
     }
 
     /**
-     * Create a new employee user (admin only).
+     * Create a new employee account (admin only).
      *
-     * @param  User   $actor  the currently authenticated user
-     * @param  array  $data   Validated data from the request
+     * @param  User  $actor  The currently authenticated admin
+     * @param  array $data   ['firstname','lastname','email','password']
      * @return User
      *
      * @throws AuthorizationException  If the actor is not an admin
@@ -224,7 +228,7 @@ class UserService
     }
 
     /**
-     * Return the authenticated user's basic profile.
+     * Return the authenticated user’s own profile information.
      *
      * @param  User  $user
      * @return array{firstname:string,lastname:string,email:string,twofa_enabled:bool}

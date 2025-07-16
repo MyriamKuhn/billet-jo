@@ -4,10 +4,20 @@ namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Form request to handle password reset email submissions.
+ *
+ * Validates that the provided email exists in the users table
+ * and is properly formatted.
+ */
 class ForgotPasswordRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     *
+     * All users (authenticated or guest) may request a password reset.
+     *
+     * @return bool
      */
     public function authorize(): bool
     {

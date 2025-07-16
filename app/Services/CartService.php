@@ -15,7 +15,12 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use App\Exceptions\StockUnavailableException;
 use App\Models\Product;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
+/**
+ * CartService handles operations related to user and guest carts.
+ * It supports both authenticated users and guests using Redis for guest carts.
+ */
 class CartService
 {
     /**
@@ -28,11 +33,11 @@ class CartService
     /**
      * CartService constructor.
      *
-     * Initializes the TTL for guest carts based on session configuration.
+     * Initializes the TTL for guest carts based on the session configuration.
      */
     public function __construct(protected LoggerInterface $logger)
     {
-        // Set TTL from session lifetime (in minutes) to seconds
+        // Convert session lifetime from minutes to seconds
         $this->guestTtl = config('session.lifetime', 120) * 60;
     }
 
@@ -40,7 +45,7 @@ class CartService
      * Retrieve or create a cart for the specified user.
      *
      * @param  User  $user  The user for whom to retrieve or create a cart.
-     * @return Cart  The user's cart model.
+     * @return Cart         The user's cart model.
      */
     public function getUserCart(User $user): Cart
     {
@@ -53,11 +58,11 @@ class CartService
     /**
      * Retrieve the guest cart items stored in Redis.
      *
-     * Attempts to fetch the hash at the session-specific key. Any error
-     * (connection failure, timeout, etc.) is caught and logged, and an empty
-     * array is returned.
+     * Attempts to fetch the hash at the session-specific key.
+     * Any error (connection failure, timeout, etc.) is caught and logged,
+     * and an empty array is returned.
      *
-     * @return array<int,int>  An associative array mapping product IDs to quantities.
+     * @return array<int,int>  Associative array mapping product IDs to quantities.
      */
     public function getGuestCart(): array
     {
@@ -78,7 +83,7 @@ class CartService
      *
      * @param  int  $productId  The ID of the product to add.
      * @param  int  $qty        The quantity to add (must be at least 1).
-     * @throws BadRequestHttpException            If the quantity is less than 1.
+     * @throws BadRequestHttpException  If the quantity is less than 1.
      * @return void
      */
     public function addItemForGuest(int $productId, int $qty = 1): void
@@ -87,14 +92,12 @@ class CartService
             throw new BadRequestHttpException('Quantity must be at least 1');
         }
 
-        // On récupère l’état actuel du panier invité
         $items = $this->getGuestCart();
         $items[$productId] = ($items[$productId] ?? 0) + $qty;
 
-        // Vérification du stock
+        // Ensure enough stock for all requested items
         $this->assertStockAvailable($items);
 
-        // Enregistrement dans Redis
         try {
             $key = $this->guestKey();
             Redis::hincrby($key, $productId, $qty);
@@ -111,7 +114,7 @@ class CartService
      * Remove or decrement an item from the guest cart (Redis).
      *
      * @param  int        $productId  The ID of the product to remove or decrement.
-     * @param  int|null   $qty        The amount to remove; if null, the item is fully removed.
+     * @param  int|null   $qty        The amount to remove; if null, the item is removed entirely.
      * @return void
      */
     public function removeItemForGuest(int $productId, ?int $qty = null): void
@@ -144,8 +147,8 @@ class CartService
      * @param  User  $user       The authenticated user.
      * @param  int   $productId  The ID of the product to add.
      * @param  int   $qty        The quantity to add (must be at least 1).
-     * @throws BadRequestHttpException            If the quantity is less than 1.
-     * @throws \Illuminate\Database\QueryException If a database error occurs.
+     * @throws BadRequestHttpException    If the quantity is less than 1.
+     * @throws QueryException             If a database error occurs.
      * @return void
      */
     public function addItemForUser(User $user, int $productId, int $qty = 1): void
@@ -154,13 +157,12 @@ class CartService
             throw new BadRequestHttpException('Quantity must be at least 1');
         }
 
-        // On charge le panier utilisateur et ses items
         $cart = $this->getUserCart($user);
         $cart->load(['cartItems']);
         $items = $cart->cartItems->pluck('quantity', 'product_id')->toArray();
         $items[$productId] = ($items[$productId] ?? 0) + $qty;
 
-        // Vérification du stock
+        // Ensure enough stock
         $this->assertStockAvailable($items);
 
         try {
@@ -187,8 +189,8 @@ class CartService
      *
      * @param  User        $user       The authenticated user.
      * @param  int         $productId  The ID of the product to remove or decrement.
-     * @param  int|null    $qty        The amount to remove; if null, the item is fully removed.
-     * @throws \Illuminate\Database\QueryException If a database error occurs.
+     * @param  int|null    $qty        The amount to remove; if null, the item is removed entirely.
+     * @throws QueryException           If a database error occurs.
      * @return void
      */
     public function removeItemForUser(User $user, int $productId, ?int $qty = null): void
@@ -216,16 +218,16 @@ class CartService
     }
 
     /**
-     * Merge all guest items into the user's cart by adding quantities for duplicates.
+     * Merge all guest cart items into the user's cart.
+     * Quantities for duplicate products are summed.
      *
      * @param  int  $userId  The ID of the user whose cart will receive guest items.
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If the user does not exist.
-     * @throws \Illuminate\Database\QueryException                 If a database error occurs while merging carts.
+     * @throws ModelNotFoundException   If the user does not exist.
+     * @throws QueryException           If a database error occurs.
      * @return void
      */
     public function mergeGuestIntoUser(int $userId): void
     {
-        // Récupère l'utilisateur ou échoue
         $user     = User::findOrFail($userId);
         $userCart = $this->getUserCart($user);
         $guestItems = $this->getGuestCart();
@@ -245,7 +247,7 @@ class CartService
             }
         }
 
-        // Cleanup du panier invité en Redis et en session
+        // Clean up the guest cart in Redis and session
         try {
             Redis::del($this->guestKey());
             Session::forget('guest_cart_id');
@@ -258,8 +260,8 @@ class CartService
     }
 
     /**
-     * Generate and retrieve a unique Redis key for the guest cart.
-     * Stocke un UUID en session si pas déjà présent.
+     * Generate or retrieve a unique Redis key for the guest cart.
+     * Stores a UUID in the session if one is not already present.
      *
      * @return string  The Redis key for the current guest cart.
      */
@@ -269,7 +271,6 @@ class CartService
         if ($headerId && \Ramsey\Uuid\Uuid::isValid($headerId)) {
             $guestId = $headerId;
         } else {
-            // Récupère ou génère un ID unique pour cette session invité
             $guestId = Session::get('guest_cart_id');
             if (! $guestId) {
                 $guestId = (string) Str::uuid();
@@ -282,9 +283,10 @@ class CartService
     }
 
     /**
-     * Remove all items from the authenticated user's cart.
+     * Clear all items from the authenticated user's cart.
      *
-     * @throws \Illuminate\Database\QueryException If a database error occurs when deleting cart items.
+     * @param  User  $user
+     * @throws QueryException  If a database error occurs during deletion.
      * @return void
      */
     public function clearCartForUser(User $user): void
@@ -302,10 +304,10 @@ class CartService
     }
 
     /**
-     * Assert that stock is available for all items donnés (user ou guest).
+     * Ensure that there is sufficient stock for all items (guest or user).
      *
-     * @param  Cart|array<int,int>  $cartOrItems
-     * @throws StockUnavailableException
+     * @param  Cart|array<int,int>  $cartOrItems  A Cart model or an array of [product_id => quantity].
+     * @throws StockUnavailableException  If any item exceeds available stock.
      * @return void
      */
     public function assertStockAvailable(Cart|array $cartOrItems): void

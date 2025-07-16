@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
+ * Model representing an email update request.
+ *
  * @OA\Schema(
  *     schema="EmailUpdate",
  *     type="object",
@@ -24,10 +26,10 @@ class EmailUpdate extends Model
     /** @use HasFactory<\Database\Factories\EmailUpdateFactory> */
     use HasFactory;
 
-    /**
+   /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var string[]
      */
     protected $fillable = [
         'user_id',
@@ -37,7 +39,7 @@ class EmailUpdate extends Model
     ];
 
     /**
-     * Associate the email update with a user.
+     * Define the relationship to the User who requested the email update.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<User, EmailUpdate>
      */

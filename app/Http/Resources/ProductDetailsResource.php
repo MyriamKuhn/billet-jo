@@ -5,6 +5,8 @@ namespace App\Http\Resources;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * Represents the details of a product, typically used in ticketing systems.
+ *
  * @OA\Schema(
  *   schema="ProductDetails",
  *   title="ProductDetails",
@@ -29,7 +31,7 @@ class ProductDetailsResource extends JsonResource
      */
     public function toArray($request): array
     {
-        // $this->resource est déjà un array thanks to the cast
+        // $this->resource is already an array thanks to the cast
         return [
             'places'      => $this->resource['places']      ?? null,
             'description' => $this->resource['description'] ?? null,

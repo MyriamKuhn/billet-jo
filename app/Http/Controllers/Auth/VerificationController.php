@@ -8,8 +8,6 @@ use App\Services\CartService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
-use App\Models\EmailUpdate;
-use App\Helpers\EmailHelper;
 use App\Services\Auth\EmailVerificationService;
 use App\Exceptions\Auth\UserNotFoundException;
 use App\Exceptions\Auth\InvalidVerificationLinkException;
@@ -18,12 +16,28 @@ use App\Exceptions\Auth\MissingVerificationTokenException;
 use App\Exceptions\Auth\EmailUpdateNotFoundException;
 use App\Services\Auth\EmailUpdateService;
 
+/**
+ * Controller for handling email verification and update flows:
+ * - Initial email verification after registration
+ * - Resending verification links
+ * - Verifying and canceling pending email change requests
+ *
+ * In production, endpoints redirect to the frontend result pages.
+ * In non-production, JSON responses are returned for easier testing.
+ */
 class VerificationController extends Controller
 {
+    /**
+     * Inject required services for verification and email updates.
+     *
+     * @param EmailVerificationService $verificationService
+     * @param CartService              $cartService
+     * @param EmailUpdateService       $emailUpdateService
+     */
     public function __construct(private EmailVerificationService $verificationService, private CartService $cartService, private EmailUpdateService $emailUpdateService) {}
 
     /**
-     * Verify the user's email address
+     * Verify the user's email via signed URL.
      *
      * @OA\Get(
      *     path="/api/auth/email/verify/{id}/{hash}",
@@ -123,6 +137,9 @@ Validates the email verification link.
      *         )
      *     )
      * )
+     *
+     * @param  Request                        $request       Contains route params `id` and `hash`.
+     * @return RedirectResponse|JsonResponse                Redirect in prod, JSON in non-prod.
      */
     public function verify(Request $request): RedirectResponse|JsonResponse
     {
@@ -130,10 +147,11 @@ Validates the email verification link.
         $hash  = $request->route('hash');
         $base  = config('app.frontend_url') . '/verification-result';
 
-        // Web flow redirection for the frontend
+        // Production: redirect to frontend
         if (app()->environment('production')) {
             try {
                 $user = $this->verificationService->verify($id, $hash);
+                // Rebuild user's cart after verification
                 $this->cartService->getUserCart($user);
                 $segment = 'success';
             } catch (UserNotFoundException|InvalidVerificationLinkException $e) {
@@ -151,7 +169,7 @@ Validates the email verification link.
             return redirect()->away("{$base}/{$segment}");
         }
 
-        // On dev environment, we return a JSON response
+        // Non-production: return JSON
         $user = $this->verificationService->verify($id, $hash);
         $this->cartService->getUserCart($user);
 
@@ -162,7 +180,7 @@ Validates the email verification link.
     }
 
     /**
-     * Resend email verification link
+     * Resend an email verification link to the given address.
      *
      * @OA\Post(
      *     path="/api/auth/email/resend",
@@ -194,6 +212,9 @@ Validates the email verification link.
      *     @OA\Response(response=429, ref="#/components/responses/TooManyRequests"),
      *     @OA\Response(response=500, ref="#/components/responses/InternalError"),
      * )
+     *
+     * @param  Request     $request  Must contain `email` in body.
+     * @return JsonResponse          Success message on resend.
      */
     public function resend(Request $request): JsonResponse
     {
@@ -207,7 +228,7 @@ Validates the email verification link.
     }
 
     /**
-     * Verify and apply a pending email change.
+     * Verify a pending email change via token.
      *
      * @OA\Get(
      *     path="/api/auth/email/change/verify",
@@ -288,15 +309,14 @@ Validates the token for a pending email change.
      *     )
      * )
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+     * @param  Request                        $request  Query must include `token`.
+     * @return RedirectResponse|JsonResponse           Redirect in prod, JSON otherwise.
      */
     public function verifyNew(Request $request): RedirectResponse|JsonResponse
     {
         $token = $request->query('token');
         $base  = config('app.frontend_url') . '/verification-result';
 
-        // Web flow redirection in prod
         if (app()->environment('production')) {
             try {
                 $user = $this->emailUpdateService->verifyNewEmail($token);
@@ -316,7 +336,7 @@ Validates the token for a pending email change.
             return redirect()->away("{$base}/{$segment}");
         }
 
-        // Dev/API → JSON
+        // Non-production: return JSON
         $this->emailUpdateService->verifyNewEmail($token);
         return response()->json([
             'message'      => 'Email updated successfully',
@@ -325,7 +345,7 @@ Validates the token for a pending email change.
     }
 
     /**
-     * Cancel a pending email change and restore the old address.
+     * Cancel a pending email update and restore the old email.
      *
      * @OA\Get(
      *     path="/api/auth/email/change/cancel/{token}",
@@ -405,6 +425,10 @@ Validates the token for a pending email change and restores the old email during
     *         )
     *     )
     * )
+    *
+    * @param  Request                        $request  Route param `token`.
+    * @param  string                         $token    Raw update token.
+    * @return RedirectResponse|JsonResponse           Redirect in prod, JSON otherwise.
     */
     public function cancelChange(Request $request, string $token): RedirectResponse|JsonResponse
     {
@@ -413,7 +437,6 @@ Validates the token for a pending email change and restores the old email during
         if (app()->environment('production')) {
             try {
                 $user = $this->emailUpdateService->cancelEmailUpdate($token);
-                // recreate the cart for the user
                 $this->cartService->getUserCart($user);
                 $segment = 'success';
             } catch (EmailUpdateNotFoundException $e) {
@@ -429,7 +452,7 @@ Validates the token for a pending email change and restores the old email during
             return redirect()->away("{$base}/{$segment}");
         }
 
-        // Dev/API → JSON
+        // Non-production: return JSON
         $this->emailUpdateService->cancelEmailUpdate($token);
 
         return response()->json([

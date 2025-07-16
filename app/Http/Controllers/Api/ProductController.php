@@ -14,18 +14,47 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\UpdateProductPricingRequest;
 
+/**
+ * Controller for product-related API endpoints.
+ *
+ * Supports:
+ * - Listing in‑stock products (public)
+ * - Listing all products (admin only)
+ * - Retrieving a single product
+ * - Creating a new product (admin only)
+ * - Updating product details and images (admin only)
+ * - Updating pricing and stock (admin only)
+ */
 class ProductController extends Controller
 {
+    /**
+     * Service for handling public product listing logic.
+     *
+     * @var ProductListingService
+     */
     protected ProductListingService $listingService;
+    /**
+     * Service for handling admin product creation and updates.
+     *
+     * @var ProductManagementService
+     */
     protected ProductManagementService $productService;
 
+    /**
+     * Inject services for listing and managing products.
+     *
+     * @param  ProductListingService     $listingService  Business logic for listing
+     * @param  ProductManagementService  $productService  Business logic for create/update
+     */
     public function __construct(ProductListingService $listingService, ProductManagementService $productService) {
         $this->listingService = $listingService;
         $this->productService = $productService;
     }
 
     /**
-     * Show the list of available products with optional filters and sorting.
+     * Show a paginated list of in‑stock products with optional filters and sorting.
+     *
+     * Aborts with 404 if no products match.
      *
      *
      * @OA\Get(
@@ -79,8 +108,8 @@ Returns a paginated list of products that are currently in stock.
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param  IndexProductRequest  $request
-     * @return JsonResponse
+     * @param  IndexProductRequest  $request  Validated filter & pagination input
+     * @return JsonResponse                   JSON containing `data` and `pagination`
      */
     public function index(IndexProductRequest $request): JsonResponse
     {
@@ -102,7 +131,9 @@ Returns a paginated list of products that are currently in stock.
     }
 
     /**
-     * Show a detailed paginated list of all products (admin only).
+     * Show a paginated list of all products (including out‑of‑stock) for admins.
+     *
+     * Aborts with 404 if no products match.
      *
      * @OA\Get(
      *     path="/api/products/all",
@@ -153,8 +184,8 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *     @OA\Response(response=503, ref="#/components/responses/ServiceUnavailable")
      *   )
      *
-     * @param  AdminProductRequest  $request
-     * @return JsonResponse
+     * @param  AdminProductRequest  $request  Validated filter & pagination input
+     * @return JsonResponse                   JSON containing `data` and `pagination`
      */
     public function getProducts(AdminProductRequest $request): JsonResponse
     {
@@ -176,7 +207,7 @@ Returns a paginated list of all products (including out-of-stock), with optional
     }
 
     /**
-     * Retrieve a single product by its ID.
+     * Retrieve the details of a single product by ID.
      *
      * @OA\Get(
      *     path="/api/products/{product}",
@@ -205,8 +236,8 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param  Product  $product
-     * @return JsonResponse
+     * @param  Product     $product  The product model resolved by route model binding
+     * @return JsonResponse          JSON containing the `data` property with product details
      */
     public function show(Product $product): JsonResponse
     {
@@ -216,7 +247,10 @@ Returns a paginated list of all products (including out-of-stock), with optional
     }
 
     /**
-     * Create a new product (admin only).
+     * Create a new product with translations and optional image (admin only).
+     *
+     * Stores uploaded image, injects filename into all locales,
+     * and delegates creation to the management service.
      *
      * @OA\Post(
      *   path="/api/products",
@@ -299,34 +333,36 @@ Returns a paginated list of all products (including out-of-stock), with optional
      *   @OA\Response(response=422, ref="#/components/responses/ValidationError"),
      *   @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
+     *
+     * @param  StoreProductRequest  $request  Validated input including translations & image
+     * @return JsonResponse                  201 Created with no body
      */
     public function store(StoreProductRequest $request): JsonResponse
     {
-        // Retrieve the validated data
         $data = $request->validated();
 
         if ($request->hasFile('image')) {
             /** @var \Illuminate\Http\UploadedFile $image */
             $image    = $request->file('image');
 
-            // stocke le fichier et récupère son nom
             $filename = $image->store('', 'images');
 
-            // on injecte ce même nom partout dans le payload
             foreach (['en','fr','de'] as $locale) {
                 $data['translations'][$locale]['product_details']['image'] = $filename;
             }
         }
 
-        // Product creation
         $product = $this->productService->create($data);
 
-        // return the message to frontend
         return response()->json(null, 201);
     }
 
     /**
-     * Update an existing product (admin only).
+     * Update an existing product’s details and image (admin only).
+     *
+     * - Retains old image if none uploaded
+     * - Deletes old file and stores new one if provided
+     * - Delegates the update to the management service
      *
      * @OA\Post(
      *     path="/api/products/{product}",
@@ -426,13 +462,12 @@ Updates the details of an existing product for all 3 languages.
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param  StoreProductRequest  $request
-     * @param  Product  $product
-     * @return JsonResponse
+     * @param  StoreProductRequest  $request  Validated input including optional image
+     * @param  Product              $product  The product to update
+     * @return JsonResponse                  204 No Content on success
      */
     public function update(StoreProductRequest $request, Product $product): JsonResponse
     {
-        // 1) Récupère les données validées
         $data = $request->validated();
 
         $oldFilename = data_get($product->product_details, 'image');
@@ -443,34 +478,30 @@ Updates the details of an existing product for all 3 languages.
             }
         }
 
-        // 2) Si on a uploadé une image…
         if ($request->hasFile('image')) {
             /** @var \Illuminate\Http\UploadedFile $image */
             $image    = $request->file('image');
             $oldImage = data_get($product->product_details, 'image');
 
-            // Supprime l’ancienne si elle existe
             if ($oldImage) {
                 Storage::disk('images')->delete($oldImage);
             }
 
-            // Stocke la nouvelle et récupère le nom
             $filename = $image->store('', 'images');
 
-            // Injecte ce même nom dans toutes les traductions
             foreach (['en', 'fr', 'de'] as $locale) {
                 $data['translations'][$locale]['product_details']['image'] = $filename;
             }
         }
 
-        // 3) Toujours déléguer la mise à jour du produit (avec ou sans nouvelle image)
         $updated = $this->productService->update($product, $data);
 
-        // 4) Répond en 204 (No Content)
         return response()->json(null, 204);
     }
 
     /**
+     * Update only the pricing and stock quantity of a product (admin only).
+     *
      * @OA\Patch(
      *     path="/api/products/{product}/pricing",
      *     operationId="updateProductPricing",
@@ -503,9 +534,9 @@ Updates the details of an existing product for all 3 languages.
      *     @OA\Response(response=500, ref="#/components/responses/InternalError")
      * )
      *
-     * @param  UpdateProductPricingRequest  $request
-     * @param  Product  $product
-     * @return JsonResponse
+     * @param  UpdateProductPricingRequest  $request  Validated `price`, `sale`, `stock_quantity`
+     * @param  Product                      $product  The product to update
+     * @return JsonResponse                            204 No Content on success
      */
     public function updatePricing(UpdateProductPricingRequest $request, Product $product): JsonResponse
     {

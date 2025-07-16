@@ -9,6 +9,9 @@ use Illuminate\Auth\Events\Registered;
 use App\Services\Auth\CaptchaService;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
+/**
+ * Handles user registration logic.
+ */
 class RegistrationService
 {
     public function __construct(private CaptchaService $captchaService) {}
@@ -16,13 +19,13 @@ class RegistrationService
     /**
      * Register a new user.
      *
-     * @param array $data
-     * @return User
-     * @throws \Exception
+     * @param  array  $data   The registration data
+     * @return User           The newly created user
+     * @throws HttpResponseException  On validation or captcha failure
      */
     public function register(array $data): User
     {
-        // Check the captcha token if the application is in production
+        // If in production, validate the captcha token
         if (app()->environment('production') && ! $this->captchaService->verify($data['captcha_token'])) {
             Log::warning('Captcha verification failed', [
                 'token' => $data['captcha_token'],
@@ -33,6 +36,7 @@ class RegistrationService
             ], 422));
         }
 
+        // Ensure the user accepted the terms and conditions
         if ($data['accept_terms'] !== true) {
             throw new HttpResponseException(response()->json([
                 'message' => 'You must accept the terms and conditions',
@@ -40,7 +44,7 @@ class RegistrationService
             ], 422));
         }
 
-        // Create the user
+        // Create the user record
         $user = User::create([
             'firstname'    => $data['firstname'],
             'lastname'     => $data['lastname'],
@@ -49,7 +53,7 @@ class RegistrationService
             'role'         => 'user',
         ]);
 
-        // Start the email verification sending process
+        // Fire the Registered event to send verification email, etc.
         event(new Registered($user));
 
         return $user;

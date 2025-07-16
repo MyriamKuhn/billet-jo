@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
+ * Model representing a shopping cart.
+ *
  * @OA\Schema(
  *     schema="Cart",
  *     type="object",
@@ -29,14 +31,14 @@ class Cart extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var string[]
      */
     protected $fillable = [
         "user_id",
     ];
 
     /**
-     * Associate the cart with a user.
+     * Get the user that owns this cart.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<User, Cart>
      */
@@ -46,7 +48,7 @@ class Cart extends Model
     }
 
     /**
-     * Associate the cart with cart items.
+     * Get the items in this cart.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<CartItem, Cart>
      */

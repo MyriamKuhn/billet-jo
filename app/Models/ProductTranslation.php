@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
+ * Model for product translations.
+ *
  * @OA\Schema(
  *     schema="ProductTranslation",
  *     type="object",
@@ -42,7 +44,11 @@ class ProductTranslation extends Model
 {
     use HasFactory;
 
-    // Champs remplissables dans product_translations
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var string[]
+     */
     protected $fillable = [
         'product_id',
         'locale',
@@ -50,13 +56,19 @@ class ProductTranslation extends Model
         'product_details',
     ];
 
-    // Casting JSON → array
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array<string,string>
+     */
     protected $casts = [
         'product_details' => 'array',
     ];
 
     /**
-     * Relation inverse vers Product.
+     * Inverse relation to the Product model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
     public function product()
     {

@@ -4,6 +4,11 @@ namespace App\Traits;
 
 use Illuminate\Support\Str;
 
+/**
+ * Trait HasUuid
+ *
+ * Automatically generates a UUID for the model when it is created.
+ */
 trait HasUuid
 {
     protected static function bootHasUuid(): void

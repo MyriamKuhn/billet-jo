@@ -4,13 +4,16 @@ namespace App\Helpers;
 
 use Illuminate\Support\Str;
 
+/**
+ * Utility class for generating and validating email verification tokens.
+ */
 class EmailHelper
 {
     /**
-     * Hash a token using HMAC-SHA256 with the app key.
+     * Hash a token using HMAC-SHA256 with the application key.
      *
-     * @param  string  $token  raw token
-     * @return string          Hash token
+     * @param  string  $token  The raw token to hash.
+     * @return string          The resulting HMAC-SHA256 hash.
      */
     public static function hashToken(string $token): string
     {
@@ -19,11 +22,11 @@ class EmailHelper
     }
 
     /**
-     * Verify that a raw token matches a stored hash.
+     * Verify that a raw token corresponds to a given hash.
      *
-     * @param  string  $token raw token
-     * @param  string  $hash  Stocked
-     * @return bool
+     * @param  string  $token  The raw token provided by the user.
+     * @param  string  $hash   The stored HMAC-SHA256 hash.
+     * @return bool            True if the token matches the hash; false otherwise.
      */
     public static function verifyToken(string $token, string $hash): bool
     {
@@ -33,10 +36,13 @@ class EmailHelper
     }
 
     /**
-     * Generate both a raw token and its hash.
+     * Generate a new random token and its corresponding hash.
      *
-     * @param  int    $length  Lenght of the raw token
-     * @return array<string>   [0 => raw, 1 => hash]
+     * @param  int    $length  Length of the generated raw token (default: 60).
+     * @return array{raw: string, hash: string}
+     *                         An associative array containing:
+     *                         - 'raw': the plaintext token
+     *                         - 'hash': the HMAC-SHA256 hash of the token
      */
     public static function makeTokenPair(int $length = 60): array
     {

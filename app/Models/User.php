@@ -11,6 +11,8 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Notifications\VerifyEmailNotification;
 
 /**
+ * User model representing a user in the system.
+ *
  * @OA\Schema(
  *     schema="User",
  *     type="object",
@@ -65,7 +67,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * The attributes that are mass assignable.
      *
-     * @var list<string>
+     * @var string[]
      */
     protected $fillable = [
         'email',
@@ -78,9 +80,9 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * The attributes that should be hidden for arrays.
      *
-     * @var list<string>
+     * @var string[]
      */
     protected $hidden = [
         'password_hash',
@@ -91,8 +93,9 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast to native types.
      *
+     * @var array<string,string>
      */
     protected $casts = [
         'role'=> UserRole::class,
@@ -104,9 +107,9 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * Associate the user with a ticket.
+     * Get the tickets belonging to this user.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Ticket, User>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function tickets()
     {
@@ -114,9 +117,9 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Associate the user with a payment.
+     * Get the payments belonging to this user.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Payment, User>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function payments()
     {
@@ -124,9 +127,9 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Associate the user with a cart.
+     * Get the cart associated with this user.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne<Cart, User>
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
     public function cart()
     {
@@ -134,9 +137,9 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Associate the user with a email update.
+     * Get the pending email update for this user.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne<EmailUpdate, User>
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
     public function emailUpdate()
     {
@@ -144,7 +147,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     *  Send the email verification notification.
+     * Send the email verification notification.
      *
      * @return void
      */
